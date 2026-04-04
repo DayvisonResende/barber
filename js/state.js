@@ -1,0 +1,39 @@
+const App = {
+    state: {
+        isAuthenticated: false,
+        authView: 'login', // 'login', 'register', 'forgot'
+        activeTab: 'agendamentos',
+        role: 'client', // 'client' ou 'barber'
+        appointments: [],
+        completedTransactions: [], // Histórico de Caixa
+        reportsFilter: 'day', // 'day', 'week', 'month', 'year', 'custom'
+        reportsCustomStart: '',
+        reportsCustomEnd: '',
+        unreadCount: 0,
+        appointmentsFilter: 'day',
+        blockedTimes: [],
+        confirmingPaymentId: null,
+        confirmingPaymentMethod: null,
+        // Estado do formulário de marcação
+        isBooking: false,
+        selectedServices: [],
+        selectedBarber: null,
+        selectedDate: '',
+        selectedTime: '',
+        activeBookingStep: 1,
+        editingAppointmentId: null,
+        currentMonth: new Date().getMonth(),
+        currentYear: new Date().getFullYear(),
+        recoveryStep: 'verify', // 'verify' ou 'reset'
+        recoveryUserId: null,
+        isEditingProfile: false,
+        isBuildingAvatar: false,
+        theme: localStorage.getItem('finotrato-theme') || 'dark',
+        showReminderPopup: false,
+        // Configurações da Barbearia (Dinâmicas)
+        shopSettings: null,
+        isEditingShop: false,
+        isManagingShop: false, // Controle do painel admin
+        adminShopTab: 'barbers' // 'barbers', 'services', 'schedules'
+    }
+};
