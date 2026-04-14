@@ -1,0 +1,29 @@
+{
+  "name": "FinnoTratoBarber",
+  "short_name": "FinnoTrato",
+  "description": "Sistema de Agendamento Profissional para Barbearias",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0c0c0c",
+  "theme_color": "#f59e0b",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}
