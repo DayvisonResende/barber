@@ -1,0 +1,251 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@font-face {
+    font-family: 'Pristina';
+    src: url('PRISTINA.TTF') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+.logo-font {
+    font-family: 'Pristina', cursive !important;
+    letter-spacing: 0.05em;
+}
+
+:root {
+    --bg-app: #09090b; /* zinc-950 */
+    --bg-card: #18181b; /* zinc-900 */
+    --bg-input: #09090b; /* zinc-950/darker */
+    --text-main: #f4f4f5; /* zinc-100 */
+    --text-muted: #a1a1aa; /* zinc-400 */
+    --border-main: #27272a; /* zinc-800 */
+    --accent: #f59e0b; /* amber-500 */
+    --accent-hover: #d97706; /* amber-600 */
+}
+
+body.light-mode {
+    --bg-app: #f9f9fb; /* zinc-50/ish */
+    --bg-card: #ffffff; /* white */
+    --bg-input: #f4f4f5; /* zinc-100 */
+    --text-main: #09090b; /* zinc-950 */
+    --text-muted: #71717a; /* zinc-500 */
+    --border-main: #e4e4e7; /* zinc-200 */
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Classes de Tema para substituir bg-zinc-XXX fixos */
+.app-bg { background-color: var(--bg-app) !important; }
+.card-bg { background-color: var(--bg-card) !important; }
+.input-bg { background-color: var(--bg-input) !important; }
+.text-theme { color: var(--text-main) !important; }
+.text-muted-theme { color: var(--text-muted) !important; }
+.border-theme { border-color: var(--border-main) !important; }
+
+/* Interações */
+.hover-bg:hover { background-color: var(--border-main) !important; opacity: 0.9; }
+.active-scale:active { transform: scale(0.98); }
+
+/* Transições suaves para todos os elementos que mudam de cor */
+* {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease !important;
+}
+
+
+
+/* Animações simulando o tailwindcss-animate */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(1rem);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInDown {
+    from {
+        transform: translateY(-1rem);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulseAlert {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .5;
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+.slide-in-up {
+    animation: slideInUp 0.4s ease-out forwards;
+}
+
+.slide-in-down {
+    animation: slideInDown 0.4s ease-out forwards;
+}
+
+.animate-pulse-alert {
+    animation: pulseAlert 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+
+
+/* Animações de Destaque */
+.slide-down {
+    animation: slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.pulse-warm {
+    animation: pulseWarm 2s infinite;
+}
+
+@keyframes pulseWarm {
+    0% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+    }
+}
+
+/* Novo: Lembrete Flutuante Minimalista */
+.floating-bell {
+    position: fixed !important;
+    bottom: 90px !important;
+    right: 20px !important;
+    width: 60px;
+    height: 60px;
+    background-color: #f59e0b !important; /* Cor direta para evitar falha de variável */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #09090b !important;
+    box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.6);
+    z-index: 9999 !important; /* Forçar topo absoluto */
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.floating-bell:hover {
+    transform: scale(1.1);
+}
+
+.floating-bell:active {
+    transform: scale(0.9);
+}
+
+.popover-card {
+    position: fixed;
+    bottom: 155px; /* Acima do sino */
+    right: 20px;
+    width: 280px;
+    background: rgba(39, 39, 42, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    z-index: 49;
+    transform-origin: bottom right;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: scale(0.5) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Animações de Modal */
+.scale-in {
+    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Utilitários para Componentes Complexos */
+.group:hover .group-hover\:bg-amber-500 {
+    background-color: var(--amber-500) !important;
+}
+.group:hover .group-hover\:text-zinc-950 {
+    color: #09090b !important;
+}
+
+/* Barra de scroll customizada para áreas específicas */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(39, 39, 42, 0.5);
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(245, 158, 11, 0.5);
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(245, 158, 11, 0.8);
+}
