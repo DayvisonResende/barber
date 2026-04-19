@@ -51,6 +51,8 @@ Object.assign(App, {
             window.revenueChart.destroy();
         }
 
+        const isLight = document.body.classList.contains('light-mode');
+
         window.revenueChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -64,7 +66,7 @@ Object.assign(App, {
                     fill: true,
                     tension: 0.4,
                     pointBackgroundColor: '#f59e0b',
-                    pointBorderColor: '#0c0c0c',
+                    pointBorderColor: isLight ? '#ffffff' : '#0c0c0c',
                     pointBorderWidth: 2,
                     pointRadius: 4
                 }]
@@ -77,10 +79,10 @@ Object.assign(App, {
                     tooltip: {
                         mode: 'index',
                         intersect: false,
-                        backgroundColor: '#18181b',
-                        titleColor: '#a1a1aa',
-                        bodyColor: '#fff',
-                        borderColor: '#27272a',
+                        backgroundColor: isLight ? '#ffffff' : '#18181b',
+                        titleColor: isLight ? '#71717a' : '#a1a1aa',
+                        bodyColor: isLight ? '#18181b' : '#fff',
+                        borderColor: isLight ? '#e4e4e7' : '#27272a',
                         borderWidth: 1,
                         padding: 10,
                         displayColors: false,
@@ -99,7 +101,7 @@ Object.assign(App, {
                     x: {
                         grid: { display: false },
                         ticks: {
-                            color: '#71717a',
+                            color: isLight ? '#71717a' : '#a1a1aa',
                             font: { size: 10, weight: 'bold' }
                         }
                     }

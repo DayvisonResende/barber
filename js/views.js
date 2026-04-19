@@ -1,7 +1,7 @@
 Object.assign(App, {
     renderSplash() {
         return `
-            <div class="flex flex-col items-center justify-center min-h-[80vh] bg-zinc-950 fade-in">
+            <div class="flex flex-col items-center justify-center min-h-[80vh] app-bg fade-in">
                 <div class="relative w-32 h-32 mb-8">
                     <div class="absolute inset-0 border-4 border-amber-500/20 rounded-full"></div>
                     <div class="absolute inset-0 border-4 border-t-amber-500 rounded-full animate-spin"></div>
@@ -9,8 +9,8 @@ Object.assign(App, {
                         <i data-lucide="scissors" class="w-12 h-12 text-amber-500 animate-pulse"></i>
                     </div>
                 </div>
-                <h1 class="text-3xl font-black text-white italic uppercase tracking-widest animate-pulse logo-font">${this.state.shopSettings?.name || 'FinnoTrato'}</h1>
-                <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.3em] mt-2">${this.state.shopSettings?.slogan || 'Personal Grooming'}</p>
+                <h1 class="text-3xl font-black text-theme italic uppercase tracking-widest animate-pulse logo-font">${this.state.shopSettings?.name || 'FinnoTrato'}</h1>
+                <p class="text-[10px] text-muted-theme font-bold uppercase tracking-[0.3em] mt-2">${this.state.shopSettings?.slogan || 'Personal Grooming'}</p>
             </div>
         `;
     },
@@ -35,7 +35,7 @@ Object.assign(App, {
                         </div>
                         
                         <div>
-                            <p class="text-[10px] text-zinc-500 uppercase font-black tracking-widest leading-none">Seu próximo corte</p>
+                            <p class="text-[10px] text-muted-theme uppercase font-black tracking-widest leading-none">Seu próximo corte</p>
                             <h3 class="text-xl font-black text-theme mt-1">Hoje, às ${reminder.apt.time}</h3>
                             <p class="text-xs font-bold text-amber-500/80 mt-1 flex items-center justify-center gap-1">
                                 <i data-lucide="timer" class="w-3.5 h-3.5"></i> Faltam ${reminder.timeMsg}
@@ -46,7 +46,7 @@ Object.assign(App, {
                              <a href="https://wa.me/${App.formatWA(this.state.shopSettings?.whatsapp)}?text=Ol%C3%A1,%20estou%20a%20caminho%20do%20meu%20hor%C3%A1rio%20das%20${reminder.apt.time}" target="_blank" class="flex-1 py-2 bg-[#25D366]/10 text-[#25D366] rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1.5">
                                 <i data-lucide="message-circle" class="w-3 h-3"></i> WhatsApp
                             </a>
-                            <button onclick="App.toggleReminderPopup()" class="p-2 input-bg text-zinc-400 rounded-xl">
+                            <button onclick="App.toggleReminderPopup()" class="p-2 input-bg text-muted-theme rounded-xl">
                                 <i data-lucide="x" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -82,7 +82,7 @@ Object.assign(App, {
                         </button>
                     </div>
 
-                    <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter opacity-50">FinnoTrato Barber • Estilo & Excelência</p>
+                    <p class="text-[10px] text-muted-theme font-bold uppercase tracking-tighter opacity-50">FinnoTrato Barber • Estilo & Excelência</p>
                 </div>
             </div>
         `;
@@ -102,7 +102,7 @@ Object.assign(App, {
                         `}
                     </div>
 
-                    <h1 class="text-[2.75rem] font-bold tracking-tight text-white logo-font leading-tight">
+                    <h1 class="text-[2.75rem] font-bold tracking-tight text-theme logo-font leading-tight">
                         ${(() => {
                             const name = this.state.shopSettings?.name || 'FinnoTratoBarber';
                             if (name.toLowerCase().includes('barber')) {
@@ -129,7 +129,7 @@ Object.assign(App, {
                         </div>
                         <div class="relative group">
                             <input type="password" id="login-password" placeholder="••••••••" class="w-full card-bg border border-theme rounded-xl p-3 pr-12 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
-                            <button type="button" onclick="App.togglePasswordVisibility('login-password', 'eye-login')" class="absolute right-0 top-0 h-full px-4 text-zinc-500 hover:text-amber-500 transition-colors">
+                            <button type="button" onclick="App.togglePasswordVisibility('login-password', 'eye-login')" class="absolute right-0 top-0 h-full px-4 text-muted-theme hover:text-amber-500 transition-colors">
                                 <i id="eye-login" data-lucide="eye" class="w-5 h-5"></i>
                             </button>
                         </div>
@@ -140,7 +140,7 @@ Object.assign(App, {
                     <button onclick="App.login()" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-lg shadow-amber-500/25">
                         <i data-lucide="log-in" class="w-5 h-5"></i> Entrar
                     </button>
-                    <button onclick="App.setAuthView('register')" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-transparent text-zinc-300 border border-theme hover:card-bg">
+                    <button onclick="App.setAuthView('register')" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-transparent text-muted-theme border border-theme hover:card-bg">
                         Criar uma nova conta
                     </button>
                 </div>
@@ -152,7 +152,7 @@ Object.assign(App, {
         return `
             <div class="space-y-6 fade-in slide-in-up mt-8">
                 <div class="mb-8">
-                    <button onclick="App.setAuthView('login')" class="flex items-center gap-2 text-muted-theme hover:text-white transition-colors mb-4">
+                    <button onclick="App.setAuthView('login')" class="flex items-center gap-2 text-muted-theme hover:text-theme transition-colors mb-4">
                         <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar
                     </button>
                     <h2 class="text-3xl font-bold text-theme">Criar Conta</h2>
@@ -185,7 +185,7 @@ Object.assign(App, {
                         <label class="text-sm font-medium text-muted-theme">Criar Senha</label>
                         <div class="relative group">
                             <input type="password" id="reg-password" placeholder="••••••••" class="w-full card-bg border border-theme rounded-xl p-3 pr-12 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
-                            <button type="button" onclick="App.togglePasswordVisibility('reg-password', 'eye-reg')" class="absolute right-0 top-0 h-full px-4 text-zinc-500 hover:text-amber-500 transition-colors">
+                            <button type="button" onclick="App.togglePasswordVisibility('reg-password', 'eye-reg')" class="absolute right-0 top-0 h-full px-4 text-muted-theme hover:text-amber-500 transition-colors">
                                 <i id="eye-reg" data-lucide="eye" class="w-5 h-5"></i>
                             </button>
                         </div>
@@ -195,7 +195,7 @@ Object.assign(App, {
                         <label class="text-sm font-medium text-muted-theme">Confirmar Senha</label>
                         <div class="relative group">
                             <input type="password" id="reg-confirm-password" placeholder="••••••••" class="w-full card-bg border border-theme rounded-xl p-3 pr-12 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
-                            <button type="button" onclick="App.togglePasswordVisibility('reg-confirm-password', 'eye-reg-confirm')" class="absolute right-0 top-0 h-full px-4 text-zinc-500 hover:text-amber-500 transition-colors">
+                            <button type="button" onclick="App.togglePasswordVisibility('reg-confirm-password', 'eye-reg-confirm')" class="absolute right-0 top-0 h-full px-4 text-muted-theme hover:text-amber-500 transition-colors">
                                 <i id="eye-reg-confirm" data-lucide="eye" class="w-5 h-5"></i>
                             </button>
                         </div>
@@ -203,7 +203,7 @@ Object.assign(App, {
                 </div>
 
                 <div class="pt-4">
-                    <button onclick="App.register()" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-lg shadow-amber-500/25">
+                    <button onclick="App.register()" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-theme">
                         <i data-lucide="user-plus" class="w-5 h-5"></i> Finalizar Cadastro
                     </button>
                 </div>
@@ -216,7 +216,7 @@ Object.assign(App, {
             return `
                 <div class="space-y-6 fade-in slide-in-up mt-8">
                     <div class="mb-8">
-                        <button onclick="App.setAuthView('login')" class="flex items-center gap-2 text-muted-theme hover:text-white transition-colors mb-4">
+                        <button onclick="App.setAuthView('login')" class="flex items-center gap-2 text-muted-theme hover:text-theme transition-colors mb-4">
                             <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar
                         </button>
                         <h2 class="text-3xl font-bold text-theme">Recuperar Senha</h2>
@@ -241,7 +241,7 @@ Object.assign(App, {
                     </div>
 
                     <div class="pt-4">
-                        <button onclick="App.verifyRecovery()" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-lg shadow-amber-500/25">
+                        <button onclick="App.verifyRecovery()" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-theme">
                             <i data-lucide="shield-check" class="w-5 h-5"></i> Verificar Identidade
                         </button>
                     </div>
@@ -260,7 +260,7 @@ Object.assign(App, {
                             <label class="text-sm font-medium text-muted-theme">Nova Senha</label>
                             <div class="relative group">
                                 <input type="password" id="new-password" placeholder="••••••••" class="w-full card-bg border border-theme rounded-xl p-3 pr-12 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
-                                <button type="button" onclick="App.togglePasswordVisibility('new-password', 'eye-new')" class="absolute right-0 top-0 h-full px-4 text-zinc-500 hover:text-amber-500 transition-colors">
+                                <button type="button" onclick="App.togglePasswordVisibility('new-password', 'eye-new')" class="absolute right-0 top-0 h-full px-4 text-muted-theme hover:text-amber-500 transition-colors">
                                     <i id="eye-new" data-lucide="eye" class="w-5 h-5"></i>
                                 </button>
                             </div>
@@ -269,7 +269,7 @@ Object.assign(App, {
                             <label class="text-sm font-medium text-muted-theme">Confirmar Nova Senha</label>
                             <div class="relative group">
                                 <input type="password" id="new-confirm-password" placeholder="••••••••" class="w-full card-bg border border-theme rounded-xl p-3 pr-12 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
-                                <button type="button" onclick="App.togglePasswordVisibility('new-confirm-password', 'eye-new-confirm')" class="absolute right-0 top-0 h-full px-4 text-zinc-500 hover:text-amber-500 transition-colors">
+                                <button type="button" onclick="App.togglePasswordVisibility('new-confirm-password', 'eye-new-confirm')" class="absolute right-0 top-0 h-full px-4 text-muted-theme hover:text-amber-500 transition-colors">
                                     <i id="eye-new-confirm" data-lucide="eye" class="w-5 h-5"></i>
                                 </button>
                             </div>
@@ -277,7 +277,7 @@ Object.assign(App, {
                     </div>
 
                     <div class="pt-4">
-                        <button onclick="App.resetPassword()" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-lg shadow-amber-500/25">
+                        <button onclick="App.resetPassword()" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-theme">
                             <i data-lucide="save" class="w-5 h-5"></i> Atualizar Senha
                         </button>
                     </div>
@@ -292,7 +292,7 @@ Object.assign(App, {
             <div class="space-y-6 fade-in slide-in-up">
                 <div class="flex items-center justify-between">
                     <h2 class="text-2xl font-bold text-theme">Novo Agendamento</h2>
-                    <button onclick="App.cancelBooking()" class="p-2 input-bg rounded-full text-muted-theme hover:text-white transition-colors">
+                    <button onclick="App.cancelBooking()" class="p-2 input-bg rounded-full text-muted-theme hover:text-theme transition-colors">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>
@@ -313,7 +313,7 @@ Object.assign(App, {
                     
                     <!-- Corpo -->
                     ${this.state.activeBookingStep === 1 ? `
-                        <div class="p-4 fade-in app-bg/30">
+                        <div class="p-4 fade-in input-bg">
                             ${this.renderCalendar()}
                         </div>
                     ` : ''}
@@ -333,7 +333,7 @@ Object.assign(App, {
                     </div>
 
                     ${this.state.activeBookingStep === 2 ? `
-                        <div class="p-4 fade-in app-bg/30 space-y-3 max-h-80 overflow-y-auto scrollbar-hide">
+                        <div class="p-4 fade-in input-bg space-y-3 max-h-80 overflow-y-auto scrollbar-hide">
                         ${(() => {
                             // Validação de Dia de Funcionamento (Bloqueio Semanal)
                             const workingDays = this.state.shopSettings?.working_days || [1, 2, 3, 4, 5, 6];
@@ -395,6 +395,9 @@ Object.assign(App, {
                                         // Compara o barbeiro (UUID)
                                         if (String(apt.barber_id) !== String(barber.user_id)) return false;
 
+                                        // Status cancelado não ocupa horário
+                                        if (apt.status === 'cancelled') return false;
+
                                         const [aptH, aptM] = apt.time.split(':').map(Number);
                                         const aptStartTotal = aptH * 60 + aptM;
                                         const aptEndTotal = aptStartTotal + (apt.total_duration || 30);
@@ -402,7 +405,11 @@ Object.assign(App, {
                                         const [thisH, thisM] = time.split(':').map(Number);
                                         const thisTotal = thisH * 60 + thisM;
 
-                                        const totalDuration = this.state.selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
+                                        // Se houver um agendamento exato no mesmo minuto de início, está ocupado
+                                        if (thisTotal === aptStartTotal) return true;
+
+                                        // Para verificar se "cabe", usamos a duração total dos serviços já selecionados (ou 5min se vazio)
+                                        const totalDuration = this.state.selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0) || 15;
                                         const thisEndTotal = thisTotal + totalDuration;
 
                                         return (thisTotal < aptEndTotal && thisEndTotal > aptStartTotal);
@@ -420,9 +427,15 @@ Object.assign(App, {
                                             ${availableBarbers.map(barber => {
                                     const isSelected = this.state.selectedTime === time && this.state.selectedBarber?.id === barber.id;
                                     return `
-                                                <div onclick="App.selectTimeAndBarber('${time}', ${barber.id})" class="cursor-pointer transition-all flex flex-col items-center gap-1 ${isSelected ? 'scale-110' : 'hover:scale-105 opacity-60 hover:opacity-100'}">
+                                                <div onclick="App.selectTimeAndBarber('${time}', ${barber.id})" class="cursor-pointer transition-all flex flex-col items-center gap-1 ${isSelected ? 'scale-110' : 'hover:scale-105 opacity-80 hover:opacity-100'}">
                                                     <div class="relative">
-                                                        <img src="${barber.avatar}" alt="${App.escapeHTML(barber.name)}" class="w-12 h-12 rounded-full input-bg border-2 ${isSelected ? 'border-amber-500 object-cover shadow-md shadow-amber-500/20' : 'border-zinc-700 object-cover'}">
+                                                        ${barber.avatar ? `
+                                                            <img src="${barber.avatar}" alt="${App.escapeHTML(barber.name)}" class="w-12 h-12 rounded-full input-bg border-2 ${isSelected ? 'border-amber-500 object-cover shadow-md shadow-amber-500/20' : 'border-zinc-700 object-cover'}">
+                                                        ` : `
+                                                            <div class="w-12 h-12 rounded-full input-bg border-2 ${isSelected ? 'border-amber-500 shadow-md shadow-amber-500/20' : 'border-zinc-700'} flex items-center justify-center bg-zinc-800 shadow-inner">
+                                                                <span class="text-xl font-black text-amber-500/70">${(barber.name?.[0] || 'P').toUpperCase()}</span>
+                                                            </div>
+                                                        `}
                                                         ${isSelected ? '<div class="absolute -top-1 -right-1 bg-amber-500 rounded-full p-0.5 shadow-sm"><i data-lucide="check" class="w-3 h-3 text-zinc-950"></i></div>' : ''}
                                                     </div>
                                                     <span class="text-[10px] ${isSelected ? 'text-amber-500 font-bold' : 'text-muted-theme font-medium'}">${barber.name.split(' ')[0]}</span>
@@ -452,7 +465,7 @@ Object.assign(App, {
                     </div>
 
                     ${this.state.activeBookingStep === 3 ? `
-                        <div class="p-4 fade-in app-bg/30 grid gap-2">
+                        <div class="p-4 fade-in input-bg grid gap-2">
                             ${(() => {
                                 // Filtrar serviços baseados no barbeiro selecionado
                                 let availableServices = SERVICES;
@@ -482,7 +495,7 @@ Object.assign(App, {
                                             </div>
                                         </div>
                                     `;
-                                }).join('') || '<div class="p-8 text-center text-muted-theme text-xs opacity-50">Nenhum serviço disponível com este profissional para os parâmetros selecionados.</div>';
+                                }).join('') || '<div class="p-8 text-center text-muted-theme text-xs opacity-80">Nenhum serviço disponível com este profissional para os parâmetros selecionados.</div>';
                             })()}
                         </div>
                     ` : ''}
@@ -520,17 +533,17 @@ Object.assign(App, {
                                                 }
                                             </div>
                                             <div class="flex-1 min-w-0">
-                                                <p class="font-bold text-white text-sm truncate">${App.escapeHTML(this.state.staffSelectedClient.name)}</p>
-                                                <p class="text-[11px] text-zinc-500 truncate">${App.escapeHTML(App.formatDisplayPhone(this.state.staffSelectedClient.phone) || 'Sem telefone')}</p>
+                                                <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(this.state.staffSelectedClient.name)}</p>
+                                                <p class="text-[11px] text-muted-theme truncate">${App.escapeHTML(App.formatDisplayPhone(this.state.staffSelectedClient.phone) || 'Sem telefone')}</p>
                                             </div>
                                             <button onclick="App.clearStaffClient()" class="flex-shrink-0 p-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg transition-colors" title="Trocar cliente">
-                                                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-zinc-400"></i>
+                                                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-muted-theme"></i>
                                             </button>
                                         </div>
                                     ` : `
                                         <!-- Busca de cliente -->
                                         <div class="relative">
-                                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none"></i>
+                                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-theme pointer-events-none"></i>
                                             <input 
                                                 type="text" 
                                                 id="staff-client-search-input"
@@ -607,7 +620,7 @@ Object.assign(App, {
                         <div class="flex justify-between items-center">
                             <h2 class="text-2xl font-bold text-theme">Agenda</h2>
                             <span class="bg-amber-500/10 text-amber-500 px-3 py-1 rounded-full text-sm font-medium">
-                                ${filteredApts.length} cortes
+                                ${filteredApts.length} serviço(s)
                             </span>
                         </div>
                         
@@ -622,7 +635,7 @@ Object.assign(App, {
 
                             ${filteredApts.length === 0 ? `
                         <div class="text-center py-12 text-muted-theme">
-                            <i data-lucide="calendar" class="w-16 h-16 mx-auto mb-4 opacity-20"></i>
+                            <i data-lucide="calendar" class="w-16 h-16 mx-auto mb-4 opacity-40"></i>
                             <p>Nenhum agendamento encontrado.</p>
                         </div>
                     ` : `
@@ -644,9 +657,31 @@ Object.assign(App, {
                                         <div class="flex-1 min-w-0">
                                             <h3 class="font-bold text-theme text-lg truncate">${App.escapeHTML(apt.clientName)}</h3>
                                             <div class="flex flex-wrap gap-1.5 mt-1.5">
-                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 text-[10px] font-bold uppercase tracking-wider border border-amber-500/20">
-                                                    <i data-lucide="scissors" class="w-3 h-3"></i> ${apt.service.name}
-                                                </span>
+                                                ${this.state.editingServicesId === apt.id ? `
+                                                    <div class="w-full bg-zinc-900/40 border border-amber-500/30 rounded-xl p-3 flex flex-col gap-3 fade-in shadow-inner">
+                                                        <div class="flex flex-wrap gap-1.5">
+                                                            ${SERVICES.filter(s => {
+                                                                const specialties = (this.state.barberServices || []).filter(bs => String(bs.barber_id) === String(apt.barber_id)).map(bs => bs.service_id);
+                                                                return specialties.length === 0 || specialties.includes(s.id);
+                                                            }).map(s => {
+                                                                const isSelected = (this.state.tempSelectedServices || []).some(ts => ts.id === s.id);
+                                                                return `
+                                                                    <button onclick="App.toggleEditService(${s.id})" class="px-2 py-1 rounded-md text-[9px] font-bold uppercase transition-all ${isSelected ? 'bg-amber-500 text-zinc-950 shadow-sm' : 'bg-zinc-800 text-muted-theme border border-transparent hover:border-amber-500/30'}">
+                                                                        ${s.name}
+                                                                    </button>
+                                                                `;
+                                                            }).join('')}
+                                                        </div>
+                                                        <div class="flex gap-2">
+                                                            <button onclick="App.updateAppointmentServices('${apt.id}')" class="flex-1 py-1.5 bg-amber-500 text-zinc-950 rounded-lg text-[10px] font-black uppercase shadow-sm active:scale-95">Salvar</button>
+                                                            <button onclick="App.cancelEditServices()" class="flex-1 py-1.5 bg-zinc-700 text-muted-theme rounded-lg text-[10px] font-bold uppercase border border-theme active:scale-95">X</button>
+                                                        </div>
+                                                    </div>
+                                                ` : `
+                                                    <button onclick="App.initEditServices('${apt.id}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 text-[10px] font-bold uppercase tracking-wider border border-amber-500/20 hover:bg-amber-500/20 transition-all" title="Editar Serviço(s)">
+                                                        <i data-lucide="scissors" class="w-3 h-3"></i> ${apt.service.name}
+                                                    </button>
+                                                `}
 
                                                 ${this.state.editingPriceId === apt.id ? `
                                                     <div class="flex items-center gap-1 fade-in">
@@ -657,7 +692,7 @@ Object.assign(App, {
                                                         <button onclick="App.updateAppointmentPrice('${apt.id}', document.getElementById('adj-price-${apt.id}').value)" class="p-1 bg-emerald-500 text-zinc-950 rounded hover:bg-emerald-400">
                                                             <i data-lucide="check" class="w-3 h-3"></i>
                                                         </button>
-                                                        <button onclick="App.cancelEditPrice()" class="p-1 bg-zinc-700 text-zinc-300 rounded hover:bg-zinc-600">
+                                                        <button onclick="App.cancelEditPrice()" class="p-1 bg-zinc-700 text-muted-theme rounded hover:bg-zinc-600">
                                                             <i data-lucide="x" class="w-3 h-3"></i>
                                                         </button>
                                                     </div>
@@ -676,7 +711,7 @@ Object.assign(App, {
                                                         <button onclick="App.updateAppointmentDuration('${apt.id}', document.getElementById('adj-dur-${apt.id}').value)" class="p-1 bg-amber-500 text-zinc-950 rounded hover:bg-amber-400">
                                                             <i data-lucide="check" class="w-3 h-3"></i>
                                                         </button>
-                                                        <button onclick="App.cancelEditDuration()" class="p-1 bg-zinc-700 text-zinc-300 rounded hover:bg-zinc-600">
+                                                        <button onclick="App.cancelEditDuration()" class="p-1 bg-zinc-700 text-muted-theme rounded hover:bg-zinc-600">
                                                             <i data-lucide="x" class="w-3 h-3"></i>
                                                         </button>
                                                     </div>
@@ -697,7 +732,7 @@ Object.assign(App, {
                                                         <button onclick="App.updateAppointmentTime('${apt.id}', document.getElementById('adj-time-${apt.id}').value)" class="p-1 bg-amber-500 text-zinc-950 rounded hover:bg-amber-400 shadow-sm">
                                                             <i data-lucide="check" class="w-3 h-3"></i>
                                                         </button>
-                                                        <button onclick="App.cancelEditTime()" class="p-1 bg-zinc-700 text-zinc-300 rounded hover:bg-zinc-600 shadow-sm">
+                                                        <button onclick="App.cancelEditTime()" class="p-1 input-bg text-muted-theme rounded hover:bg-zinc-700 shadow-sm border border-theme">
                                                             <i data-lucide="x" class="w-3 h-3"></i>
                                                         </button>
                                                     </div>
@@ -715,10 +750,10 @@ Object.assign(App, {
                                         <a href="https://wa.me/${App.formatWA(apt.clientPhone)}?text=Olá%20${encodeURIComponent(apt.clientName)},%20seu%20horário%20de%20${encodeURIComponent(apt.time)}%20está%20chegando!%20Te%20aguardo." target="_blank" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-semibold">
                                             <i data-lucide="bell-ring" class="w-3.5 h-3.5"></i> Lembrete
                                         </a>
-                                        <a href="https://wa.me/${App.formatWA(apt.clientPhone)}" target="_blank" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 input-bg text-zinc-300 hover:bg-zinc-700 border border-zinc-700 transition-colors text-xs font-semibold">
+                                        <a href="https://wa.me/${App.formatWA(apt.clientPhone)}" target="_blank" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 input-bg text-muted-theme hover:text-theme border border-theme transition-colors text-xs font-semibold">
                                             <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> Mensagem
                                         </a>
-                                        <a href="tel:+55${apt.clientPhone}" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 input-bg text-zinc-300 hover:bg-zinc-700 border border-zinc-700 transition-colors text-xs font-semibold">
+                                        <a href="tel:+55${apt.clientPhone}" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 input-bg text-muted-theme hover:text-theme border border-theme transition-colors text-xs font-semibold">
                                             <i data-lucide="phone" class="w-3.5 h-3.5"></i> Ligar
                                         </a>
                                         <button onclick="App.cancelAppointment('${apt.id}')" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-all text-xs font-bold active:scale-95">
@@ -731,7 +766,7 @@ Object.assign(App, {
                                             <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex flex-col items-center gap-3 fade-in">
                                                 <p class="text-sm font-medium text-amber-500">Confirmar <span class="font-bold uppercase">${this.state.confirmingPaymentMethod}</span>?</p>
                                                 <div class="flex gap-2 w-full">
-                                                    <button onclick="App.cancelCompleteAppointment()" class="flex-1 py-2 rounded-lg font-medium transition-all duration-200 input-bg text-zinc-300 hover:bg-zinc-700 text-xs border border-zinc-700 active:scale-[0.98]">
+                                                    <button onclick="App.cancelCompleteAppointment()" class="flex-1 py-2 rounded-lg font-medium transition-all duration-200 input-bg text-theme hover:bg-zinc-700 text-xs border border-theme active:scale-[0.98]">
                                                         Cancelar
                                                     </button>
                                                     <button onclick="App.completeAppointment()" class="flex-1 py-2 rounded-lg font-bold transition-all duration-200 bg-amber-500 text-zinc-950 hover:bg-amber-400 text-xs shadow-md shadow-amber-500/20 active:scale-[0.98]">
@@ -741,20 +776,20 @@ Object.assign(App, {
                                             </div>
                                         ` : `
                                         <div class="grid grid-cols-2 gap-2">
-                                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Dinheiro')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-zinc-300 hover:bg-zinc-700 border border-zinc-700 text-xs active:scale-[0.98]">
+                                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Dinheiro')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
                                                 <i data-lucide="banknote" class="w-4 h-4 text-emerald-500"></i> Dinheiro
                                             </button>
-                                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Pix')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-zinc-300 hover:bg-zinc-700 border border-zinc-700 text-xs active:scale-[0.98]">
+                                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Pix')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
                                                 <i data-lucide="zap" class="w-4 h-4 text-teal-400"></i> Pix
                                             </button>
-                                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Débito')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-zinc-300 hover:bg-zinc-700 border border-zinc-700 text-xs active:scale-[0.98]">
+                                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Débito')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
                                                 <i data-lucide="credit-card" class="w-4 h-4 text-blue-400"></i> Débito
                                             </button>
-                                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Crédito')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-zinc-300 hover:bg-zinc-700 border border-zinc-700 text-xs active:scale-[0.98]">
+                                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Crédito')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
                                                 <i data-lucide="credit-card" class="w-4 h-4 text-amber-500"></i> Crédito
                                             </button>
                                         </div>
-                                        <button onclick="App.initSplitPayment('${apt.id}')" class="w-full mt-2 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-zinc-700 text-xs active:scale-[0.98]">
+                                            <button onclick="App.initSplitPayment('${apt.id}')" class="w-full mt-2 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 bg-zinc-800 text-muted-theme hover:bg-zinc-700 border border-zinc-700 text-xs active:scale-[0.98]">
                                             <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i> Pagamento Dividido
                                         </button>
                                         `}
@@ -781,7 +816,7 @@ Object.assign(App, {
         return `
                 <div class="space-y-6 fade-in slide-in-up">
                     <div class="flex items-center justify-between">
-                        <h2 class="text-2xl font-bold text-theme">Meus Cortes</h2>
+                        <h2 class="text-2xl font-bold text-theme">Meus Serviço(s)</h2>
                     </div>
 
                     <button onclick="App.startBooking()" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-md shadow-amber-500/20">
@@ -804,12 +839,12 @@ Object.assign(App, {
                                     </p>
                                 </div>
                                 <div class="text-right flex-shrink-0 flex flex-col items-end gap-2">
-                                    <p class="text-sm font-medium text-zinc-300">${apt.service.price.replace('A partir de', '<span class="text-amber-500 font-bold italic">A partir de</span>')}</p>
+                                    <p class="text-sm font-medium text-theme">${apt.service.price.replace('A partir de', '<span class="text-amber-500 font-bold italic">A partir de</span>')}</p>
                                     <div class="flex gap-2">
-                                        <button onclick="App.editAppointment('${apt.id}')" class="p-2 input-bg text-amber-500 rounded-lg hover:bg-zinc-700 transition-colors border border-zinc-700 active:scale-95" title="Alterar Horário">
+                                        <button onclick="App.editAppointment('${apt.id}')" class="p-2 input-bg text-amber-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Alterar Horário">
                                             <i data-lucide="edit-3" class="w-4 h-4"></i>
                                         </button>
-                                        <button onclick="App.cancelAppointment('${apt.id}')" class="p-2 input-bg text-rose-500 rounded-lg hover:bg-zinc-700 transition-colors border border-zinc-700 active:scale-95" title="Cancelar">
+                                        <button onclick="App.cancelAppointment('${apt.id}')" class="p-2 input-bg text-rose-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Cancelar">
                                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                                         </button>
                                     </div>
@@ -916,7 +951,7 @@ Object.assign(App, {
                             </div>
                             <div class="min-w-0 flex-1">
                                 <p class="font-bold text-rose-500 text-sm truncate uppercase">${p.type === 'advance' ? 'Adiantamento (Vale)' : 'Quitação Total'}</p>
-                                <div class="text-[10px] text-zinc-500 mt-0.5 font-mono">${new Date(p.payout_date).toLocaleDateString()}</div>
+                                <div class="text-[10px] text-muted-theme mt-0.5 font-mono">${new Date(p.payout_date).toLocaleDateString()}</div>
                             </div>
                         </div>
                         <div class="text-right flex-shrink-0 flex flex-col items-end min-w-[75px] mt-0.5">
@@ -937,12 +972,12 @@ Object.assign(App, {
                 <div class="flex items-end justify-between mb-2">
                     <h2 class="text-2xl font-bold text-theme">${reportTitle}</h2>
                     <div class="flex items-center gap-2">
-                        <button onclick="App.exportTransactionsToCSV()" class="p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-amber-500 hover:border-amber-500/30 transition-all active:scale-95" title="Exportar CSV">
+                        <button onclick="App.exportTransactionsToCSV()" class="p-2 rounded-lg card-bg border border-theme text-muted-theme hover:text-amber-500 hover:border-amber-500/30 transition-all active:scale-95" title="Exportar CSV">
                             <i data-lucide="download" class="w-4 h-4"></i>
                         </button>
-                        <div class="flex bg-zinc-900 p-1 rounded-lg border border-zinc-800">
-                            <button onclick="App.toggleReportsView('list')" class="px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${this.state.reportsView === 'list' ? 'bg-amber-500 text-zinc-950' : 'text-zinc-500'}">Lista</button>
-                            <button onclick="App.toggleReportsView('dashboard')" class="px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${this.state.reportsView === 'dashboard' ? 'bg-amber-500 text-zinc-950' : 'text-zinc-500'}">Estratégico</button>
+                        <div class="flex card-bg p-1 rounded-lg border border-theme">
+                            <button onclick="App.toggleReportsView('list')" class="px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${this.state.reportsView === 'list' ? 'bg-amber-500 text-zinc-950' : 'text-muted-theme'}">Lista</button>
+                            <button onclick="App.toggleReportsView('dashboard')" class="px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${this.state.reportsView === 'dashboard' ? 'bg-amber-500 text-zinc-950' : 'text-muted-theme'}">Estratégico</button>
                         </div>
                     </div>
                 </div>
@@ -962,11 +997,11 @@ Object.assign(App, {
                         <div class="card-bg border border-theme p-3 rounded-xl flex gap-2 items-end fade-in">
                             <div class="flex-1">
                                 <label class="text-xs text-muted-theme mb-1 block">De</label>
-                                <input type="date" id="report-start-date" value="${this.state.reportsCustomStart}" class="w-full input-bg text-zinc-300 text-sm rounded-lg p-2 border-none outline-none focus:ring-1 focus:ring-amber-500">
+                                <input type="date" id="report-start-date" value="${this.state.reportsCustomStart}" class="w-full input-bg text-theme text-sm rounded-lg p-2 border-none outline-none focus:ring-1 focus:ring-amber-500">
                             </div>
                             <div class="flex-1">
                                 <label class="text-xs text-muted-theme mb-1 block">Até</label>
-                                <input type="date" id="report-end-date" value="${this.state.reportsCustomEnd}" class="w-full input-bg text-zinc-300 text-sm rounded-lg p-2 border-none outline-none focus:ring-1 focus:ring-amber-500">
+                                <input type="date" id="report-end-date" value="${this.state.reportsCustomEnd}" class="w-full input-bg text-theme text-sm rounded-lg p-2 border-none outline-none focus:ring-1 focus:ring-amber-500">
                             </div>
                             <button onclick="App.setCustomReportRange()" class="bg-amber-500 text-zinc-950 p-2 rounded-lg font-bold hover:bg-amber-400 active:scale-95"><i data-lucide="search" class="w-5 h-5"></i></button>
                         </div>
@@ -974,17 +1009,17 @@ Object.assign(App, {
 
                     <!-- Filtro por Método de Pagamento (Chips) -->
                     <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide" style="-ms-overflow-style: none; scrollbar-width: none;">
-                        <button onclick="App.setPaymentFilter('all')" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${this.state.paymentMethodFilter === 'all' ? 'bg-zinc-100 text-zinc-950' : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300'}">Tudo</button>
-                        <button onclick="App.setPaymentFilter('Pix')" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${this.state.paymentMethodFilter === 'Pix' ? 'bg-teal-500 text-zinc-950' : 'bg-zinc-800 text-zinc-500 hover:text-teal-400'} flex items-center gap-1.5">
+                        <button onclick="App.setPaymentFilter('all')" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${this.state.paymentMethodFilter === 'all' ? 'bg-zinc-100 text-zinc-950' : 'input-bg text-muted-theme hover:text-theme'}">Tudo</button>
+                        <button onclick="App.setPaymentFilter('Pix')" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${this.state.paymentMethodFilter === 'Pix' ? 'bg-teal-500 text-zinc-950' : 'input-bg text-muted-theme hover:text-teal-400'} flex items-center gap-1.5">
                             <div class="w-1.5 h-1.5 rounded-full ${this.state.paymentMethodFilter === 'Pix' ? 'bg-zinc-950' : 'bg-teal-500'}"></div> Pix
                         </button>
-                        <button onclick="App.setPaymentFilter('Dinheiro')" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${this.state.paymentMethodFilter === 'Dinheiro' ? 'bg-emerald-500 text-zinc-950' : 'bg-zinc-800 text-zinc-500 hover:text-emerald-400'} flex items-center gap-1.5">
+                        <button onclick="App.setPaymentFilter('Dinheiro')" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${this.state.paymentMethodFilter === 'Dinheiro' ? 'bg-emerald-500 text-zinc-950' : 'input-bg text-muted-theme hover:text-emerald-400'} flex items-center gap-1.5">
                             <div class="w-1.5 h-1.5 rounded-full ${this.state.paymentMethodFilter === 'Dinheiro' ? 'bg-zinc-950' : 'bg-emerald-500'}"></div> Dinheiro
                         </button>
-                        <button onclick="App.setPaymentFilter('Crédito')" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${this.state.paymentMethodFilter === 'Crédito' ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-800 text-zinc-500 hover:text-amber-400'} flex items-center gap-1.5">
+                        <button onclick="App.setPaymentFilter('Crédito')" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${this.state.paymentMethodFilter === 'Crédito' ? 'bg-amber-500 text-zinc-950' : 'input-bg text-muted-theme hover:text-amber-400'} flex items-center gap-1.5">
                             <div class="w-1.5 h-1.5 rounded-full ${this.state.paymentMethodFilter === 'Crédito' ? 'bg-zinc-950' : 'bg-amber-500'}"></div> Crédito
                         </button>
-                        <button onclick="App.setPaymentFilter('Débito')" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${this.state.paymentMethodFilter === 'Débito' ? 'bg-blue-500 text-zinc-950' : 'bg-zinc-800 text-zinc-500 hover:text-blue-400'} flex items-center gap-1.5">
+                        <button onclick="App.setPaymentFilter('Débito')" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${this.state.paymentMethodFilter === 'Débito' ? 'bg-blue-500 text-zinc-950' : 'input-bg text-muted-theme hover:text-blue-400'} flex items-center gap-1.5">
                             <div class="w-1.5 h-1.5 rounded-full ${this.state.paymentMethodFilter === 'Débito' ? 'bg-zinc-950' : 'bg-blue-500'}"></div> Débito
                         </button>
                     </div>
@@ -992,14 +1027,14 @@ Object.assign(App, {
                     <!-- Filtro de Status de Pagamento -->
                     <div class="flex items-center gap-2 mt-2">
                         <span class="text-[9px] font-black text-muted-theme uppercase tracking-widest mr-1 opacity-50">Status:</span>
-                        <button onclick="App.setPaymentStatusFilter('pending')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${this.state.paymentStatusFilter === 'pending' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' : 'bg-zinc-800 text-zinc-500'}">Pendentes</button>
-                        <button onclick="App.setPaymentStatusFilter('all')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${this.state.paymentStatusFilter === 'all' ? 'bg-zinc-200 text-zinc-950 shadow-lg' : 'bg-zinc-800 text-zinc-500'}">Arquivados</button>
+                        <button onclick="App.setPaymentStatusFilter('pending')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${this.state.paymentStatusFilter === 'pending' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' : 'input-bg text-muted-theme'}">Pendentes</button>
+                        <button onclick="App.setPaymentStatusFilter('all')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${this.state.paymentStatusFilter === 'all' ? 'bg-zinc-200 text-zinc-950 shadow-lg' : 'input-bg text-muted-theme'}">Arquivados</button>
                     </div>
                 </div>
                 </div>
 
                 <!-- Resumo Principal -->
-                <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-5 shadow-lg shadow-amber-500/20 relative overflow-hidden transition-all duration-300">
+                <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-5 shadow-theme relative overflow-hidden transition-all duration-300">
                     <div class="absolute right-[-20px] top-[-20px] opacity-20">
                         <i data-lucide="trending-up" class="w-32 h-32 text-zinc-950"></i>
                     </div>
@@ -1051,7 +1086,7 @@ Object.assign(App, {
                                 return `
                                 <div onclick="App.toggleTransactionExpand('${tx.id}')" class="card-bg rounded-xl border ${isExpanded ? 'border-amber-500/50 bg-amber-500/5 shadow-amber-500/10' : 'border-theme shadow-sm'} p-3 shadow-md flex items-start justify-between hover:border-amber-500/30 transition-all gap-3 cursor-pointer group">
                                     <div class="flex items-start gap-3 min-w-0 flex-1">
-                                        <div class="input-bg p-2 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-zinc-800 transition-colors">
+                                        <div class="input-bg p-2 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:input-bg transition-colors">
                                             ${tx.paymentMethod === 'Pix' ? '<i data-lucide="zap" class="w-5 h-5 text-teal-400"></i>' : tx.paymentMethod === 'Dinheiro' ? '<i data-lucide="banknote" class="w-5 h-5 text-emerald-500"></i>' : tx.paymentMethod === 'Débito' ? '<i data-lucide="credit-card" class="w-5 h-5 text-blue-400"></i>' : '<i data-lucide="credit-card" class="w-5 h-5 text-amber-500"></i>'}
                                         </div>
                                         <div class="min-w-0 flex-1">
@@ -1060,9 +1095,9 @@ Object.assign(App, {
                                                 <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-muted-theme transition-transform duration-300 ${isExpanded ? 'rotate-180 text-amber-500' : 'group-hover:translate-y-0.5'}"></i>
                                             </div>
                                             <div class="text-[10px] text-muted-theme flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                                <span class="bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700 font-bold text-amber-500 uppercase tracking-tighter flex-shrink-0">${tx.paymentMethod}</span>
+                                                <span class="input-bg px-1.5 py-0.5 rounded border border-theme font-bold text-amber-500 uppercase tracking-tighter flex-shrink-0">${tx.paymentMethod}</span>
                                                 <span class="opacity-30 flex-shrink-0">•</span>
-                                                <span class="${isExpanded ? 'whitespace-normal leading-relaxed text-zinc-300' : 'truncate block'} transition-all">${tx.service.name}</span>
+                                                <span class="${isExpanded ? 'whitespace-normal leading-relaxed text-theme' : 'truncate block'} transition-all">${tx.service.name}</span>
                                                 ${isManagement && tx.barberName ? `
                                                     <span class="opacity-30 flex-shrink-0">•</span>
                                                     <span class="text-amber-500 font-bold uppercase tracking-tighter bg-amber-500/10 px-1 rounded truncate flex-shrink-0">${tx.barberName.split(' ')[0]}</span>
@@ -1105,22 +1140,22 @@ Object.assign(App, {
                 <!-- Header -->
                 <div class="flex items-end justify-between mb-2">
                     <h2 class="text-2xl font-bold text-theme italic">Business Intelligence</h2>
-                    <div class="flex bg-zinc-900 p-1 rounded-lg border border-zinc-800">
-                        <button onclick="App.toggleReportsView('list')" class="px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all text-zinc-500">Lista</button>
+                    <div class="flex card-bg p-1 rounded-lg border border-theme">
+                        <button onclick="App.toggleReportsView('list')" class="px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all text-muted-theme">Lista</button>
                         <button onclick="App.toggleReportsView('dashboard')" class="px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all bg-amber-500 text-zinc-950">Estratégico</button>
                     </div>
                 </div>
 
                 <!-- KPI Cards Grid -->
                 <div class="grid grid-cols-2 gap-3">
-                    <div class="card-bg border border-zinc-800 p-4 rounded-2xl space-y-1 shadow-sm">
+                    <div class="card-bg border border-theme p-4 rounded-2xl space-y-1 shadow-sm">
                         <p class="text-[10px] uppercase font-black text-muted-theme tracking-widest">Ticket Médio</p>
                         <h4 class="text-xl font-bold text-theme">R$ ${stats.avgTicket.toFixed(2)}</h4>
-                        <div class="flex items-center gap-1 text-[10px] text-zinc-500">
+                        <div class="flex items-center gap-1 text-[10px] text-muted-theme">
                             <i data-lucide="info" class="w-3 h-3"></i> este mês
                         </div>
                     </div>
-                    <div class="card-bg border border-zinc-800 p-4 rounded-2xl space-y-1 shadow-sm">
+                    <div class="card-bg border border-theme p-4 rounded-2xl space-y-1 shadow-sm">
                         <p class="text-[10px] uppercase font-black text-muted-theme tracking-widest">Crescimento</p>
                         <h4 class="text-xl font-bold ${growthColor}">${stats.growth >= 0 ? '+' : ''}${stats.growth.toFixed(1)}%</h4>
                         <div class="flex items-center gap-1 text-[10px] ${growthColor}">
@@ -1143,10 +1178,10 @@ Object.assign(App, {
                 <!-- Main Revenue Chart -->
                 <div class="card-bg border border-theme p-5 rounded-3xl shadow-xl space-y-4">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-sm font-bold text-white flex items-center gap-2 italic">
+                        <h3 class="text-sm font-bold text-theme flex items-center gap-2 italic">
                             <i data-lucide="line-chart" class="w-4 h-4 text-amber-500"></i> Evolução de Faturamento
                         </h3>
-                        <span class="text-[10px] bg-zinc-800 px-2 py-0.5 rounded text-zinc-400 font-bold uppercase tracking-tighter">Últimos 6 meses</span>
+                        <span class="text-[10px] input-bg px-2 py-0.5 rounded text-muted-theme font-bold uppercase tracking-tighter">Últimos 6 meses</span>
                     </div>
                     <div class="h-48 w-full relative">
                         <canvas id="revenueGrowthChart"></canvas>
@@ -1158,12 +1193,12 @@ Object.assign(App, {
                     <h3 class="text-xs font-bold text-muted-theme uppercase tracking-widest">Mix de Serviços (Popularidade)</h3>
                     <div class="space-y-2">
                         ${stats.topServices.map((s, idx) => `
-                            <div class="flex items-center justify-between p-3 card-bg rounded-xl border border-zinc-800/50">
+                            <div class="flex items-center justify-between p-3 card-bg rounded-xl border border-theme/50">
                                 <div class="flex items-center gap-3">
-                                    <span class="w-6 h-6 rounded flex items-center justify-center bg-zinc-800 text-[10px] font-black ${idx === 0 ? 'text-amber-500 border border-amber-500/20' : 'text-zinc-500'}">${idx + 1}</span>
+                                    <span class="w-6 h-6 rounded flex items-center justify-center input-bg text-[10px] font-black ${idx === 0 ? 'text-amber-500 border border-amber-500/20' : 'text-muted-theme'}">${idx + 1}</span>
                                     <span class="text-sm font-medium text-theme">${App.escapeHTML(s.name)}</span>
                                 </div>
-                                <span class="text-xs font-bold text-zinc-400">${s.count} <span class="text-[10px] font-normal uppercase opacity-50">cortes</span></span>
+                                <span class="text-xs font-bold text-muted-theme">${s.count} <span class="text-[10px] font-normal uppercase opacity-50">serviço(s)</span></span>
                             </div>
                         `).join('')}
                     </div>
@@ -1204,7 +1239,7 @@ Object.assign(App, {
                             <h2 class="text-2xl font-bold text-theme">Editar Barbearia</h2>
                             <p class="text-xs text-muted-theme">Atualize sua marca e contatos.</p>
                         </div>
-                        <button onclick="App.toggleShopEdit()" class="p-2 input-bg rounded-full text-muted-theme hover:text-white">
+                        <button onclick="App.toggleShopEdit()" class="p-2 input-bg rounded-full text-muted-theme hover:text-theme">
                             <i data-lucide="x" class="w-5 h-5"></i>
                         </button>
                     </div>
@@ -1218,18 +1253,18 @@ Object.assign(App, {
                     <div class="card-bg rounded-2xl border border-theme p-6 space-y-5 shadow-xl">
                         <div class="space-y-2">
                             <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Nome da Barbearia</label>
-                            <input type="text" id="shop-name" value="${App.escapeHTML(s.name)}" class="w-full input-bg border border-zinc-700 rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
+                            <input type="text" id="shop-name" value="${App.escapeHTML(s.name)}" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
                         </div>
                         <div class="space-y-2">
                             <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Slogan / Frase de Impacto</label>
-                            <input type="text" id="shop-slogan" value="${s.slogan || ''}" placeholder="Ex: A melhor experiência em estilo e cuidado." class="w-full input-bg border border-zinc-700 rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
+                            <input type="text" id="shop-slogan" value="${s.slogan || ''}" placeholder="Ex: A melhor experiência em estilo e cuidado." class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
                         </div>
 
                         <div class="space-y-2">
                             <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Logo da Barbearia</label>
                             
-                            <div class="flex items-center gap-4 p-4 card-bg border border-zinc-700 rounded-2xl">
-                                <div class="relative w-16 h-16 rounded-xl overflow-hidden bg-zinc-800 border-2 border-zinc-700 flex-shrink-0">
+                            <div class="flex items-center gap-4 p-4 card-bg border border-theme rounded-2xl">
+                                <div class="relative w-16 h-16 rounded-xl overflow-hidden input-bg border-2 border-theme flex-shrink-0">
                                     ${s.logo_url ? `
                                         <img src="${s.logo_url}" class="w-full h-full object-cover" />
                                     ` : `
@@ -1248,7 +1283,7 @@ Object.assign(App, {
                                 <div class="flex-1 space-y-2">
                                     <p class="text-[10px] text-muted-theme leading-tight">Envie uma imagem JPG ou PNG. Recomendamos um formato quadrado ou horizontal.</p>
                                     <div class="flex gap-2">
-                                        <label for="shop-logo-input" class="cursor-pointer px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-theme text-[10px] font-bold uppercase rounded-lg transition-colors flex items-center gap-2">
+                                        <label for="shop-logo-input" class="cursor-pointer px-3 py-1.5 input-bg hover:bg-zinc-700 border border-theme text-theme text-[10px] font-bold uppercase rounded-lg transition-colors flex items-center gap-2">
                                             <i data-lucide="upload" class="w-3.5 h-3.5 text-amber-500"></i>
                                             ${s.logo_url ? 'Trocar Imagem' : 'Enviar Logo'}
                                             <input type="file" id="shop-logo-input" class="hidden" accept="image/*" onchange="App.handleShopLogoUpload(event)" ${this.state.isUploadingLogo ? 'disabled' : ''} />
@@ -1262,21 +1297,21 @@ Object.assign(App, {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="space-y-2">
                                 <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Rua e Número</label>
-                                <input type="text" id="shop-street" value="${s.address_street}" class="w-full input-bg border border-zinc-700 rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
+                                <input type="text" id="shop-street" value="${s.address_street}" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
                             </div>
                             <div class="space-y-2">
                                 <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Cidade / Estado</label>
-                                <input type="text" id="shop-city" value="${s.address_city}" class="w-full input-bg border border-zinc-700 rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
+                                <input type="text" id="shop-city" value="${s.address_city}" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="space-y-2">
                                 <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">WhatsApp (Apenas Números)</label>
-                                <input type="text" id="shop-whatsapp" inputmode="numeric" value="${s.whatsapp}" class="w-full input-bg border border-zinc-700 rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
+                                <input type="text" id="shop-whatsapp" inputmode="numeric" value="${s.whatsapp}" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
                             </div>
                             <div class="space-y-2">
                                 <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Telefone Comercial</label>
-                                <input type="text" id="shop-phone" inputmode="numeric" value="${s.phone}" class="w-full input-bg border border-zinc-700 rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
+                                <input type="text" id="shop-phone" inputmode="numeric" value="${s.phone}" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
                             </div>
                         </div>
                         
@@ -1287,9 +1322,9 @@ Object.assign(App, {
                                     const isOpen = (s.working_days || [1,2,3,4,5,6]).includes(idx);
                                     return `
                                         <button 
-                                            onclick="this.classList.toggle('active'); this.classList.toggle('bg-zinc-800'); this.classList.toggle('bg-amber-500'); this.classList.toggle('text-muted-theme'); this.classList.toggle('text-zinc-950');"
+                                            onclick="this.classList.toggle('active'); this.classList.toggle('input-bg'); this.classList.toggle('bg-amber-500'); this.classList.toggle('text-muted-theme'); this.classList.toggle('text-zinc-950');"
                                             data-day="${idx}" 
-                                            class="day-selector flex-1 py-3 px-2 rounded-xl text-[10px] font-black uppercase transition-all border border-zinc-700 ${isOpen ? 'active bg-amber-500 text-zinc-950' : 'bg-zinc-800 text-muted-theme'}"
+                                            class="day-selector flex-1 py-3 px-2 rounded-xl text-[10px] font-black uppercase transition-all border border-theme ${isOpen ? 'active bg-amber-500 text-zinc-950' : 'input-bg text-muted-theme'}"
                                         >
                                             ${day}
                                         </button>
@@ -1303,21 +1338,21 @@ Object.assign(App, {
 
                             <div class="space-y-2">
                                 <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">URL Instagram</label>
-                                <input type="text" id="shop-instagram" value="${s.instagram_url}" class="w-full input-bg border border-zinc-700 rounded-xl p-2 text-theme focus:border-amber-500 outline-none transition-colors text-xs" />
+                                <input type="text" id="shop-instagram" value="${s.instagram_url}" class="w-full input-bg border border-theme rounded-xl p-2 text-theme focus:border-amber-500 outline-none transition-colors text-xs" />
                             </div>
                             <div class="space-y-2">
                                 <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">URL Facebook</label>
-                                <input type="text" id="shop-facebook" value="${s.facebook_url || ''}" class="w-full input-bg border border-zinc-700 rounded-xl p-2 text-theme focus:border-amber-500 outline-none transition-colors text-xs" />
+                                <input type="text" id="shop-facebook" value="${s.facebook_url || ''}" class="w-full input-bg border border-theme rounded-xl p-2 text-theme focus:border-amber-500 outline-none transition-colors text-xs" />
                             </div>
                             <div class="space-y-2">
                                 <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">URL do Google (Avaliação)</label>
-                                <input type="text" id="shop-google" value="${s.google_review_url}" class="w-full input-bg border border-zinc-700 rounded-xl p-2 text-theme focus:border-amber-500 outline-none transition-colors text-xs" />
+                                <input type="text" id="shop-google" value="${s.google_review_url}" class="w-full input-bg border border-theme rounded-xl p-2 text-theme focus:border-amber-500 outline-none transition-colors text-xs" />
                             </div>
                         </div>
                     </div>
 
                     <div class="flex gap-3 pt-4">
-                        <button onclick="App.toggleShopEdit()" class="flex-1 py-4 rounded-xl font-bold transition-all duration-200 input-bg text-muted-theme hover:bg-zinc-700 border border-zinc-700 shadow-sm">
+                        <button onclick="App.toggleShopEdit()" class="flex-1 py-4 rounded-xl font-bold transition-all duration-200 input-bg text-muted-theme hover:bg-zinc-700 border border-theme shadow-sm">
                             Cancelar
                         </button>
                         <button onclick="App.saveShopSettings()" class="flex-1 py-4 rounded-xl font-bold transition-all duration-200 bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-xl shadow-amber-500/20">
@@ -1338,12 +1373,12 @@ Object.assign(App, {
                     </div>
                     <div class="flex gap-2">
                         ${['admin', 'manager', 'barber'].includes(this.state.role) ? `
-                            <button onclick="App.toggleShopManagement()" class="p-2.5 bg-zinc-800 text-white rounded-xl hover:bg-zinc-700 transition-all active:scale-95 shadow-lg border border-zinc-700 flex items-center gap-2 font-bold text-xs" title="Gestão Avançada">
-                                <i data-lucide="settings" class="w-4 h-4 text-zinc-300"></i> Painel
+                            <button onclick="App.toggleShopManagement()" class="p-2.5 input-bg text-theme rounded-xl hover:bg-zinc-700 transition-all active:scale-95 shadow-lg border border-theme flex items-center gap-2 font-bold text-xs" title="Gestão Avançada">
+                                <i data-lucide="settings" class="w-4 h-4 text-theme"></i> Painel
                             </button>
                         ` : ''}
                         ${isStaff ? `
-                            <button onclick="App.toggleShopEdit()" class="p-2.5 bg-amber-500 text-zinc-950 rounded-xl hover:bg-amber-400 transition-all active:scale-95 shadow-lg shadow-amber-500/20 flex items-center gap-2 font-bold text-xs">
+                            <button onclick="App.toggleShopEdit()" class="p-2.5 bg-amber-500 text-zinc-950 rounded-xl hover:bg-amber-400 transition-all active:scale-95 shadow-theme flex items-center gap-2 font-bold text-xs">
                                 <i data-lucide="edit-3" class="w-4 h-4"></i> Editar
                             </button>
                         ` : ''}
@@ -1354,7 +1389,7 @@ Object.assign(App, {
                 <div class="relative card-bg border border-theme rounded-3xl p-8 shadow-xl overflow-hidden flex flex-col items-center text-center mt-4">
                     <div class="absolute top-0 right-0 w-40 h-40 bg-amber-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
                     
-                    <div class="w-24 h-24 rounded-full flex items-center justify-center mb-5 z-10 border-4 border-zinc-950 shadow-2xl relative overflow-hidden bg-zinc-900">
+                    <div class="w-24 h-24 rounded-full flex items-center justify-center mb-5 z-10 border-4 border-zinc-950 shadow-2xl relative overflow-hidden card-bg">
                         ${s.logo_url ? `
                             <img src="${s.logo_url}" alt="Logo" class="w-full h-full object-cover">
                         ` : `
@@ -1378,7 +1413,7 @@ Object.assign(App, {
                             <span class="text-xs font-black uppercase tracking-tighter">WhatsApp</span>
                         </a>
                         <a href="tel:+55${s.phone.replace(/\D/g, '')}" class="input-bg text-theme border border-theme/50 hover:bg-zinc-700 transition-all duration-300 rounded-3xl p-4 flex flex-col items-center gap-3 justify-center shadow-lg active:scale-95">
-                            <div class="bg-zinc-800 p-2.5 rounded-xl border border-white/5">
+                            <div class="input-bg p-2.5 rounded-xl border border-white/5">
                                 <i data-lucide="phone" class="w-6 h-6"></i>
                             </div>
                             <span class="text-xs font-black uppercase tracking-tighter">${this.formatDisplayPhone(s.phone)}</span>
@@ -1399,7 +1434,7 @@ Object.assign(App, {
                     
                     <!-- Novo: Botão Google Review -->
                     <div class="mt-4 pt-4 border-t border-theme/20">
-                        <a href="${s.google_review_url}" target="_blank" class="w-full bg-zinc-800/40 hover:bg-zinc-800/60 border border-theme/50 transition-all duration-300 rounded-3xl p-5 flex items-center justify-between shadow-sm group active:scale-[0.98]">
+                        <a href="${s.google_review_url}" target="_blank" class="w-full input-bg/40 hover:input-bg/60 border border-theme/50 transition-all duration-300 rounded-3xl p-5 flex items-center justify-between shadow-sm group active:scale-[0.98]">
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center p-2 shadow-2xl">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="w-full h-full">
@@ -1424,7 +1459,7 @@ Object.assign(App, {
                     </h3>
                     <div class="card-bg border border-theme rounded-3xl p-6 shadow-xl flex flex-col gap-6 group hover:border-amber-500/30 transition-all duration-300">
                         <div class="flex items-center gap-5">
-                            <div class="bg-zinc-900 border border-amber-500/20 p-4 rounded-2xl text-amber-500 self-start shadow-inner group-hover:bg-amber-500 group-hover:text-zinc-950 transition-all duration-500">
+                            <div class="card-bg border border-amber-500/20 p-4 rounded-2xl text-amber-500 self-start shadow-inner group-hover:bg-amber-500 group-hover:text-zinc-950 transition-all duration-500">
                                 <i data-lucide="map-pin" class="w-7 h-7"></i>
                             </div>
                             <div class="flex-1">
@@ -1432,15 +1467,15 @@ Object.assign(App, {
                                 <p class="text-sm text-muted-theme font-medium mt-1">${s.address_city}</p>
                             </div>
                             <div class="flex gap-2">
-                                <button onclick="App.copyAddress()" class="p-3 bg-zinc-800 text-amber-500 rounded-xl hover:bg-zinc-700 transition-all active:scale-95 border border-amber-500/10 shadow-sm" title="Copiar Endereço">
+                                <button onclick="App.copyAddress()" class="p-3 input-bg text-amber-500 rounded-xl hover:bg-zinc-700 transition-all active:scale-95 border border-amber-500/10 shadow-sm" title="Copiar Endereço">
                                     <i data-lucide="copy" class="w-5 h-5"></i>
                                 </button>
-                                <button onclick="App.shareLocation()" class="p-3 bg-zinc-800 text-amber-500 rounded-xl hover:bg-zinc-700 transition-all active:scale-95 border border-amber-500/10 shadow-sm" title="Compartilhar">
+                                <button onclick="App.shareLocation()" class="p-3 input-bg text-amber-500 rounded-xl hover:bg-zinc-700 transition-all active:scale-95 border border-amber-500/10 shadow-sm" title="Compartilhar">
                                     <i data-lucide="share-2" class="w-5 h-5"></i>
                                 </button>
                             </div>
                         </div>
-                        <a href="https://maps.google.com/?q=${encodeURIComponent(s.address_street + ', ' + s.address_city)}" target="_blank" class="w-full py-4 rounded-2xl font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.98] bg-zinc-900 text-amber-500 border border-amber-500/20 hover:bg-amber-500 hover:text-zinc-950 hover:border-amber-500 shadow-lg text-xs uppercase tracking-widest">
+                        <a href="https://maps.google.com/?q=${encodeURIComponent(s.address_street + ', ' + s.address_city)}" target="_blank" class="w-full py-4 rounded-2xl font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.98] card-bg text-amber-500 border border-amber-500/20 hover:bg-amber-500 hover:text-zinc-950 hover:border-amber-500 shadow-lg text-xs uppercase tracking-widest">
                             <i data-lucide="navigation" class="w-5 h-5"></i> Como chegar pelo Mapa
                         </a>
                     </div>
@@ -1461,29 +1496,35 @@ Object.assign(App, {
                     <h3 class="text-xs font-bold text-muted-theme uppercase tracking-wider mt-6 mb-2">Equipe Atual</h3>
                     <div class="space-y-3">
                         ${BARBERS.map(b => `
-                            <div class="card-bg border ${b.is_active ? 'border-theme' : 'border-red-500/30 opacity-60'} rounded-2xl p-4 shadow-sm flex flex-col gap-4 hover:border-zinc-700 transition-all">
+                            <div class="card-bg border ${b.is_active ? 'border-theme' : 'border-red-500/30 opacity-60'} rounded-2xl p-4 shadow-sm flex flex-col gap-4 hover:border-theme transition-all">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-3">
-                                        <img src="${b.avatar}" class="w-10 h-10 rounded-full object-cover border border-zinc-700" />
+                                        <div class="w-10 h-10 rounded-full overflow-hidden border border-theme flex-shrink-0 flex items-center justify-center bg-zinc-800">
+                                            ${b.avatar ? `
+                                                <img src="${b.avatar}" class="w-full h-full object-cover" />
+                                            ` : `
+                                                <span class="text-base font-black text-amber-500/70">${(b.name?.[0] || 'P').toUpperCase()}</span>
+                                            `}
+                                        </div>
                                         <div>
                                             <h4 class="font-bold text-theme text-sm">${App.escapeHTML(b.name)}</h4>
                                             <p class="text-[9px] uppercase text-muted-theme tracking-widest">${b.is_active ? '<span class="text-emerald-500 font-black">Ativo</span>' : '<span class="text-red-500 font-bold">Inativo</span>'}</p>
                                         </div>
                                     </div>
                                     <div class="flex gap-2">
-                                        <button onclick="App.renderBarberServicesModal(${b.id})" class="p-2 input-bg text-amber-500 rounded-lg hover:bg-zinc-700 transition-colors border border-zinc-700 active:scale-95" title="Definir Serviços (Especialidades)">
+                                        <button onclick="App.renderBarberServicesModal(${b.id})" class="p-2 input-bg text-amber-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Definir Serviços (Especialidades)">
                                             <i data-lucide="scissors" class="w-3.5 h-3.5"></i>
                                         </button>
-                                        <button onclick="App.toggleBarberStatus(${b.id})" class="p-2 input-bg rounded-lg hover:bg-zinc-700 transition-colors border border-zinc-700 active:scale-95" title="${b.is_active ? 'Desativar' : 'Ativar'}">
+                                        <button onclick="App.toggleBarberStatus(${b.id})" class="p-2 input-bg rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="${b.is_active ? 'Desativar' : 'Ativar'}">
                                             <i data-lucide="${b.is_active ? 'pause' : 'play'}" class="w-3.5 h-3.5 ${b.is_active ? 'text-amber-500' : 'text-emerald-500'}"></i>
                                         </button>
-                                        <button onclick="App.removeBarber(${b.id})" class="p-2 input-bg text-red-500 rounded-lg hover:bg-zinc-700 transition-colors border border-zinc-700 active:scale-95" title="Remover Barbeiro">
+                                        <button onclick="App.removeBarber(${b.id})" class="p-2 input-bg text-red-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Remover Barbeiro">
                                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                         </button>
                                     </div>
                                 </div>
                                 
-                                <div class="flex items-center gap-3 pt-3 border-t border-zinc-800/50">
+                                <div class="flex items-center gap-3 pt-3 border-t border-theme/50">
                                     <div class="flex-1">
                                         <label class="text-[9px] font-black text-muted-theme uppercase tracking-widest block mb-1">Repasse Individual (%)</label>
                                         <p class="text-[8px] text-muted-theme/60 italic leading-tight">Deixe vazio para usar o padrão da casa.</p>
@@ -1495,7 +1536,7 @@ Object.assign(App, {
                                             placeholder="${this.state.shopSettings?.commission_rate || 100}"
                                             onchange="App.updateBarberCommission(${b.id}, this.value)"
                                             min="0" max="100" 
-                                            class="w-full card-bg border border-zinc-700 rounded-lg p-2 text-xs text-amber-500 font-bold text-center focus:border-amber-500 outline-none shadow-inner" 
+                                            class="w-full card-bg border border-theme rounded-lg p-2 text-xs text-amber-500 font-bold text-center focus:border-amber-500 outline-none shadow-inner" 
                                         />
                                         <div class="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] text-amber-500/30 font-bold">%</div>
                                     </div>
@@ -1523,21 +1564,21 @@ Object.assign(App, {
                         
                         <div class="space-y-2">
                             <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Nome do Serviço *</label>
-                            <input type="text" id="new-service-name" value="${editingSvc ? App.escapeHTML(editingSvc.name) : ''}" placeholder="Ex: Corte Degrade + Barba" class="w-full input-bg border border-zinc-700 rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
+                            <input type="text" id="new-service-name" value="${editingSvc ? App.escapeHTML(editingSvc.name) : ''}" placeholder="Ex: Corte Degrade + Barba" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div class="space-y-2">
                                 <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Preço (R$) *</label>
-                                <input type="number" id="new-service-price" value="${editingSvc ? editingSvc.priceValue : ''}" inputmode="decimal" placeholder="45.00" step="0.01" class="w-full input-bg border border-zinc-700 rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
+                                <input type="number" id="new-service-price" value="${editingSvc ? editingSvc.priceValue : ''}" inputmode="decimal" placeholder="45.00" step="0.01" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
                             </div>
                             <div class="space-y-2">
                                 <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Duração (Minutos) *</label>
-                                <input type="number" id="new-service-duration" value="${editingSvc ? editingSvc.durationMinutes : ''}" inputmode="numeric" placeholder="30" class="w-full input-bg border border-zinc-700 rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
+                                <input type="number" id="new-service-duration" value="${editingSvc ? editingSvc.durationMinutes : ''}" inputmode="numeric" placeholder="30" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
                             </div>
                         </div>
 
                         <!-- Checkbox: Preço Variável -->
-                        <label class="flex items-center gap-3 p-3 rounded-xl bg-zinc-900 border border-zinc-700/50 cursor-pointer hover:border-amber-500/40 transition-colors group">
+                        <label class="flex items-center gap-3 p-3 rounded-xl card-bg border border-theme/50 cursor-pointer hover:border-amber-500/40 transition-colors group">
                             <input
                                 type="checkbox"
                                 id="new-service-price-variable"
@@ -1564,19 +1605,14 @@ Object.assign(App, {
                     </h3>
                     <div class="space-y-3" id="services-sortable-list">
                         ${SERVICES.map((s, idx) => `
-                            <div class="card-bg border border-theme rounded-2xl p-4 shadow-sm flex items-center gap-3 transition-all group hover:border-amber-500" data-service-id="${s.id}">
-                                <!-- Handle de ordem + setas -->
-                                <div class="flex flex-col gap-1 flex-shrink-0">
-                                    <button onclick="App.reorderService(${s.id}, 'up')" ${idx === 0 ? 'disabled' : ''} class="p-1 rounded-lg transition-colors ${idx === 0 ? 'text-zinc-700 cursor-not-allowed' : 'text-zinc-400 hover:text-amber-500 hover:bg-zinc-800 active:scale-95'}" title="Mover para cima">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                                    </button>
-                                    <button onclick="App.reorderService(${s.id}, 'down')" ${idx === SERVICES.length - 1 ? 'disabled' : ''} class="p-1 rounded-lg transition-colors ${idx === SERVICES.length - 1 ? 'text-zinc-700 cursor-not-allowed' : 'text-zinc-400 hover:text-amber-500 hover:bg-zinc-800 active:scale-95'}" title="Mover para baixo">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                                    </button>
+                            <div class="card-bg border border-theme rounded-2xl p-4 shadow-sm flex items-center gap-4 transition-all group hover:border-amber-500 cursor-default" data-service-id="${s.id}">
+                                <!-- Handle de arrasto -->
+                                <div class="sortable-handle cursor-grab active:cursor-grabbing p-2 -ml-2 text-zinc-600 hover:text-amber-500 transition-colors flex-shrink-0">
+                                    <i data-lucide="grip-vertical" class="w-5 h-5"></i>
                                 </div>
 
-                                <!-- Número de ordem -->
-                                <div class="w-6 h-6 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-black text-zinc-500 flex-shrink-0">
+                                <!-- Número de ordem (opcional, mas ajuda no visual) -->
+                                <div class="w-6 h-6 rounded-lg input-bg border border-theme flex items-center justify-center text-[10px] font-black text-muted-theme flex-shrink-0">
                                     ${idx + 1}
                                 </div>
 
@@ -1592,10 +1628,10 @@ Object.assign(App, {
 
                                 <!-- Ações -->
                                 <div class="flex gap-2 flex-shrink-0">
-                                    <button onclick="App.initEditService(${s.id})" class="p-2 input-bg text-amber-500 rounded-lg hover:bg-zinc-700 transition-colors border border-zinc-700 active:scale-95" title="Editar">
+                                    <button onclick="App.initEditService(${s.id})" class="p-2 input-bg text-amber-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Editar">
                                         <i data-lucide="edit-2" class="w-4 h-4"></i>
                                     </button>
-                                    <button onclick="App.removeService(${s.id})" class="p-2 input-bg text-red-500 rounded-lg hover:bg-zinc-700 transition-colors border border-zinc-700 active:scale-95" title="Remover">
+                                    <button onclick="App.removeService(${s.id})" class="p-2 input-bg text-red-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Remover">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                                     </button>
                                 </div>
@@ -1641,9 +1677,9 @@ Object.assign(App, {
                     </div>
                     
                     <!-- Aba de tipo de bloqueio (Recorrente vs Específico) -->
-                    <div class="flex gap-2 p-1 bg-zinc-900 rounded-xl">
-                        <button onclick="App.setAdminScheduleDate('')" class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${!selectedDate ? 'bg-amber-500 text-zinc-950' : 'text-zinc-500 hover:text-zinc-300'}">Diário / Fixo</button>
-                        <button onclick="App.setAdminScheduleDate('${new Date().toISOString().split('T')[0]}')" class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${selectedDate ? 'bg-amber-500 text-zinc-950' : 'text-zinc-500 hover:text-zinc-300'}">Data Específica</button>
+                    <div class="flex gap-2 p-1 card-bg rounded-xl">
+                        <button onclick="App.setAdminScheduleDate('')" class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${!selectedDate ? 'bg-amber-500 text-zinc-950' : 'text-muted-theme hover:text-theme'}">Diário / Fixo</button>
+                        <button onclick="App.setAdminScheduleDate('${new Date().toISOString().split('T')[0]}')" class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${selectedDate ? 'bg-amber-500 text-zinc-950' : 'text-muted-theme hover:text-theme'}">Data Específica</button>
                     </div>
 
                     <!-- Ações em Massa -->
@@ -1689,9 +1725,9 @@ Object.assign(App, {
             
             contentHtml = `
                 <div class="space-y-4 fade-in">
-                    <div class="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-4 mb-2 flex items-start gap-3">
-                        <i data-lucide="shield" class="w-5 h-5 text-zinc-400 mt-0.5"></i>
-                        <p class="text-xs text-zinc-400 font-medium leading-relaxed">
+                    <div class="input-bg/50 border border-theme/50 rounded-xl p-4 mb-2 flex items-start gap-3">
+                        <i data-lucide="shield" class="w-5 h-5 text-muted-theme mt-0.5"></i>
+                        <p class="text-xs text-muted-theme font-medium leading-relaxed">
                             Apenas usuários com nível <b>Admin</b> podem alterar permissões. Promover para Barbeiro já cadastra na equipe.
                         </p>
                     </div>
@@ -1703,9 +1739,9 @@ Object.assign(App, {
                                 <p class="text-xs font-bold tracking-widest uppercase opacity-40">Buscando Contas...</p>
                             </div>
                         ` : CLIENTES.map(c => `
-                            <div class="card-bg border border-zinc-700/50 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
+                            <div class="card-bg border border-theme/50 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700 font-bold text-theme">
+                                    <div class="w-10 h-10 rounded-full input-bg flex items-center justify-center border border-theme font-bold text-theme">
                                         ${(c.name || 'U')[0].toUpperCase()}
                                     </div>
                                     <div>
@@ -1714,7 +1750,7 @@ Object.assign(App, {
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 w-full md:w-auto">
-                                    <select id="role-select-${c.id}" class="flex-1 md:w-auto bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-xs text-theme focus:border-amber-500 outline-none">
+                                    <select id="role-select-${c.id}" class="flex-1 md:w-auto card-bg border border-theme rounded-lg p-2 text-xs text-theme focus:border-amber-500 outline-none">
                                         <option value="client" ${c.role === 'client' ? 'selected' : ''}>Cliente</option>
                                         <option value="barber" ${c.role === 'barber' ? 'selected' : ''}>Barbeiro</option>
                                         <option value="manager" ${c.role === 'manager' ? 'selected' : ''}>Gerente</option>
@@ -1737,8 +1773,8 @@ Object.assign(App, {
             contentHtml = `
                     <div class="space-y-4 pb-4">
                         <div class="relative w-full">
-                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500"></i>
-                            <input oninput="App.filterGestaoClients(this.value)" type="text" placeholder="Buscar por cliente, telefone..." class="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3 pl-10 pr-4 text-theme text-sm focus:border-amber-500 outline-none transition-colors shadow-inner" />
+                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-theme"></i>
+                            <input oninput="App.filterGestaoClients(this.value)" type="text" placeholder="Buscar por cliente, telefone..." class="w-full card-bg border border-theme rounded-xl py-3 pl-10 pr-4 text-theme text-sm focus:border-amber-500 outline-none transition-colors shadow-inner" />
                         </div>
                         <div class="space-y-3" id="admin-clients-list">
                         ${sortedClients.length === 0 ? `
@@ -1747,9 +1783,9 @@ Object.assign(App, {
                                 <p class="text-[10px] font-bold tracking-widest uppercase opacity-40">Nenhum cliente...</p>
                             </div>
                         ` : sortedClients.map(client => `
-                            <div class="client-gestao-card card-bg rounded-2xl border border-zinc-700/50 p-4 shadow-sm flex flex-col gap-4 hover:border-zinc-600 transition-colors" data-search="${App.escapeHTML(client.name)} ${client.phone} ${client.email}">
+                            <div class="client-gestao-card card-bg rounded-2xl border border-theme/50 p-4 shadow-sm flex flex-col gap-4 hover:border-zinc-600 transition-colors" data-search="${App.escapeHTML(client.name)} ${client.phone} ${client.email}">
                                 <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-amber-500 text-lg">
+                                    <div class="w-12 h-12 rounded-full input-bg border border-theme flex items-center justify-center font-bold text-amber-500 text-lg">
                                         ${(client.name || 'U')[0].toUpperCase()}
                                     </div>
                                     <div class="flex-1 min-w-0">
@@ -1761,16 +1797,16 @@ Object.assign(App, {
                                     <div class="text-right flex-shrink-0">
                                         <div class="inline-flex flex-col items-center justify-center bg-amber-500/10 border border-amber-500/20 rounded-xl px-2 py-1 min-w-[45px]">
                                             <span class="text-amber-500 font-bold text-xs leading-none">${client.cut_count || 0}</span>
-                                            <span class="text-[8px] text-amber-500/80 font-black uppercase mt-0.5 tracking-tighter">Cortes</span>
+                                            <span class="text-[8px] text-amber-500/80 font-black uppercase mt-0.5 tracking-tighter">Serviço(s)</span>
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <div class="flex gap-2 pt-3 border-t border-zinc-800">
+                                <div class="flex gap-2 pt-3 border-t border-theme">
                                     <a href="https://wa.me/${App.formatWA(client.phone)}" target="_blank" class="flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-bold border border-[#25D366]/10">
                                         <i data-lucide="message-square" class="w-4 h-4"></i> Whats
                                     </a>
-                                    <a href="tel:+55${client.phone}" class="flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-zinc-700 transition-colors text-xs font-bold">
+                                    <a href="tel:+55${client.phone}" class="flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme transition-colors text-xs font-bold">
                                         <i data-lucide="phone" class="w-4 h-4"></i> Ligar
                                     </a>
                                     ${this.state.role === 'admin' ? `
@@ -1813,7 +1849,7 @@ Object.assign(App, {
                             <div>
                                 <p class="text-[10px] uppercase font-black text-muted-theme tracking-widest mb-1">Total Pendente de Repasse</p>
                                 <h3 class="text-3xl font-bold text-theme">R$ ${stats?.pendingBalance.toFixed(2).replace('.', ',') || '0,00'}</h3>
-                                <p class="text-[9px] text-zinc-500 mt-2 italic">Comissões não quitadas menos adiantamentos.</p>
+                                <p class="text-[9px] text-muted-theme mt-2 italic">Comissões não quitadas menos adiantamentos.</p>
                             </div>
                             <button onclick="App.confirmGlobalReset()" class="p-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-500/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer shadow-lg shadow-red-500/5 group" title="Zerar todos os repasses e reiniciar saldo">
                                 <i data-lucide="power" class="w-5 h-5 group-hover:scale-110 transition-transform"></i>
@@ -1840,13 +1876,13 @@ Object.assign(App, {
                                 const bFinalBalance = Math.max(0, bEarnings - bAdvances);
 
                                 return `
-                                    <div class="card-bg rounded-2xl border border-zinc-800 p-4 shadow-sm flex items-center justify-between gap-3 hover:border-amber-500/30 transition-all">
+                                    <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm flex items-center justify-between gap-3 hover:border-amber-500/30 transition-all">
                                         <div class="min-w-0">
                                             <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(b.name)}</p>
                                             <p class="text-[10px] text-muted-theme uppercase font-black tracking-tighter mt-0.5">Saldo: <span class="text-amber-500">R$ ${bFinalBalance.toFixed(2).replace('.', ',')}</span></p>
                                         </div>
                                         <div class="flex gap-2">
-                                            <button onclick="App.openPayoutModal('${b.user_id}', '${App.escapeHTML(b.name)}', ${bFinalBalance})" class="px-3 py-2 bg-amber-500 text-zinc-950 text-[10px] font-black uppercase rounded-lg shadow-lg shadow-amber-500/20 active:scale-95 transition-all">
+                                            <button onclick="App.openPayoutModal('${b.user_id}', '${App.escapeHTML(b.name)}', ${bFinalBalance})" class="px-3 py-2 bg-amber-500 text-zinc-950 text-[10px] font-black uppercase rounded-lg shadow-theme active:scale-95 transition-all">
                                                 Pagar
                                             </button>
                                         </div>
@@ -1857,9 +1893,9 @@ Object.assign(App, {
                     </div>
 
                     <!-- Histórico de Repasses -->
-                    <div class="space-y-4 pt-4 border-t border-zinc-800">
+                    <div class="space-y-4 pt-4 border-t border-theme">
                         <h3 class="text-sm font-bold text-theme uppercase tracking-wider flex items-center gap-2">
-                            <i data-lucide="history" class="w-4 h-4 text-zinc-500"></i> Histórico de Pagamentos
+                            <i data-lucide="history" class="w-4 h-4 text-muted-theme"></i> Histórico de Pagamentos
                         </h3>
                         <div class="space-y-2">
                             ${(() => {
@@ -1870,10 +1906,10 @@ Object.assign(App, {
                                 return activePayouts.slice(0, 10).map(p => {
                                     const barber = BARBERS.find(b => String(b.user_id) === String(p.barber_id));
                                     return `
-                                        <div class="card-bg border border-zinc-800/50 p-3 rounded-xl flex items-center justify-between">
+                                        <div class="card-bg border border-theme/50 p-3 rounded-xl flex items-center justify-between">
                                             <div class="text-[10px]">
                                                 <p class="font-bold text-theme uppercase tracking-tighter">${App.escapeHTML(barber.name)}</p>
-                                                <p class="text-zinc-500 mt-0.5">${new Date(p.payout_date).toLocaleDateString()} • ${p.type === 'full' ? 'QUITAÇÃO' : 'ADIANTAMENTO'}</p>
+                                                <p class="text-muted-theme mt-0.5">${new Date(p.payout_date).toLocaleDateString()} • ${p.type === 'full' ? 'QUITAÇÃO' : 'ADIANTAMENTO'}</p>
                                             </div>
                                             <p class="font-black text-amber-500 text-sm">R$ ${p.amount.toFixed(2).replace('.', ',')}</p>
                                         </div>
@@ -1886,8 +1922,8 @@ Object.assign(App, {
                     <!-- HARD RESET WIPE BANCO -->
                     <div class="mt-8 p-4 border border-red-900 bg-red-500/5 rounded-2xl">
                         <h4 class="text-sm font-bold text-red-500 flex items-center gap-2 mb-2"><i data-lucide="alert-triangle" class="w-4 h-4"></i> Zona de Perigo</h4>
-                        <p class="text-[10px] text-zinc-500 mb-4 text-balance leading-relaxed">Apagar todo o faturamento, agendamentos e histórico de pagamentos no banco de dados. Use isso <b>apenas quando for inaugurar o sistema limpo</b> para abrir para os barbeiros. O botão ZERAR lá no topo quita as dívidas mas mantém o Faturamento.</p>
-                        <button onclick="App.confirmWipeDatabase()" class="w-full flex items-center justify-center gap-2 py-3 bg-red-500/10 text-red-500 font-bold uppercase tracking-widest text-[10px] rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-md shadow-red-500/20 active:scale-95 border border-red-500/20">
+                        <p class="text-[10px] text-muted-theme mb-4 text-balance leading-relaxed">Apagar todo o faturamento, agendamentos e histórico de pagamentos no banco de dados. Use isso <b>apenas quando for inaugurar o sistema limpo</b> para abrir para os barbeiros. O botão ZERAR lá no topo quita as dívidas mas mantém o Faturamento.</p>
+                        <button onclick="App.confirmWipeDatabase()" class="w-full flex items-center justify-center gap-2 py-3 bg-red-500/10 text-red-500 font-bold uppercase tracking-widest text-[10px] rounded-xl hover:bg-red-500 hover:text-theme transition-all shadow-md shadow-red-500/20 active:scale-95 border border-red-500/20">
                             <i data-lucide="bomb" class="w-4 h-4"></i> APAGAR TUDO (INICIAR APLICATIVO)
                         </button>
                     </div>
@@ -1903,29 +1939,29 @@ Object.assign(App, {
                         <h2 class="text-2xl font-bold text-theme flex items-center gap-2"><i data-lucide="shield-check" class="w-6 h-6 text-amber-500"></i> Painel ${this.state.role === 'admin' ? 'Admin' : 'Equipe'}</h2>
                         <p class="text-xs text-muted-theme mt-1">Gestão de sistema e atendimentos.</p>
                     </div>
-                    <button onclick="App.toggleShopManagement()" class="p-2 input-bg rounded-lg text-muted-theme hover:text-white border border-zinc-700 shadow-sm transition-colors active:scale-95">
+                    <button onclick="App.toggleShopManagement()" class="p-2 input-bg rounded-lg text-muted-theme hover:text-theme border border-theme shadow-sm transition-colors active:scale-95">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>
 
                 <!-- Abas da Gestão -->
-                <div class="flex gap-2 p-1 bg-zinc-900 rounded-xl overflow-x-auto scrollbar-hide border border-zinc-800">
-                    <button onclick="App.setAdminShopTab('barbers')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'barbers' ? 'bg-zinc-800 text-amber-500 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}">
+                <div class="flex gap-2 p-1 card-bg rounded-xl overflow-x-auto scrollbar-hide border border-theme">
+                    <button onclick="App.setAdminShopTab('barbers')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'barbers' ? 'input-bg text-amber-500 shadow-sm' : 'text-muted-theme hover:text-theme'}">
                         <i data-lucide="users" class="w-3.5 h-3.5"></i> Equipe
                     </button>
-                    <button onclick="App.setAdminShopTab('services')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'services' ? 'bg-zinc-800 text-amber-500 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}">
+                    <button onclick="App.setAdminShopTab('services')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'services' ? 'input-bg text-amber-500 shadow-sm' : 'text-muted-theme hover:text-theme'}">
                         <i data-lucide="scissors" class="w-3.5 h-3.5"></i> Serviços
                     </button>
-                    <button onclick="App.setAdminShopTab('clients')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'clients' ? 'bg-zinc-800 text-amber-500 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}">
+                    <button onclick="App.setAdminShopTab('clients')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'clients' ? 'input-bg text-amber-500 shadow-sm' : 'text-muted-theme hover:text-theme'}">
                         <i data-lucide="contact" class="w-3.5 h-3.5"></i> Clientes
                     </button>
-                    <button onclick="App.setAdminShopTab('schedules')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'schedules' ? 'bg-zinc-800 text-amber-500 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}">
+                    <button onclick="App.setAdminShopTab('schedules')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'schedules' ? 'input-bg text-amber-500 shadow-sm' : 'text-muted-theme hover:text-theme'}">
                         <i data-lucide="clock" class="w-3.5 h-3.5"></i> Horários
                     </button>
-                    <button onclick="App.setAdminShopTab('accounts')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'accounts' ? 'bg-zinc-800 text-amber-500 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}">
+                    <button onclick="App.setAdminShopTab('accounts')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'accounts' ? 'input-bg text-amber-500 shadow-sm' : 'text-muted-theme hover:text-theme'}">
                         <i data-lucide="shield" class="w-3.5 h-3.5"></i> Contas
                     </button>
-                    <button onclick="App.setAdminShopTab('financeiro')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'financeiro' ? 'bg-zinc-800 text-amber-500 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}">
+                    <button onclick="App.setAdminShopTab('financeiro')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'financeiro' ? 'input-bg text-amber-500 shadow-sm' : 'text-muted-theme hover:text-theme'}">
                         <i data-lucide="wallet" class="w-3.5 h-3.5"></i> Financeiro
                     </button>
                 </div>
@@ -1948,7 +1984,7 @@ Object.assign(App, {
             'admin': { label: 'Administrador', color: 'bg-amber-500/10 text-amber-500', icon: 'shield-check' },
             'manager': { label: 'Gerente', color: 'bg-sky-500/10 text-sky-500', icon: 'star' },
             'barber': { label: 'Barbeiro', color: 'bg-emerald-500/10 text-emerald-500', icon: 'scissors' },
-            'client': { label: 'Cliente', color: 'bg-zinc-500/10 text-zinc-400', icon: 'user' }
+            'client': { label: 'Cliente', color: 'bg-zinc-500/10 text-muted-theme', icon: 'user' }
         };
         const currentRole = roleInfo[this.state.role] || roleInfo['client'];
 
@@ -1985,26 +2021,26 @@ Object.assign(App, {
                     <div class="card-bg rounded-2xl border border-theme p-6 space-y-5 shadow-xl">
                         <div class="space-y-2">
                             <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Nome Completo</label>
-                            <input type="text" id="edit-name" value="${this.state.userProfile?.name || ''}" class="w-full input-bg border border-zinc-700 rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
+                            <input type="text" id="edit-name" value="${this.state.userProfile?.name || ''}" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
                         </div>
                         <div class="space-y-2">
                             <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Celular (Novo Celular = Novo Login)</label>
-                            <input type="tel" id="edit-phone" inputmode="numeric" value="${this.state.userProfile?.phone || ''}" class="w-full input-bg border border-zinc-700 rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
+                            <input type="tel" id="edit-phone" inputmode="numeric" value="${this.state.userProfile?.phone || ''}" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div class="space-y-2">
                                 <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">CPF</label>
-                                <input type="tel" id="edit-cpf" inputmode="numeric" value="${this.state.userProfile?.cpf || ''}" class="w-full input-bg border border-zinc-700 rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
+                                <input type="tel" id="edit-cpf" inputmode="numeric" value="${this.state.userProfile?.cpf || ''}" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
                             </div>
                             <div class="space-y-2">
                                 <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Nascimento</label>
-                                <input type="date" id="edit-birth" value="${this.dbToInputDate(this.state.userProfile?.birth_date)}" class="w-full input-bg border border-zinc-700 rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
+                                <input type="date" id="edit-birth" value="${this.dbToInputDate(this.state.userProfile?.birth_date)}" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors" />
                             </div>
                         </div>
                     </div>
 
                     <div class="flex gap-3 pt-4">
-                        <button onclick="App.toggleProfileEdit()" class="flex-1 py-4 rounded-xl font-bold transition-all duration-200 input-bg text-muted-theme hover:bg-zinc-700 border border-zinc-700">
+                        <button onclick="App.toggleProfileEdit()" class="flex-1 py-4 rounded-xl font-bold transition-all duration-200 input-bg text-muted-theme hover:bg-zinc-700 border border-theme">
                             Cancelar
                         </button>
                         <button onclick="App.saveProfileChanges()" class="flex-1 py-4 rounded-xl font-bold transition-all duration-200 bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-md shadow-amber-500/20">
@@ -2038,7 +2074,7 @@ Object.assign(App, {
 
                 <!-- Dados Pessoais -->
                 <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm space-y-4">
-                    <div class="flex items-center gap-4 text-zinc-300 p-2 border-b border-theme/50">
+                    <div class="flex items-center gap-4 text-theme p-2 border-b border-theme/50">
                         <i data-lucide="smartphone" class="w-5 h-5 text-muted-theme"></i>
                         <div class="flex-1">
                             <p class="text-xs text-muted-theme uppercase font-bold tracking-wider">Celular</p>
@@ -2046,14 +2082,14 @@ Object.assign(App, {
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="flex items-center gap-3 text-zinc-300 p-2">
+                        <div class="flex items-center gap-3 text-theme p-2">
                              <i data-lucide="credit-card" class="w-5 h-5 text-muted-theme"></i>
                              <div class="flex-1">
                                 <p class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">CPF</p>
                                 <p class="text-xs text-theme font-medium">${this.state.userProfile?.cpf || '---'}</p>
                              </div>
                         </div>
-                        <div class="flex items-center gap-3 text-zinc-300 p-2">
+                        <div class="flex items-center gap-3 text-theme p-2">
                              <i data-lucide="calendar" class="w-5 h-5 text-muted-theme"></i>
                              <div class="flex-1">
                                 <p class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Nascimento</p>
@@ -2090,7 +2126,7 @@ Object.assign(App, {
                                 <i data-lucide="bell" class="w-5 h-5 text-muted-theme"></i>
                                 <span class="text-theme">Notificações Push</span>
                             </div>
-                            <div class="w-10 h-6 ${Notification.permission === 'granted' ? 'bg-amber-500' : 'bg-zinc-800'} rounded-full flex items-center p-1 cursor-pointer transition-colors">
+                            <div class="w-10 h-6 ${Notification.permission === 'granted' ? 'bg-amber-500' : 'input-bg'} rounded-full flex items-center p-1 cursor-pointer transition-colors">
                                 <div class="w-4 h-4 card-bg rounded-full ${Notification.permission === 'granted' ? 'translate-x-4' : 'translate-x-0'} shadow-sm transition-transform"></div>
                             </div>
                         </div>
@@ -2099,7 +2135,7 @@ Object.assign(App, {
                                 <i data-lucide="${this.state.theme === 'dark' ? 'moon' : 'sun'}" class="w-5 h-5 text-muted-theme"></i>
                                 <span class="text-theme">Modo ${this.state.theme === 'dark' ? 'Escuro' : 'Claro'}</span>
                             </div>
-                            <div class="w-10 h-6 ${this.state.theme === 'light' ? 'bg-zinc-300' : 'bg-amber-500'} rounded-full flex items-center p-1 cursor-pointer transition-colors">
+                            <div class="w-10 h-6 ${this.state.theme === 'light' ? 'input-bg' : 'bg-amber-500'} rounded-full flex items-center p-1 cursor-pointer transition-colors">
                                 <div class="w-4 h-4 card-bg rounded-full ${this.state.theme === 'light' ? 'translate-x-0' : 'translate-x-4'} shadow-sm transition-transform"></div>
                             </div>
                         </div>
@@ -2111,7 +2147,7 @@ Object.assign(App, {
                         <i data-lucide="log-out" class="w-5 h-5"></i> Sair da Conta
                     </button>
                     ${this.state.role === 'client' ? `
-                    <button onclick="App.deleteAccount()" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-transparent text-zinc-500 hover:bg-red-500/10 hover:text-red-500">
+                    <button onclick="App.deleteAccount()" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-transparent text-muted-theme hover:bg-red-500/10 hover:text-red-500">
                         <i data-lucide="trash-2" class="w-5 h-5"></i> Excluir Conta Permanentemente
                     </button>
                     ` : ''}
@@ -2126,7 +2162,7 @@ Object.assign(App, {
             <div class="fixed inset-0 bg-zinc-950 flex flex-col items-center justify-center z-[300] fade-in-fast">
                 <div class="relative">
                     <div class="absolute inset-0 bg-amber-500/20 blur-3xl rounded-full scale-150 animate-pulse"></div>
-                    <div class="w-32 h-32 rounded-3xl overflow-hidden bg-zinc-900 border-2 border-amber-500/20 shadow-2xl relative z-10 flex items-center justify-center animate-bounce-subtle">
+                    <div class="w-32 h-32 rounded-3xl overflow-hidden card-bg border-2 border-amber-500/20 shadow-2xl relative z-10 flex items-center justify-center animate-bounce-subtle">
                         ${s?.logo_url ? `
                             <img src="${s.logo_url}" class="w-full h-full object-cover" />
                         ` : `
@@ -2136,7 +2172,7 @@ Object.assign(App, {
                 </div>
                 
                 <div class="mt-8 text-center space-y-2">
-                    <h2 class="text-xl font-bold text-white tracking-widest uppercase italic logo-font">${s?.name || 'Carregando...'}</h2>
+                    <h2 class="text-xl font-bold text-theme tracking-widest uppercase italic logo-font">${s?.name || 'Carregando...'}</h2>
                     <div class="flex items-center justify-center gap-1.5">
                         <div class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                         <div class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
@@ -2178,7 +2214,7 @@ Object.assign(App, {
                             <h3 class="text-xl font-black text-theme">Dividir Pagamento</h3>
                             <p class="text-[10px] text-muted-theme font-bold uppercase tracking-widest mt-0.5">Finalizar Agendamento</p>
                         </div>
-                        <button onclick="App.state.showingSplitPaymentId = null; App.render();" class="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-zinc-500 hover:text-white transition-colors border border-zinc-800 shrink-0">
+                        <button onclick="App.state.showingSplitPaymentId = null; App.render();" class="w-10 h-10 rounded-full card-bg flex items-center justify-center text-muted-theme hover:text-theme transition-colors border border-theme shrink-0">
                             <i data-lucide="x" class="w-5 h-5"></i>
                         </button>
                     </div>
@@ -2186,10 +2222,10 @@ Object.assign(App, {
                     <!-- CORPO SCROLLÁVEL -->
                     <div class="overflow-y-auto px-5 py-5 space-y-5">
 
-                        <div class="bg-zinc-900/50 rounded-2xl p-4 border border-theme flex justify-between items-center">
+                        <div class="card-bg/50 rounded-2xl p-4 border border-theme flex justify-between items-center">
                             <div>
                                 <p class="text-[10px] text-muted-theme font-bold uppercase tracking-wider mb-1">Total do Serviço</p>
-                                <p class="text-2xl font-black text-white">R$ ${apt.numericValue.toFixed(2).replace('.', ',')}</p>
+                                <p class="text-2xl font-black text-theme">R$ ${apt.numericValue.toFixed(2).replace('.', ',')}</p>
                             </div>
                             <div class="text-right">
                                 <p class="text-[10px] text-muted-theme font-bold uppercase tracking-wider mb-1">Faltando</p>
@@ -2211,7 +2247,7 @@ Object.assign(App, {
                                         <i data-lucide="${style.icon}" class="w-3.5 h-3.5 text-${style.color}-500"></i> ${method}
                                     </label>
                                     <div class="relative group">
-                                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-500">R$</span>
+                                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-theme">R$</span>
                                         <input type="text" 
                                             value="${split[method] ? split[method].toFixed(2).replace('.', ',') : ''}"
                                             onchange="App.updateSplitAmount('${method}', this.value)"
@@ -2227,7 +2263,7 @@ Object.assign(App, {
                             <button 
                                 onclick="App.completeSplitPayment('${id}')" 
                                 ${!isCompleted ? 'disabled' : ''}
-                                class="w-full py-4 rounded-2xl font-black transition-all duration-200 flex items-center justify-center gap-3 active:scale-[0.98] ${isCompleted ? 'bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-lg shadow-amber-500/25' : 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed'}">
+                                class="w-full py-4 rounded-2xl font-black transition-all duration-200 flex items-center justify-center gap-3 active:scale-[0.98] ${isCompleted ? 'bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-lg shadow-amber-500/25' : 'input-bg text-muted-theme border border-theme cursor-not-allowed'}">
                                 <i data-lucide="check-circle" class="w-6 h-6"></i> FINALIZAR AGENDAMENTO
                             </button>
                             <p class="text-center text-[10px] text-muted-theme font-medium mt-3 italic">
@@ -2263,7 +2299,7 @@ Object.assign(App, {
                                 <h3 class="text-xl font-black text-theme">Especialidades</h3>
                                 <p class="text-[10px] text-muted-theme font-bold uppercase tracking-widest mt-0.5">O que ${barber.name.split(' ')[0]} faz?</p>
                             </div>
-                            <button onclick="document.getElementById('modal-container').innerHTML = '';" class="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-zinc-500 hover:text-white transition-colors border border-zinc-800">
+                            <button onclick="document.getElementById('modal-container').innerHTML = '';" class="w-10 h-10 rounded-full card-bg flex items-center justify-center text-muted-theme hover:text-theme transition-colors border border-theme">
                                 <i data-lucide="x" class="w-5 h-5"></i>
                             </button>
                         </div>
@@ -2272,8 +2308,8 @@ Object.assign(App, {
                             ${SERVICES.map(svc => {
                                 const isSelected = currentServices.includes(svc.id);
                                 return `
-                                    <label class="flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${isSelected ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700'}">
-                                        <input type="checkbox" name="barber-service" value="${svc.id}" ${isSelected ? 'checked' : ''} class="w-5 h-5 rounded border-zinc-700 bg-zinc-900 text-amber-500 focus:ring-amber-500/20" />
+                                    <label class="flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${isSelected ? 'border-amber-500 bg-amber-500/10' : 'border-theme card-bg/50 hover:border-theme'}">
+                                        <input type="checkbox" name="barber-service" value="${svc.id}" ${isSelected ? 'checked' : ''} class="w-5 h-5 rounded border-theme card-bg text-amber-500 focus:ring-amber-500/20" />
                                         <div class="flex-1">
                                             <p class="font-bold text-sm text-theme">${svc.name}</p>
                                             <p class="text-[10px] text-muted-theme font-medium">${svc.duration}</p>
@@ -2289,7 +2325,7 @@ Object.assign(App, {
                                 App.saveBarberServices('${barberId}', selected);
                                 document.getElementById('modal-container').innerHTML = '';
                             })()"
-                            class="w-full py-4 rounded-2xl bg-amber-500 text-zinc-950 font-black hover:bg-amber-400 shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-all shrink-0">
+                            class="w-full py-4 rounded-2xl bg-amber-500 text-zinc-950 font-black hover:bg-amber-400 shadow-theme active:scale-[0.98] transition-all shrink-0">
                             SALVAR ESPECIALIDADES
                         </button>
                     </div>

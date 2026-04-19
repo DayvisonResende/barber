@@ -10,26 +10,34 @@
 .logo-font {
     font-family: 'Pristina', cursive !important;
     letter-spacing: 0.05em;
+    font-weight: normal !important;
 }
 
-:root {
-    --bg-app: #09090b; /* zinc-950 */
-    --bg-card: #18181b; /* zinc-900 */
-    --bg-input: #09090b; /* zinc-950/darker */
-    --text-main: #f4f4f5; /* zinc-100 */
-    --text-muted: #a1a1aa; /* zinc-400 */
-    --border-main: #27272a; /* zinc-800 */
-    --accent: #f59e0b; /* amber-500 */
-    --accent-hover: #d97706; /* amber-600 */
+.font-pristina {
+    font-family: 'Pristina', cursive !important;
+    font-weight: normal !important;
 }
 
 body.light-mode {
-    --bg-app: #f9f9fb; /* zinc-50/ish */
-    --bg-card: #ffffff; /* white */
-    --bg-input: #f4f4f5; /* zinc-100 */
-    --text-main: #09090b; /* zinc-950 */
-    --text-muted: #71717a; /* zinc-500 */
-    --border-main: #e4e4e7; /* zinc-200 */
+    --bg-app: #f8f9fa; /* Light grey-blue */
+    --bg-card: #ffffff;
+    --bg-input: #f1f3f5;
+    --text-main: #111827; /* Darker for better contrast */
+    --text-muted: #4b5563; /* Darker muted text */
+    --border-main: #d1d5db; /* Darker borders for better definition */
+    --shadow-theme: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+}
+
+:root {
+    --bg-app: #09090b;
+    --bg-card: #18181b;
+    --bg-input: #0c0c0e;
+    --text-main: #f4f4f5;
+    --text-muted: #a1a1aa;
+    --border-main: #27272a;
+    --accent: #f59e0b;
+    --accent-hover: #d97706;
+    --shadow-theme: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
 }
 
 body {
@@ -46,6 +54,7 @@ body {
 .text-theme { color: var(--text-main) !important; }
 .text-muted-theme { color: var(--text-muted) !important; }
 .border-theme { border-color: var(--border-main) !important; }
+.shadow-theme { box-shadow: var(--shadow-theme) !important; }
 
 /* Interações */
 .hover-bg:hover { background-color: var(--border-main) !important; opacity: 0.9; }
@@ -249,3 +258,14 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(245, 158, 11, 0.8);
 }
+
+/* Opacidade Genérica (Para substituir o /XX do Tailwind que não funciona em classes customizadas) */
+.opacity-10 { opacity: 0.1 !important; }
+.opacity-20 { opacity: 0.2 !important; }
+.opacity-30 { opacity: 0.3 !important; }
+.opacity-40 { opacity: 0.4 !important; }
+.opacity-50 { opacity: 0.5 !important; }
+.opacity-60 { opacity: 0.6 !important; }
+.opacity-70 { opacity: 0.7 !important; }
+.opacity-80 { opacity: 0.8 !important; }
+.opacity-90 { opacity: 0.9 !important; }

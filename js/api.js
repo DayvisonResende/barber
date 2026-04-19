@@ -116,7 +116,7 @@ Object.assign(App, {
         } else if (!this.state.shopSettings) {
             // Fallback apenas se não houver cache nem dado novo
             this.state.shopSettings = {
-                name: 'FinnoTrato Barber',
+                name: 'FinnoTrato Barbearia',
                 logo_url: null,
                 slogan: 'A melhor experiência em estilo e cuidado.',
                 address_street: 'Rua da Tesoura, 123',
@@ -412,7 +412,7 @@ Object.assign(App, {
                 // e pega o ID mais recente para detectar qualquer mudança
                 let query = supabaseClient
                     .from('appointments')
-                    .select('id', { count: 'exact' })
+                    .select('id, service_names, date, time')
                     .eq('status', 'pending');
 
                 // Aplicar mesmo filtro do loadAppointments por role
@@ -425,10 +425,11 @@ Object.assign(App, {
                     query = query.eq('client_id', user.id);
                 }
 
-                const { count, error } = await query;
-                if (error) return null;
+                const { data, error } = await query;
+                if (error || !data) return null;
 
-                return count; // A contagem é nossa "assinatura" do estado atual
+                // Gera uma assinatura baseada no ID e no conteúdo crítico (serviço, data, hora)
+                return data.map(a => `${a.id}:${a.service_names}:${a.date}:${a.time}`).join('|');
             } catch(e) {
                 return null;
             }
@@ -440,21 +441,26 @@ Object.assign(App, {
             const currentSignature = await getSignature();
             if (currentSignature === null) return;
 
+            const currentItems = currentSignature ? currentSignature.split('|') : [];
+            const currentCount = currentItems.length;
+            
             // Primeira rodada: apenas registra o estado atual como referência
             if (lastSignature === null) {
                 lastSignature = currentSignature;
-                console.log(`🔄 [Polling] Referência inicial: ${currentSignature} agendamentos.`);
+                console.log(`🔄 [Polling] Referência inicial: ${currentCount} agendamentos.`);
                 return;
             }
 
-            // Se o número de agendamentos mudou, atualiza tudo
+            // Se a assinatura mudou (seja por contagem ou conteúdo), atualiza tudo
             if (currentSignature !== lastSignature) {
-                const prev = lastSignature;
+                const prevItems = lastSignature ? lastSignature.split('|') : [];
+                const prevCount = prevItems.length;
+                
                 lastSignature = currentSignature; // Atualiza ANTES do await para evitar duplo disparo
-                console.log(`🔄 [Polling] Mudança detectada! Antes: ${prev} | Agora: ${currentSignature}. Atualizando...`);
+                console.log(`🔄 [Polling] Mudança detectada! (Contagem ou Conteúdo). Atualizando...`);
                 
                 const isStaff = ['admin', 'manager', 'barber'].includes(this.state.role);
-                const isNewAppointment = currentSignature > prev;
+                const isNewAppointment = currentCount > prevCount;
                 
                 if (isStaff && isNewAppointment) {
                     // Dispara alerta sonoro + notificação visual para o barbeiro
@@ -804,6 +810,69 @@ Object.assign(App, {
         }
     },
 
+    initEditServices(id) {
+        const apt = this.state.appointments.find(a => a.id === id);
+        if (!apt) return;
+        this.state.editingServicesId = id;
+        const currentNames = (apt.service.name || '').split(' + ');
+        this.state.tempSelectedServices = SERVICES.filter(s => currentNames.includes(s.name));
+        this.render();
+    },
+
+    toggleEditService(serviceId) {
+        const service = SERVICES.find(s => s.id === serviceId);
+        if (!service) return;
+        
+        const index = this.state.tempSelectedServices.findIndex(s => s.id === serviceId);
+        if (index > -1) {
+            this.state.tempSelectedServices.splice(index, 1);
+        } else {
+            this.state.tempSelectedServices.push(service);
+        }
+        this.render();
+    },
+
+    cancelEditServices() {
+        this.state.editingServicesId = null;
+        this.state.tempSelectedServices = [];
+        this.render();
+    },
+
+    async updateAppointmentServices(id) {
+        if (this.state.tempSelectedServices.length === 0) {
+            this.showNotification("Erro", "Selecione pelo menos um serviço.");
+            return;
+        }
+
+        try {
+            const totalPrice = this.state.tempSelectedServices.reduce((sum, s) => sum + s.priceValue, 0);
+            const totalDuration = this.state.tempSelectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
+            const serviceNames = this.state.tempSelectedServices.map(s => s.name).join(' + ');
+            const formattedPrice = `R$ ${totalPrice.toFixed(2).replace('.', ',')}`;
+
+            const { error } = await supabaseClient
+                .from('appointments')
+                .update({
+                    service_names: serviceNames,
+                    service_price: formattedPrice,
+                    service_numeric_value: totalPrice,
+                    total_duration: totalDuration
+                })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            this.state.editingServicesId = null;
+            this.state.tempSelectedServices = [];
+            this.showNotification("Sucesso", "Serviço(s) atualizados!");
+            await this.loadAppointments();
+            this.render();
+        } catch (err) {
+            console.error("Erro ao atualizar serviços:", err);
+            this.showNotification("Erro", "Falha ao atualizar o agendamento.");
+        }
+    },
+
     async toggleTimeBlock(time, barberId = null, date = null) {
         const bid = (!barberId || barberId === 'null' || barberId === 'undefined' || barberId === '') ? null : barberId;
         const dstr = (!date || date === 'null' || date === 'undefined' || date === '') ? null : date;
@@ -898,8 +967,8 @@ Object.assign(App, {
             const fits = this.checkIfTimeFits(this.state.selectedBarber.user_id, this.state.selectedDate, this.state.selectedTime, totalDuration);
             
             if (!fits && index === -1) { 
-                this.showNotification("Tempo Insuficiente", `O barbeiro ${this.state.selectedBarber.name.split(' ')[0]} não tem tempo livre suficiente para este combo.`);
-                return;
+                this.showNotification("Tempo Reduzido", `O barbeiro ${this.state.selectedBarber.name.split(' ')[0]} terá menos tempo que o estimado para este combo, mas você ainda pode agendar.`);
+                // Não retorna mais! Permite continuar.
             }
         }
 
@@ -908,46 +977,32 @@ Object.assign(App, {
     },
 
     checkIfTimeFits(barberId, date, startTime, duration) {
+        // Agora o sistema é flexível: apenas garante que o horário de INÍCIO está disponível
         const [h, m] = startTime.split(':').map(Number);
-        const startTotal = h * 60 + m;
-        const endTotal = startTotal + duration;
+        const currentTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 
-        // Cada slot de 5 min dentro da janela deve estar livre
-        for (let t = startTotal; t < endTotal; t += 5) {
-            const currentH = Math.floor(t / 60).toString().padStart(2, '0');
-            const currentM = (t % 60).toString().padStart(2, '0');
-            const currentTime = `${currentH}:${currentM}`;
+        // 1. Verifica se está no horário de trabalho (RECORRENTE/FIXO)
+        const isReleased = (this.state.blockedTimesFull || []).some(b => 
+            b.barber_id === barberId && !b.date && b.blocked_time === currentTime
+        );
+        if (!isReleased) return false;
 
-            // 1. Verifica se está no horário de trabalho (RECORRENTE/FIXO)
-            // IMPORTANTE: Só é obrigatório para o INÍCIO do serviço. 
-            // Os slots seguintes podem ser "não-liberados" na escala fixa, 
-            // permitindo que o serviço consuma o tempo até o próximo compromisso real.
-            if (t === startTotal) {
-                const isReleased = (this.state.blockedTimesFull || []).some(b => 
-                    b.barber_id === barberId && !b.date && b.blocked_time === currentTime
-                );
-                if (!isReleased) return false;
-            }
+        // 2. Verifica se há algum BLOQUEIO EXPLICÍCITO (Blacklist) manual para este slot
+        const isExplicitlyBlocked = (this.state.blockedTimesFull || []).some(b => {
+            if (!b.barber_id && !b.date && b.blocked_time === currentTime) return true;
+            if (b.barber_id === barberId && b.date === date && b.blocked_time === currentTime) return true;
+            return false;
+        });
+        if (isExplicitlyBlocked) return false;
 
-            // 2. Verifica se há algum BLOQUEIO EXPLICÍCITO (Blacklist) - Válido para a janela toda
-            const isExplicitlyBlocked = (this.state.blockedTimesFull || []).some(b => {
-                if (!b.barber_id && !b.date && b.blocked_time === currentTime) return true;
-                if (b.barber_id === barberId && b.date === date && b.blocked_time === currentTime) return true;
-                return false;
-            });
-            if (isExplicitlyBlocked) return false;
+        // 3. Verifica se já existe um agendamento que COMEÇA exatamente neste horário
+        const isOccupiedAtStart = (this.state.allAppointmentsForStats || []).some(apt => 
+            apt.date === date && apt.barber_id === barberId && apt.time === currentTime && apt.status !== 'cancelled'
+        );
+        
+        if (isOccupiedAtStart) return false;
 
-            // 2. Verifica AGENDAMENTOS
-            const isOccupied = this.state.allAppointmentsForStats?.some(apt => {
-                if (apt.date !== date || apt.barber_id !== barberId) return false;
-                const [aptH, aptM] = apt.time.split(':').map(Number);
-                const aptStart = aptH * 60 + aptM;
-                const aptEnd = aptStart + (apt.total_duration || 30);
-                return (t >= aptStart && t < aptEnd);
-            });
-            if (isOccupied) return false;
-        }
-        return true;
+        return true; // Se o início está livre, "cabe" (trust the barber)
     },
 
     async completeAppointment() {
@@ -1176,9 +1231,7 @@ Object.assign(App, {
             return;
         }
 
-        if (!avatar) {
-            avatar = "https://ui-avatars.com/api/?name=" + encodeURIComponent(name) + "&background=f59e0b&color=000&rounded=true";
-        }
+        if (!avatar) avatar = "";
         
         if (!userId) {
             userId = null; // Caso não tenha vínculo
@@ -1305,33 +1358,36 @@ Object.assign(App, {
         }
     },
 
-    async reorderService(serviceId, direction) {
-        // Encontrar posição atual do serviço na lista ordenada
-        const idx = SERVICES.findIndex(s => s.id === serviceId);
-        if (idx === -1) return;
+    async updateServiceOrder(newOrderIds) {
+        if (!newOrderIds || newOrderIds.length === 0) return;
 
-        const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-        if (swapIdx < 0 || swapIdx >= SERVICES.length) return;
-
-        // Trocar as posições na array local
-        [SERVICES[idx], SERVICES[swapIdx]] = [SERVICES[swapIdx], SERVICES[idx]];
-
-        // Atribuir novos sort_order sequenciais
-        const updates = SERVICES.map((s, i) => ({ id: s.id, sort_order: i }));
-
-        // Atualizar localmente imediatamente (UI responsiva)
-        SERVICES.forEach((s, i) => { s.sort_order = i; });
+        // 1. Reordenar o array local SERVICES baseada na nova ordem de IDs
+        const reordered = newOrderIds.map(id => SERVICES.find(s => String(s.id) === String(id))).filter(Boolean);
+        
+        // 2. Atualizar indices de sort_order localmente
+        reordered.forEach((s, i) => { s.sort_order = i; });
+        SERVICES = reordered;
+        
+        // 3. Renderizar com a nova ordem imediatamente
         this.render();
 
-        // Persistir no banco em paralelo (sem bloquear a UI)
+        // 4. Salvar no Supabase (em lote)
+        const updates = reordered.map((s, i) => ({ id: s.id, sort_order: i }));
+        
         try {
+            // Executar updates em paralelo
             await Promise.all(updates.map(({ id, sort_order }) =>
                 supabaseClient.from('services').update({ sort_order }).eq('id', id)
             ));
+            
+            // Opcional: Notificar sucesso silencioso ou log
+            console.log('✅ Ordem dos serviços salva no banco.');
         } catch (e) {
             console.error('Erro ao salvar ordem dos serviços:', e);
+            this.showNotification('Erro', 'Não foi possível salvar a nova ordem no servidor.');
         }
     },
+
 
     async removeService(id) {
         this.showConfirm("Remover Serviço", "Tem certeza que deseja apagar permanentemente este serviço do catálogo?", true, async () => {
@@ -1371,7 +1427,7 @@ Object.assign(App, {
                 if (newRole === 'barber') {
                     const { data: existing } = await supabaseClient.from('barbers').select('id').eq('user_id', userId).maybeSingle();
                     if (!existing) {
-                        const fallBackAvatar = userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName)}&backgroundColor=b6e3f4`;
+                        const fallBackAvatar = userAvatar || "";
                         try {
                             await supabaseClient.from('barbers').insert({
                                 user_id: userId,

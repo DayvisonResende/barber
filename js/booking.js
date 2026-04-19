@@ -44,42 +44,42 @@ Object.assign(App, {
 
         const modal = document.createElement('div');
         modal.id = 'staff-booking-mode-modal';
-        modal.className = 'fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm fade-in';
+        modal.className = 'fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-4 app-bg opacity-80 backdrop-blur-sm fade-in';
         modal.innerHTML = `
-            <div class="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl slide-in-up">
+            <div class="w-full max-w-sm card-bg border border-theme rounded-3xl p-6 shadow-2xl slide-in-up">
                 <div class="text-center mb-6">
                     <div class="w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
                         <i data-lucide="calendar-plus" class="w-6 h-6 text-amber-500"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-white">Novo Agendamento</h3>
-                    <p class="text-xs text-zinc-500 mt-1">Como deseja registrar este cliente?</p>
+                    <h3 class="text-xl font-bold text-theme">Novo Agendamento</h3>
+                    <p class="text-xs text-muted-theme mt-1">Como deseja registrar este cliente?</p>
                 </div>
 
                 <div class="space-y-3">
-                    <button onclick="App.setStaffBookingMode('registered')" class="w-full flex items-center gap-4 p-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-amber-500/40 rounded-2xl transition-all duration-200 active:scale-[0.98] text-left group">
+                    <button onclick="App.setStaffBookingMode('registered')" class="w-full flex items-center gap-4 p-4 input-bg hover:bg-zinc-700 border border-theme hover:border-amber-500/40 rounded-2xl transition-all duration-200 active:scale-[0.98] text-left group">
                         <div class="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-amber-500/20 transition-colors">
                             <i data-lucide="user-check" class="w-5 h-5 text-amber-500"></i>
                         </div>
                         <div>
-                            <p class="font-bold text-white text-sm">Cliente Cadastrado</p>
-                            <p class="text-[11px] text-zinc-500 mt-0.5">Buscar e vincular a uma conta existente</p>
+                            <p class="font-bold text-theme text-sm">Cliente Cadastrado</p>
+                            <p class="text-[11px] text-muted-theme mt-0.5">Buscar e vincular a uma conta existente</p>
                         </div>
                         <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-600 ml-auto group-hover:text-amber-500 transition-colors"></i>
                     </button>
 
-                    <button onclick="App.setStaffBookingMode('walkin')" class="w-full flex items-center gap-4 p-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 rounded-2xl transition-all duration-200 active:scale-[0.98] text-left group">
+                    <button onclick="App.setStaffBookingMode('walkin')" class="w-full flex items-center gap-4 p-4 input-bg hover:bg-zinc-700 border border-theme hover:border-theme rounded-2xl transition-all duration-200 active:scale-[0.98] text-left group">
                         <div class="w-10 h-10 bg-zinc-700 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-zinc-600 transition-colors">
-                            <i data-lucide="user-plus" class="w-5 h-5 text-zinc-400"></i>
+                            <i data-lucide="user-plus" class="w-5 h-5 text-muted-theme"></i>
                         </div>
                         <div>
-                            <p class="font-bold text-white text-sm">Cliente Avulso</p>
-                            <p class="text-[11px] text-zinc-500 mt-0.5">Walk-in sem conta no sistema</p>
+                            <p class="font-bold text-theme text-sm">Cliente Avulso</p>
+                            <p class="text-[11px] text-muted-theme mt-0.5">Walk-in sem conta no sistema</p>
                         </div>
                         <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-600 ml-auto group-hover:text-zinc-400 transition-colors"></i>
                     </button>
                 </div>
 
-                <button onclick="document.getElementById('staff-booking-mode-modal').remove()" class="w-full mt-4 py-3 text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+                <button onclick="document.getElementById('staff-booking-mode-modal').remove()" class="w-full mt-4 py-3 text-sm text-muted-theme hover:text-theme transition-colors">
                     Cancelar
                 </button>
             </div>
@@ -105,7 +105,7 @@ Object.assign(App, {
         if (!resultsEl) return;
 
         if (!term || term.trim().length < 2) {
-            resultsEl.innerHTML = '<p class="text-[11px] text-zinc-600 text-center py-3">Digite ao menos 2 caracteres para buscar.</p>';
+            resultsEl.innerHTML = '<p class="text-[11px] text-muted-theme text-center py-3">Digite ao menos 2 caracteres para buscar.</p>';
             return;
         }
 
@@ -118,7 +118,7 @@ Object.assign(App, {
         }).slice(0, 8); // Limite de 8 resultados
 
         if (results.length === 0) {
-            resultsEl.innerHTML = '<p class="text-[11px] text-zinc-500 text-center py-4">Nenhum cliente encontrado.</p>';
+            resultsEl.innerHTML = '<p class="text-[11px] text-muted-theme text-center py-4">Nenhum cliente encontrado.</p>';
             return;
         }
 
@@ -127,15 +127,15 @@ Object.assign(App, {
             const phone = c.phone ? App.formatDisplayPhone(c.phone) : 'Sem telefone';
             return `
                 <button onclick="App.selectStaffClient('${c.id}')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-700 transition-colors text-left active:scale-[0.98]">
-                    <div class="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 bg-zinc-700 flex items-center justify-center border border-zinc-600">
+                    <div class="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 input-bg flex items-center justify-center border border-theme">
                         ${c.avatar
                             ? `<img src="${c.avatar}" class="w-full h-full object-cover" />`
                             : `<span class="text-sm font-black text-amber-500/70">${initial}</span>`
                         }
                     </div>
                     <div class="min-w-0 flex-1">
-                        <p class="font-bold text-white text-sm truncate">${App.escapeHTML(c.name || 'Cliente')}</p>
-                        <p class="text-[11px] text-zinc-500 truncate">${App.escapeHTML(phone)}</p>
+                        <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(c.name || 'Cliente')}</p>
+                        <p class="text-[11px] text-muted-theme truncate">${App.escapeHTML(phone)}</p>
                     </div>
                     <i data-lucide="plus-circle" class="w-4 h-4 text-amber-500 flex-shrink-0"></i>
                 </button>
@@ -234,9 +234,9 @@ Object.assign(App, {
             const thisTotal = thisH * 60 + thisM;
             const thisEndTotal = thisTotal + totalDuration;
 
-            // Sobreposição de Horários:
-            // O novo agendamento colide se começar antes de um acabar E terminar depois de um começar.
-            return (thisTotal < aptEndTotal && thisEndTotal > aptStartTotal);
+            // Proteção simplificada: Apenas evita que dois agendamentos comecem NO MESMO MINUTO.
+            // Isso permite que o barbeiro gerencie sobreposições de duração (durations que "vazam").
+            return (thisTotal === aptStartTotal);
         });
 
         if (collisions.length > 0) {

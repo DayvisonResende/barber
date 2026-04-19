@@ -53,6 +53,8 @@ const App = {
         editingPriceId: null,
         showingSplitPaymentId: null,
         splitPaymentAmounts: { Pix: 0, Dinheiro: 0, Débito: 0, Crédito: 0 },
-        editingServiceId: null
+        editingServiceId: null,
+        editingServicesId: null,
+        tempSelectedServices: []
     }
 };

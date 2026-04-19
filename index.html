@@ -95,7 +95,7 @@
                     <i id="header-logo-icon" data-lucide="scissors" class="w-5 h-5 text-amber-500 opacity-20"></i>
                 </div>
 
-                <h1 id="header-shop-name" class="text-2xl font-bold tracking-tight text-white logo-font">FinnoTrato<span class="text-amber-500">Barber</span></h1>
+                <h1 id="header-shop-name" class="text-2xl font-bold tracking-tight text-theme logo-font flex items-baseline leading-none">FinnoTrato<span class="text-amber-500 ml-1 text-3xl font-normal">Barbearia</span></h1>
             </div>
 
             <div class="flex items-center gap-1">
@@ -139,7 +139,7 @@
                 <div class="w-12 h-12 flex items-center justify-center overflow-hidden rounded-xl bg-amber-500/10 border border-amber-500/20">
                     <i data-lucide="scissors" class="w-6 h-6 text-amber-500"></i>
                 </div>
-                <h1 class="text-xl font-bold tracking-tight text-white">FinnoTrato<br><span class="text-amber-500 text-sm">Barber</span></h1>
+                <h1 id="sidebar-shop-name" class="text-xl font-bold tracking-tight text-theme logo-font">FinnoTrato<br><span class="text-amber-500 text-sm">Barbearia</span></h1>
             </div>
 
             <button id="nav-agendamentos" onclick="App.setTab('agendamentos')"
@@ -193,8 +193,8 @@
                     <i id="confirm-icon" data-lucide="help-circle" class="w-8 h-8 text-amber-500"></i>
                 </div>
                 <div>
-                    <h3 id="confirm-title" class="text-xl font-bold text-zinc-100">Confirmar?</h3>
-                    <p id="confirm-message" class="text-sm text-zinc-400 mt-2 leading-relaxed"></p>
+                    <h3 id="confirm-title" class="text-xl font-bold text-theme">Confirmar?</h3>
+                    <p id="confirm-message" class="text-sm text-muted-theme mt-2 leading-relaxed"></p>
                 </div>
             </div>
 
@@ -204,7 +204,7 @@
             </div>
 
             <div class="flex gap-3 mt-6">
-                <button onclick="App.hideConfirmModal()" class="flex-1 py-3 rounded-xl font-bold transition-all duration-200 bg-zinc-800 text-zinc-400 hover:bg-zinc-700">
+                <button onclick="App.hideConfirmModal()" class="flex-1 py-3 rounded-xl font-bold transition-all duration-200 card-bg text-muted-theme border border-theme hover:input-bg">
                     Cancelar
                 </button>
                 <button id="btn-confirm-action" class="flex-1 py-3 rounded-xl font-bold transition-all duration-200 bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-md shadow-amber-500/20">
@@ -238,6 +238,7 @@
 
     <!-- Inicialização (Motor Principal) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="js/analytics.js" defer></script>
     <script src="js/app.js" defer></script>
 </body>

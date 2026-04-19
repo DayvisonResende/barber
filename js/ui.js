@@ -220,11 +220,11 @@ Object.assign(App, {
         if (isDestructive) {
             iconBg.className = 'bg-red-500/10 p-4 rounded-2xl';
             iconEl.className = 'w-8 h-8 text-red-500';
-            btnConfirm.className = 'flex-1 py-3 rounded-xl font-bold transition-all duration-200 bg-red-500 text-white hover:bg-red-600 shadow-md shadow-red-500/20';
+            btnConfirm.className = 'flex-1 py-3 rounded-xl font-bold transition-all duration-200 bg-red-500 text-theme hover:bg-red-600 shadow-md shadow-red-500/20';
         } else {
             iconBg.className = 'bg-amber-500/10 p-4 rounded-2xl';
             iconEl.className = 'w-8 h-8 text-amber-500';
-            btnConfirm.className = 'flex-1 py-3 rounded-xl font-bold transition-all duration-200 bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-md shadow-amber-500/20';
+            btnConfirm.className = 'flex-1 py-3 rounded-xl font-bold transition-all duration-200 bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-theme';
         }
 
         // Warning (esconder por padrão, a menos que queiramos usar no futuro)
@@ -372,22 +372,45 @@ Object.assign(App, {
         const btnNotify = document.getElementById('btn-notifications');
         const badge = document.getElementById('notification-badge');
         const headerName = document.getElementById('header-shop-name');
+        const sidebarName = document.getElementById('sidebar-shop-name');
         const logoContainer = document.getElementById('header-logo-container');
         const logoIcon = document.getElementById('header-logo-icon');
 
-        // 1. Atualizar Nome da Barbearia
+        const highlightRegex = /(barber|barbearia)/i;
+
+        // 1. Atualizar Nome da Barbearia (Header Principal)
         if (headerName && this.state.shopSettings) {
             headerName.classList.add('logo-font');
             const name = this.state.shopSettings.name;
-            // Preservar o estilo (ex: FinnoTratoBarber -> FinnoTrato<span class="text-amber-500">Barber</span>)
-            // Para ser flexível, se o nome contiver "Barber", vamos colorir.
-            if (name.toLowerCase().includes('barber')) {
-                const parts = name.split(/(barber)/i);
-                headerName.innerHTML = parts.map(part => 
-                    part.toLowerCase() === 'barber' ? `<span class="text-amber-500">${part}</span>` : part
-                ).join('');
+            if (highlightRegex.test(name)) {
+                const parts = name.split(highlightRegex);
+                headerName.innerHTML = parts.map(part => {
+                    const lowerPart = part.toLowerCase();
+                    if (lowerPart === 'barber' || lowerPart === 'barbearia') {
+                        return `<span class="text-amber-500 ml-1 text-3xl font-normal">${part}</span>`;
+                    }
+                    return part;
+                }).join('');
             } else {
                 headerName.textContent = name;
+            }
+        }
+
+        // 1.1 Atualizar Nome da Barbearia (Sidebar PC)
+        if (sidebarName && this.state.shopSettings) {
+            sidebarName.classList.add('logo-font');
+            const name = this.state.shopSettings.name;
+            if (highlightRegex.test(name)) {
+                const parts = name.split(highlightRegex);
+                sidebarName.innerHTML = parts.map(part => {
+                    const lowerPart = part.toLowerCase();
+                    if (lowerPart === 'barber' || lowerPart === 'barbearia') {
+                        return `<br><span class="text-amber-500 text-base font-normal -mt-1 block">${part}</span>`;
+                    }
+                    return part;
+                }).join('');
+            } else {
+                sidebarName.textContent = name;
             }
         }
 
@@ -398,7 +421,7 @@ Object.assign(App, {
                 logoContainer.innerHTML = `<img src="${this.state.shopSettings.logo_url}" class="w-full h-full object-cover" />`;
             } else if (logoIcon) {
                 // Se não tem, garante que o ícone padrão está lá
-                logoContainer.innerHTML = `<i id="header-logo-icon" data-lucide="scissors" class="w-5 h-5 text-zinc-950"></i>`;
+                logoContainer.innerHTML = `<i id="header-logo-icon" data-lucide="scissors" class="w-5 h-5 text-theme"></i>`;
                 if (window.lucide) lucide.createIcons();
             }
         }
@@ -448,7 +471,7 @@ Object.assign(App, {
     openPayoutModal(barberId, barberName, balance) {
         const modal = document.createElement('div');
         modal.id = 'payout-modal';
-        modal.className = 'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm fade-in';
+        modal.className = 'fixed inset-0 z-[100] flex items-center justify-center p-4 app-bg/80 backdrop-blur-sm fade-in';
         
         modal.innerHTML = `
             <div class="card-bg w-full max-w-sm rounded-3xl border border-theme p-6 space-y-6 shadow-2xl slide-in-up">
@@ -457,7 +480,7 @@ Object.assign(App, {
                         <h3 class="text-xl font-bold text-theme">Pagamento</h3>
                         <p class="text-xs text-muted-theme mt-1">${barberName}</p>
                     </div>
-                    <button onclick="document.getElementById('payout-modal').remove()" class="text-zinc-500 hover:text-white transition-colors">
+                    <button onclick="document.getElementById('payout-modal').remove()" class="text-zinc-500 hover:text-theme transition-colors">
                         <i data-lucide="x" class="w-6 h-6"></i>
                     </button>
                 </div>
@@ -474,17 +497,17 @@ Object.assign(App, {
                         </button>
                         
                         <div class="relative flex items-center py-2">
-                            <div class="flex-grow border-t border-zinc-800"></div>
-                            <span class="flex-shrink mx-4 text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Ou Adiantar</span>
-                            <div class="flex-grow border-t border-zinc-800"></div>
+                            <div class="flex-grow border-t border-theme"></div>
+                            <span class="flex-shrink mx-4 text-[10px] text-muted-theme font-bold uppercase tracking-widest">Ou Adiantar</span>
+                            <div class="flex-grow border-t border-theme"></div>
                         </div>
 
                         <div class="space-y-2">
                             <div class="relative">
                                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-muted-theme font-bold">R$</span>
-                                <input type="number" id="advance-amount" placeholder="Valor do Adiantamento" class="w-full input-bg border border-zinc-800 rounded-xl p-4 pl-10 text-theme outline-none focus:border-amber-500 transition-all font-bold" />
+                                <input type="number" id="advance-amount" placeholder="Valor do Adiantamento" class="w-full input-bg border border-theme rounded-xl p-4 pl-10 text-theme outline-none focus:border-amber-500 transition-all font-bold" />
                             </div>
-                            <button onclick="App.handlePayout('${barberId}', null, 'advance')" class="w-full py-3 bg-zinc-800 text-zinc-300 font-bold rounded-xl active:scale-95 transition-all border border-zinc-700">
+                            <button onclick="App.handlePayout('${barberId}', null, 'advance')" class="w-full py-3 input-bg text-theme font-bold rounded-xl active:scale-95 transition-all border border-theme">
                                 Confirmar Adiantamento
                             </button>
                         </div>
@@ -591,6 +614,11 @@ Object.assign(App, {
             setTimeout(() => this.initCharts(), 10);
         }
 
+        // Se estivermos na aba de serviços, inicializar Sortable
+        if (this.state.activeTab === 'barbearia' && this.state.adminShopTab === 'services') {
+            setTimeout(() => this.initServicesSortable(), 50);
+        }
+
         // --- Renderizar Modais Globais ---
         const modalContainer = document.getElementById('modal-container');
         if (modalContainer) {
@@ -651,11 +679,11 @@ Object.assign(App, {
             <div class="card-bg border border-theme rounded-2xl p-4 shadow-sm w-full font-sans">
                 <!-- Header -->
                 <div class="flex justify-between items-center mb-6">
-                    <button onclick="App.prevMonth()" class="p-2 text-muted-theme hover:text-white transition-colors input-bg/50 hover:input-bg rounded-full">
+                    <button onclick="App.prevMonth()" class="p-2 text-muted-theme hover:text-theme transition-colors input-bg/50 hover:input-bg rounded-full">
                         <i data-lucide="chevron-left" class="w-5 h-5"></i>
                     </button>
                     <h4 class="text-theme font-bold text-lg capitalize tracking-wide">${monthNames[month]} de ${year}</h4>
-                    <button onclick="App.nextMonth()" class="p-2 text-muted-theme hover:text-white transition-colors input-bg/50 hover:input-bg rounded-full">
+                    <button onclick="App.nextMonth()" class="p-2 text-muted-theme hover:text-theme transition-colors input-bg/50 hover:input-bg rounded-full">
                         <i data-lucide="chevron-right" class="w-5 h-5"></i>
                     </button>
                 </div>
@@ -685,7 +713,7 @@ Object.assign(App, {
 
             if (isPast) {
                 calendarHtml += `
-                    <div class="flex justify-center items-center h-10 w-full text-zinc-600/30 font-medium cursor-not-allowed">
+                    <div class="flex justify-center items-center h-10 w-full text-muted-theme opacity-30 font-medium cursor-not-allowed">
                         ${i}
                     </div>
                 `;
@@ -698,7 +726,7 @@ Object.assign(App, {
             } else {
                 calendarHtml += `
                     <div class="flex justify-center items-center h-10 w-full cursor-pointer hover:input-bg/60 rounded-full group transition-colors" onclick="App.selectDate('${dateStr}')">
-                        <span class="text-zinc-300 font-medium group-hover:text-white">${i}</span>
+                        <span class="text-theme font-medium group-hover:text-amber-500">${i}</span>
                     </div>
                 `;
             }
@@ -835,6 +863,29 @@ Object.assign(App, {
                 img.onerror = reject;
             };
             reader.onerror = reject;
+        });
+    },
+
+    initServicesSortable() {
+        const el = document.getElementById('services-sortable-list');
+        if (!el || !window.Sortable) return;
+
+        // Limpar instância anterior se existir para evitar bugs de duplicidade
+        if (this.servicesSortable) {
+            this.servicesSortable.destroy();
+        }
+
+        this.servicesSortable = new Sortable(el, {
+            animation: 150,
+            handle: '.sortable-handle',
+            ghostClass: 'opacity-50',
+            dragClass: 'shadow-2xl',
+            onEnd: () => {
+                const newOrderIds = Array.from(el.querySelectorAll('[data-service-id]'))
+                    .map(item => item.dataset.serviceId);
+                
+                this.updateServiceOrder(newOrderIds);
+            }
         });
     }
 });
