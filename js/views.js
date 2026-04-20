@@ -1424,13 +1424,22 @@ Object.assign(App, {
                     </div>
                     
                     <!-- Novo: Botão Google Review -->
+                    ${s.google_review_url ? `
+                        <div class="pt-2">
+                            <a href="${s.google_review_url}" target="_blank" class="w-full card-bg border border-amber-500/20 hover:border-amber-500/50 transition-all duration-500 rounded-2xl p-4 flex items-center justify-between group shadow-lg active:scale-[0.98]">
+                                <div class="flex items-center gap-4">
+                                    <div class="bg-white p-2 rounded-xl shadow-inner group-hover:scale-110 transition-transform duration-500 flex-shrink-0">
+                                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" class="w-5 h-5" alt="Google Logo" />
+                                    </div>
+                                    <div class="text-left">
+                                        <p class="text-xs font-black text-theme uppercase tracking-widest">Avaliar no Google</p>
+                                        <p class="text-[10px] text-muted-theme font-medium mt-0.5">Sua opinião é muito importante para nós!</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="bg-amber-500/10 p-2.5 rounded-xl text-amber-500 group-hover:bg-amber-500 group-hover:text-zinc-950 transition-all duration-500 shadow-inner">
-                                <i data-lucide="star" class="w-5 h-5 fill-current"></i>
-                            </div>
-                        </a>
-                    </div>
+                                <i data-lucide="external-link" class="w-4 h-4 text-muted-theme group-hover:text-amber-500 transition-colors"></i>
+                            </a>
+                        </div>
+                    ` : ''}
                 </div>
 
                 <div class="space-y-4 pt-6">
