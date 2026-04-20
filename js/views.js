@@ -1,5 +1,20 @@
 Object.assign(App, {
     renderSplash() {
+        const name = this.state.shopSettings?.name || 'FinnoTrato';
+        const highlightRegex = /(barber|barbearia)/i;
+        let formattedName = name;
+        
+        if (highlightRegex.test(name)) {
+            const parts = name.split(highlightRegex);
+            formattedName = parts.map(part => {
+                const lowerPart = part.toLowerCase();
+                if (lowerPart === 'barber' || lowerPart === 'barbearia') {
+                    return `<span class="text-amber-500">${part}</span>`;
+                }
+                return part;
+            }).join('');
+        }
+
         return `
             <div class="flex flex-col items-center justify-center min-h-[80vh] app-bg fade-in">
                 <div class="relative w-32 h-32 mb-8">
@@ -9,7 +24,7 @@ Object.assign(App, {
                         <i data-lucide="scissors" class="w-12 h-12 text-amber-500 animate-pulse"></i>
                     </div>
                 </div>
-                <h1 class="text-3xl font-black text-theme italic uppercase tracking-widest animate-pulse logo-font">${this.state.shopSettings?.name || 'FinnoTrato'}</h1>
+                <h1 class="text-3xl font-black text-theme italic uppercase tracking-widest animate-pulse logo-font">${formattedName}</h1>
                 <p class="text-[10px] text-muted-theme font-bold uppercase tracking-[0.3em] mt-2">${this.state.shopSettings?.slogan || 'Personal Grooming'}</p>
             </div>
         `;
@@ -105,11 +120,16 @@ Object.assign(App, {
                     <h1 class="text-[2.75rem] font-bold tracking-tight text-theme logo-font leading-tight">
                         ${(() => {
                             const name = this.state.shopSettings?.name || 'FinnoTratoBarber';
-                            if (name.toLowerCase().includes('barber')) {
-                                const parts = name.split(/(barber)/i);
-                                return parts.map(part => 
-                                    part.toLowerCase() === 'barber' ? `<span class="text-amber-500">${part}</span>` : part
-                                ).join('');
+                            const highlightRegex = /(barber|barbearia)/i;
+                            if (highlightRegex.test(name)) {
+                                const parts = name.split(highlightRegex);
+                                return parts.map(part => {
+                                    const lowerPart = part.toLowerCase();
+                                    if (lowerPart === 'barber' || lowerPart === 'barbearia') {
+                                        return `<span class="text-amber-500">${part}</span>`;
+                                    }
+                                    return part;
+                                }).join('');
                             }
                             return name;
                         })()}
@@ -335,12 +355,15 @@ Object.assign(App, {
                     ${this.state.activeBookingStep === 2 ? `
                         <div class="p-4 fade-in input-bg space-y-3 max-h-80 overflow-y-auto scrollbar-hide">
                         ${(() => {
-                            // Validação de Dia de Funcionamento (Bloqueio Semanal)
-                            const workingDays = this.state.shopSettings?.working_days || [1, 2, 3, 4, 5, 6];
                             const dateObj = new Date(this.state.selectedDate + 'T00:00:00');
                             const dayOfWeek = dateObj.getDay();
+                            const isStaff = ['admin', 'manager', 'barber'].includes(this.state.role);
+                            
+                            // NOVO: Verificação de Barbearia Aberta (Ignorada para staff se necessário, mas mantida por padrão)
+                            const workingDays = this.state.shopSettings.working_days || [1,2,3,4,5,6];
+                            const isShopOpen = workingDays.includes(dayOfWeek);
 
-                            if (!workingDays.includes(dayOfWeek)) {
+                            if (!isShopOpen && !isStaff) {
                                 return `
                                     <div class="flex flex-col items-center justify-center py-10 text-center space-y-4">
                                         <div class="w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center text-red-500">
@@ -348,85 +371,64 @@ Object.assign(App, {
                                         </div>
                                         <div>
                                             <h4 class="font-bold text-theme">Barbearia Fechada</h4>
-                                            <p class="text-xs text-muted-theme mt-1">Não abrimos neste dia da semana.<br>Por favor, escolha outra data.</p>
+                                            <p class="text-xs text-muted-theme mt-1">Neste dia não funcionamos.<br>Por favor, selecione outra data.</p>
                                         </div>
-                                        <button onclick="App.setBookingStep(1)" class="px-6 py-2 bg-zinc-800 text-amber-500 text-xs font-bold rounded-xl border border-zinc-700">
-                                            Voltar ao Calendário
-                                        </button>
                                     </div>
                                 `;
                             }
 
-                            return AVAILABLE_TIMES.map((time, idx) => {
-                                const now = new Date();
-                                const year = now.getFullYear();
-                                const month = String(now.getMonth() + 1).padStart(2, '0');
-                                const day = String(now.getDate()).padStart(2, '0');
-                                const todayStr = `${year}-${month}-${day}`;
-                                const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                                const isStaff = ['admin', 'manager', 'barber'].includes(this.state.role);
+                            const now = new Date();
+                            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                            const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-                                if (!isStaff && this.state.selectedDate === todayStr && time <= currentTimeStr) {
-                                    return '';
+                            // Agrupar slots por horário: { "09:00": [barber1, barber2], "09:45": [barber1] }
+                            const slotsByTime = {};
+
+                            // Filtro resiliente: se is_active/active for undefined, assume que é ativo (retrocompatibilidade)
+                            const activeBarbers = BARBERS.filter(b => b.is_active !== false && b.active !== false);
+                            
+                            activeBarbers.forEach(barber => {
+                                const available = this.getBarberAvailableSlots(barber.user_id, this.state.selectedDate);
+                                
+                                // Debug log para ajudar o suporte (visível no console)
+                                if (available.length === 0) {
+                                    console.log(`ℹ️ Nenhuma disponibilidade para ${barber.name} em ${this.state.selectedDate}`);
                                 }
 
-                                const availableBarbers = BARBERS.filter(barber => {
-                                    if (!barber.is_active) return false;
+                                available.forEach(slot => {
+                                    if (slot.isOccupied) return;
 
-                                    // 1. Verifica se o horário foi LIBERADO pelo barbeiro
-                                    const isReleased = (this.state.blockedTimesFull || []).some(b =>
-                                        String(b.barber_id) === String(barber.user_id) && !b.date && b.blocked_time === time
-                                    );
-                                    if (!isReleased) return false;
+                                    // Se não for staff, não mostrar horários retroativos do dia de hoje
+                                    if (!isStaff && this.state.selectedDate === todayStr && slot.time <= currentTimeStr) return;
 
-                                    // 2. Verifica se há algum BLOQUEIO EXPLICÍCITO (Folga/Médico/Global)
-                                    const isExplicitlyBlocked = (this.state.blockedTimesFull || []).some(b => {
-                                        if (!b.barber_id && !b.date && b.blocked_time === time) return true;
-                                        if (String(b.barber_id) === String(barber.user_id) && b.date === this.state.selectedDate && b.blocked_time === time) return true;
-                                        return false;
-                                    });
-
-                                    if (isExplicitlyBlocked) return false;
-
-                                    // 3. Verifica se o horário já está OCUPADO por outro agendamento
-                                    const isOccupied = (this.state.allAppointmentsForStats || []).some(apt => {
-                                        if (apt.date !== this.state.selectedDate) return false;
-
-                                        // Compara o barbeiro (UUID)
-                                        if (String(apt.barber_id) !== String(barber.user_id)) return false;
-
-                                        // Status cancelado não ocupa horário
-                                        if (apt.status === 'cancelled') return false;
-
-                                        const [aptH, aptM] = apt.time.split(':').map(Number);
-                                        const aptStartTotal = aptH * 60 + aptM;
-                                        const aptEndTotal = aptStartTotal + (apt.total_duration || 30);
-
-                                        const [thisH, thisM] = time.split(':').map(Number);
-                                        const thisTotal = thisH * 60 + thisM;
-
-                                        // Se houver um agendamento exato no mesmo minuto de início, está ocupado
-                                        if (thisTotal === aptStartTotal) return true;
-
-                                        // Para verificar se "cabe", usamos a duração total dos serviços já selecionados (ou 5min se vazio)
-                                        const totalDuration = this.state.selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0) || 15;
-                                        const thisEndTotal = thisTotal + totalDuration;
-
-                                        return (thisTotal < aptEndTotal && thisEndTotal > aptStartTotal);
-                                    });
-
-                                    return !isOccupied;
+                                    if (!slotsByTime[slot.time]) slotsByTime[slot.time] = [];
+                                    slotsByTime[slot.time].push(barber);
                                 });
+                            });
 
-                                if (availableBarbers.length === 0) return '';
+                            const sortedTimes = Object.keys(slotsByTime).sort();
 
+                            if (sortedTimes.length === 0) {
                                 return `
-                                    <div class="p-3 card-bg border border-theme rounded-xl flex items-center justify-between shadow-sm">
-                                        <span class="text-xl font-bold text-theme">${time}</span>
-                                        <div class="flex gap-4">
-                                            ${availableBarbers.map(barber => {
-                                    const isSelected = this.state.selectedTime === time && this.state.selectedBarber?.id === barber.id;
-                                    return `
+                                    <div class="flex flex-col items-center justify-center py-10 text-center space-y-4">
+                                        <div class="w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center text-amber-500">
+                                            <i data-lucide="clock" class="w-8 h-8"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-theme">Sem Horários</h4>
+                                            <p class="text-xs text-muted-theme mt-1">Nenhum barbeiro disponível para esta data.<br>Tente outro dia.</p>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            return sortedTimes.map(time => `
+                                <div class="p-3 card-bg border border-theme rounded-xl flex items-center justify-between shadow-sm">
+                                    <span class="text-xl font-bold text-theme">${time}</span>
+                                    <div class="flex gap-4">
+                                        ${slotsByTime[time].map(barber => {
+                                            const isSelected = this.state.selectedTime === time && this.state.selectedBarber?.id === barber.id;
+                                            return `
                                                 <div onclick="App.selectTimeAndBarber('${time}', ${barber.id})" class="cursor-pointer transition-all flex flex-col items-center gap-1 ${isSelected ? 'scale-110' : 'hover:scale-105 opacity-80 hover:opacity-100'}">
                                                     <div class="relative">
                                                         ${barber.avatar ? `
@@ -440,12 +442,11 @@ Object.assign(App, {
                                                     </div>
                                                     <span class="text-[10px] ${isSelected ? 'text-amber-500 font-bold' : 'text-muted-theme font-medium'}">${barber.name.split(' ')[0]}</span>
                                                 </div>
-                                                `;
-                                }).join('')}
-                                        </div>
+                                            `;
+                                        }).join('')}
                                     </div>
-                                `;
-                            }).join('');
+                                </div>
+                            `).join('');
                         })()}
                         </div>
                     ` : ''}
@@ -1315,24 +1316,6 @@ Object.assign(App, {
                             </div>
                         </div>
                         
-                        <div class="space-y-3 pt-4 border-t border-theme/50">
-                            <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider block">Semana de Trabalho (Dias Abertos)</label>
-                            <div class="flex flex-wrap gap-2">
-                                ${['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day, idx) => {
-                                    const isOpen = (s.working_days || [1,2,3,4,5,6]).includes(idx);
-                                    return `
-                                        <button 
-                                            onclick="this.classList.toggle('active'); this.classList.toggle('input-bg'); this.classList.toggle('bg-amber-500'); this.classList.toggle('text-muted-theme'); this.classList.toggle('text-zinc-950');"
-                                            data-day="${idx}" 
-                                            class="day-selector flex-1 py-3 px-2 rounded-xl text-[10px] font-black uppercase transition-all border border-theme ${isOpen ? 'active bg-amber-500 text-zinc-950' : 'input-bg text-muted-theme'}"
-                                        >
-                                            ${day}
-                                        </button>
-                                    `;
-                                }).join('')}
-                            </div>
-                            <p class="text-[9px] text-amber-500/60 italic">Clique nos dias para ativar/desativar o funcionamento da casa.</p>
-                        </div>
 
                         <div class="space-y-4 pt-4 border-t border-theme/50">
 
@@ -1406,44 +1389,41 @@ Object.assign(App, {
                         <div class="w-8 h-px bg-theme/20"></div> Contato e Redes Sociais
                     </h3>
                     <div class="grid grid-cols-2 gap-4">
-                        <a href="https://wa.me/${App.formatWA(s.whatsapp)}" target="_blank" class="bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/10 hover:bg-[#25D366]/20 transition-all duration-300 rounded-3xl p-4 flex flex-col items-center gap-3 justify-center shadow-lg active:scale-95">
-                            <div class="bg-[#25D366]/20 p-2.5 rounded-xl">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.75.452 3.457 1.319 4.972L2 22l5.161-1.353a9.948 9.948 0 0 0 4.851 1.226c5.509 0 10.013-4.504 10.013-10.013s-4.504-10.012-10.013-10.012zm5.823 14.16c-.25.713-1.464 1.3-2.022 1.38-.501.071-1.077.106-1.745-.107-2.617-.837-4.305-3.486-4.436-3.66-.131-.174-1.063-1.411-1.063-2.695 0-1.284.672-1.921.912-2.181.25-.26-.145-.51-.145-.51l1.107-.107c.25.011.511.022.753.593.25.592.511 1.254.511 1.254s.061.127.018.239a.44.44 0 0 1-.223.239c-.131.061-.223.111-.315.207-.131.131-.274.275-.018.711.25.436.56 1.01.99 1.48.583.633 1.137.95 1.623 1.17 1.545.698 2.37.5 2.766.1a1.8 1.8 0 0 1 .536-.71c.145-.126.315-.175.56-.08.68.254 1.25.54 2.1 1.05zm0 0"/></svg>
-                            </div>
-                            <span class="text-xs font-black uppercase tracking-tighter">WhatsApp</span>
-                        </a>
-                        <a href="tel:+55${s.phone.replace(/\D/g, '')}" class="input-bg text-theme border border-theme/50 hover:bg-zinc-700 transition-all duration-300 rounded-3xl p-4 flex flex-col items-center gap-3 justify-center shadow-lg active:scale-95">
-                            <div class="input-bg p-2.5 rounded-xl border border-white/5">
-                                <i data-lucide="phone" class="w-6 h-6"></i>
-                            </div>
-                            <span class="text-xs font-black uppercase tracking-tighter">${this.formatDisplayPhone(s.phone)}</span>
-                        </a>
-                        <a href="${s.instagram_url}" target="_blank" class="bg-gradient-to-tr from-[#f09433]/10 via-[#e6683c]/10 to-[#bc1888]/10 text-[#e1306c] border border-[#e1306c]/10 hover:bg-[#e1306c]/20 transition-all duration-300 rounded-3xl p-4 flex flex-col items-center gap-3 justify-center shadow-lg active:scale-95">
-                            <div class="bg-[#bc1888]/20 p-2.5 rounded-xl">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
-                            </div>
-                            <span class="text-xs font-black uppercase tracking-tighter">Instagram</span>
-                        </a>
-                        <a href="${s.facebook_url || '#'}" target="_blank" class="bg-[#1877F2]/10 text-[#1877F2] border border-[#1877F2]/10 hover:bg-[#1877F2]/20 transition-all duration-300 rounded-3xl p-4 flex flex-col items-center gap-3 justify-center shadow-lg active:scale-95">
-                            <div class="bg-[#1877F2]/20 p-2.5 rounded-xl">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M9 8H6v4h3v12h5V12h3.642L18 8h-4V6.333C14 5.378 14.792 5 15.536 5H18V0h-3.977C10.038 0 9 2.105 9 5.589V8z"/></svg>
-                            </div>
-                            <span class="text-xs font-black uppercase tracking-tighter">Facebook</span>
-                        </a>
+                        ${s.whatsapp ? `
+                            <a href="https://wa.me/${App.formatWA(s.whatsapp)}" target="_blank" class="bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/10 hover:bg-[#25D366]/20 transition-all duration-300 rounded-3xl p-4 flex flex-col items-center gap-3 justify-center shadow-lg active:scale-95">
+                                <div class="bg-[#25D366]/20 p-2.5 rounded-xl">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.75.452 3.457 1.319 4.972L2 22l5.161-1.353a9.948 9.948 0 0 0 4.851 1.226c5.509 0 10.013-4.504 10.013-10.013s-4.504-10.012-10.013-10.012zm5.823 14.16c-.25.713-1.464 1.3-2.022 1.38-.501.071-1.077.106-1.745-.107-2.617-.837-4.305-3.486-4.436-3.66-.131-.174-1.063-1.411-1.063-2.695 0-1.284.672-1.921.912-2.181.25-.26-.145-.51-.145-.51l1.107-.107c.25.011.511.022.753.593.25.592.511 1.254.511 1.254s.061.127.018.239a.44.44 0 0 1-.223.239c-.131.061-.223.111-.315.207-.131.131-.274.275-.018.711.25.436.56 1.01.99 1.48.583.633 1.137.95 1.623 1.17 1.545.698 2.37.5 2.766.1a1.8 1.8 0 0 1 .536-.71c.145-.126.315-.175.56-.08.68.254 1.25.54 2.1 1.05zm0 0"/></svg>
+                                </div>
+                                <span class="text-xs font-black uppercase tracking-tighter">WhatsApp</span>
+                            </a>
+                        ` : ''}
+                        ${s.phone ? `
+                            <a href="tel:+55${s.phone.replace(/\D/g, '')}" class="input-bg text-theme border border-theme/50 hover:bg-zinc-700 transition-all duration-300 rounded-3xl p-4 flex flex-col items-center gap-3 justify-center shadow-lg active:scale-95">
+                                <div class="input-bg p-2.5 rounded-xl border border-white/5">
+                                    <i data-lucide="phone" class="w-6 h-6"></i>
+                                </div>
+                                <span class="text-xs font-black uppercase tracking-tighter">${this.formatDisplayPhone(s.phone)}</span>
+                            </a>
+                        ` : ''}
+                        ${s.instagram_url ? `
+                            <a href="${s.instagram_url}" target="_blank" class="bg-gradient-to-tr from-[#f09433]/10 via-[#e6683c]/10 to-[#bc1888]/10 text-[#e1306c] border border-[#e1306c]/10 hover:bg-[#e1306c]/20 transition-all duration-300 rounded-3xl p-4 flex flex-col items-center gap-3 justify-center shadow-lg active:scale-95">
+                                <div class="bg-[#bc1888]/20 p-2.5 rounded-xl">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+                                </div>
+                                <span class="text-xs font-black uppercase tracking-tighter">Instagram</span>
+                            </a>
+                        ` : ''}
+                        ${s.facebook_url ? `
+                            <a href="${s.facebook_url}" target="_blank" class="bg-[#1877F2]/10 text-[#1877F2] border border-[#1877F2]/10 hover:bg-[#1877F2]/20 transition-all duration-300 rounded-3xl p-4 flex flex-col items-center gap-3 justify-center shadow-lg active:scale-95">
+                                <div class="bg-[#1877F2]/20 p-2.5 rounded-xl">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M9 8H6v4h3v12h5V12h3.642L18 8h-4V6.333C14 5.378 14.792 5 15.536 5H18V0h-3.977C10.038 0 9 2.105 9 5.589V8z"/></svg>
+                                </div>
+                                <span class="text-xs font-black uppercase tracking-tighter">Facebook</span>
+                            </a>
+                        ` : ''}
                     </div>
                     
                     <!-- Novo: Botão Google Review -->
-                    <div class="mt-4 pt-4 border-t border-theme/20">
-                        <a href="${s.google_review_url}" target="_blank" class="w-full input-bg/40 hover:input-bg/60 border border-theme/50 transition-all duration-300 rounded-3xl p-5 flex items-center justify-between shadow-sm group active:scale-[0.98]">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center p-2 shadow-2xl">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="w-full h-full">
-                                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/>
-                                    </svg>
-                                </div>
-                                <div class="text-left">
-                                    <h4 class="text-sm font-bold text-theme">Avalie-nos no Google</h4>
-                                    <p class="text-[10px] text-muted-theme font-medium leading-none mt-1">Sua nota nos ajuda a crescer!</p>
                                 </div>
                             </div>
                             <div class="bg-amber-500/10 p-2.5 rounded-xl text-amber-500 group-hover:bg-amber-500 group-hover:text-zinc-950 transition-all duration-500 shadow-inner">
@@ -1642,77 +1622,190 @@ Object.assign(App, {
             `;
         } else if (tab === 'schedules') {
             const selectedBarberId = this.state.adminScheduleBarberId || (this.state.role === 'barber' ? this.state.userProfile?.id : null);
-            const selectedDate = this.state.adminScheduleDate;
+            const viewMode = this.state.adminScheduleViewMode; // 'fixed' ou 'exceptions'
             const currentBarber = BARBERS.find(b => b.user_id === selectedBarberId);
+            const selectedDay = this.state.adminScheduleDayOfWeek;
+            const selectedDate = this.state.adminScheduleDate;
+
+            const daysLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            const fullDaysLabels = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+
+            const barberConfig = this.state.barberConfigs.find(c => c.barber_id === selectedBarberId) || { lunch_start: '12:00', lunch_end: '13:00' };
 
             contentHtml = `
-                <div class="space-y-6 fade-in">
-                    <!-- Seletores -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        ${this.state.role === 'admin' ? `
-                            <div class="space-y-2">
-                                <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest pl-1">Selecionar Barbeiro</label>
-                                <select onchange="App.setAdminScheduleBarber(this.value)" class="w-full card-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500">
-                                    <option value="" ${!selectedBarberId ? 'selected' : ''}>--- Global (Todos) ---</option>
-                                    ${BARBERS.map(b => `<option value="${b.user_id}" ${selectedBarberId === b.user_id ? 'selected' : ''}>${App.escapeHTML(b.name)}</option>`).join('')}
-                                </select>
-                            </div>
-                        ` : ''}
+                <div class="space-y-6 fade-in pb-10">
+                    <!-- NOVO: Configuração Global da Casa (Sempre Visível) -->
+                    <div class="card-bg rounded-2xl border border-theme p-5 space-y-4 shadow-xl">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                            <h3 class="text-[10px] font-black uppercase text-theme tracking-[0.2em]">Semana de Trabalho (Dias Abertos)</h3>
+                        </div>
+                        
+                        <div class="flex flex-wrap gap-2">
+                            ${['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day, idx) => {
+                                const isOpen = (this.state.shopSettings.working_days || [1,2,3,4,5,6]).includes(idx);
+                                return `
+                                    <button 
+                                        onclick="App.toggleShopOpeningDay(${idx})"
+                                        class="flex-1 min-w-[45px] py-3 rounded-xl text-[10px] font-black uppercase transition-all border border-theme ${isOpen ? 'bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/20' : 'input-bg text-muted-theme opacity-50'}"
+                                    >
+                                        ${day}
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+                        <p class="text-[9px] text-amber-500/60 font-medium pl-1 italic">Estes são os dias que a barbearia aparece disponível para os clientes.</p>
+                    </div>
+
+                    <!-- Seleção de Barbeiro (Apenas Admin) -->
+                    ${this.state.role === 'admin' ? `
                         <div class="space-y-2">
-                            <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest pl-1">Escolher Data</label>
-                            <input type="date" value="${selectedDate}" onchange="App.setAdminScheduleDate(this.value)" class="w-full card-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500" />
+                            <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest pl-1">Barbeiro</label>
+                            <select onchange="App.setAdminScheduleBarber(this.value)" class="w-full card-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500">
+                                <option value="" ${!selectedBarberId ? 'selected' : ''}>--- Selecione um Barbeiro ---</option>
+                                ${BARBERS.map(b => `<option value="${b.user_id}" ${selectedBarberId === b.user_id ? 'selected' : ''}>${App.escapeHTML(b.name)}</option>`).join('')}
+                            </select>
                         </div>
-                    </div>
+                    ` : ''}
 
-                    <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
-                        <i data-lucide="info" class="w-5 h-5 text-amber-500 mt-0.5"></i>
-                        <div>
-                            <p class="text-xs text-amber-200/90 font-bold leading-relaxed">
-                                ${!selectedBarberId ? '<b>MODO GLOBAL:</b> Bloqueios afetarão todos os barbeiros.' : `Gestão de horários para <b>${currentBarber?.name || 'Profissional'}</b>.`}
-                            </p>
-                            <p class="text-[10px] text-amber-200/60 mt-1">
-                                Clique para bloquear/liberar. Use a data para folgas pontuais ou deixe sem data para horários diários (ex: almoço).
-                            </p>
+                    ${!selectedBarberId ? `
+                        <div class="text-center py-20 text-muted-theme">
+                            <i data-lucide="user-plus" class="w-16 h-16 mx-auto mb-4 opacity-20"></i>
+                            <p class="font-medium">Selecione um barbeiro para gerenciar a escala.</p>
                         </div>
-                    </div>
-                    
-                    <!-- Aba de tipo de bloqueio (Recorrente vs Específico) -->
-                    <div class="flex gap-2 p-1 card-bg rounded-xl">
-                        <button onclick="App.setAdminScheduleDate('')" class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${!selectedDate ? 'bg-amber-500 text-zinc-950' : 'text-muted-theme hover:text-theme'}">Diário / Fixo</button>
-                        <button onclick="App.setAdminScheduleDate('${new Date().toISOString().split('T')[0]}')" class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${selectedDate ? 'bg-amber-500 text-zinc-950' : 'text-muted-theme hover:text-theme'}">Data Específica</button>
-                    </div>
+                    ` : `
 
-                    <!-- Ações em Massa -->
-                    <div class="flex gap-2">
-                        <button onclick="App.bulkToggleDay('${selectedBarberId}', '${selectedDate}', 'block')" class="flex-1 py-2.5 rounded-xl border border-red-500/20 bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-2">
-                            <i data-lucide="lock" class="w-3.5 h-3.5"></i> Bloquear Dia Inteiro
-                        </button>
-                        <button onclick="App.bulkToggleDay('${selectedBarberId}', '${selectedDate}', 'release')" class="flex-1 py-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-2">
-                            <i data-lucide="unlock" class="w-3.5 h-3.5"></i> Liberar Tudo
-                        </button>
-                    </div>
+                        <!-- Toggle de Modo -->
+                        <div class="flex gap-2 p-1 card-bg rounded-xl">
+                            <button onclick="App.setState({ adminScheduleViewMode: 'fixed' })" class="flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${viewMode === 'fixed' ? 'bg-amber-500 text-zinc-950 shadow-lg' : 'text-muted-theme hover:text-theme'}">Escala Fixa (Semanal)</button>
+                            <button onclick="App.setState({ adminScheduleViewMode: 'exceptions' })" class="flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${viewMode === 'exceptions' ? 'bg-amber-500 text-zinc-950 shadow-lg' : 'text-muted-theme hover:text-theme'}">Exceções (Feriados/...)</button>
+                        </div>
 
-                    <div class="grid grid-cols-4 gap-2 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
-                        ${AVAILABLE_TIMES.map(time => {
-                            const block = (this.state.blockedTimesFull || []).find(b => 
-                                b.blocked_time === time && 
-                                b.barber_id === (selectedBarberId || null) && 
-                                b.date === (selectedDate || null)
-                            );
-                            
-                            // Lógica Invertida para Recorrente: Se NÃO tem registro, está BLOQUEADO.
-                            // Para Global/Data específica: Se TEM registro, está BLOQUEADO.
-                            const isRecurrentMode = selectedBarberId && !selectedDate;
-                            const isBlocked = isRecurrentMode ? !block : !!block;
-                            
-                            return `
-                                <button onclick="App.toggleTimeBlock('${time}', ${selectedBarberId ? `'${selectedBarberId}'` : 'null'}, ${selectedDate ? `'${selectedDate}'` : 'null'})" class="py-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all duration-200 active:scale-95 ${isBlocked ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'card-bg border-theme text-amber-500 hover:border-amber-500 shadow-lg shadow-amber-500/5'}">
-                                    <span class="text-[10px] font-black">${time}</span>
-                                    ${isBlocked ? '<i data-lucide="lock" class="w-3 h-3"></i>' : '<i data-lucide="unlock" class="w-3 h-3 opacity-30"></i>'}
-                                </button>
-                            `;
-                        }).join('')}
-                    </div>
+                        ${viewMode === 'fixed' ? `
+                            <!-- MODO ESCALA FIXA -->
+                            <div class="space-y-6 slide-in-right">
+                                <!-- Bulk Mode Toggle -->
+                                <div class="flex items-center justify-between px-2">
+                                    <h4 class="text-[10px] font-black uppercase text-muted-theme tracking-widest flex items-center gap-2">
+                                        <i data-lucide="layers" class="w-3 h-3"></i> Multi-seleção de dias
+                                    </h4>
+                                    <button onclick="App.toggleBulkMode()" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${this.state.adminScheduleBulkMode ? 'bg-amber-500' : 'bg-zinc-700'}">
+                                        <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${this.state.adminScheduleBulkMode ? 'translate-x-6' : 'translate-x-1'}"></span>
+                                    </button>
+                                </div>
+
+                                <!-- Seleção de Dia -->
+                                <div class="flex justify-between gap-1 overflow-x-auto pb-2 scrollbar-hide">
+                                    ${daysLabels.map((label, idx) => {
+                                        const isSelected = this.state.adminScheduleBulkMode 
+                                            ? this.state.adminScheduleBulkDays.includes(idx)
+                                            : selectedDay === idx;
+                                            
+                                        const onClick = this.state.adminScheduleBulkMode
+                                            ? `App.toggleBulkDay(${idx})`
+                                            : `App.setState({ adminScheduleDayOfWeek: ${idx} })`;
+
+                                        return `
+                                            <button onclick="${onClick}" class="flex-1 min-w-[45px] py-3 rounded-xl border transition-all flex flex-col items-center gap-1 ${isSelected ? 'bg-amber-500 border-amber-500 text-zinc-950 font-bold' : 'card-bg border-theme text-muted-theme hover:border-amber-500/50'}">
+                                                <span class="text-[9px] uppercase tracking-tighter">${label}</span>
+                                                ${this.state.adminScheduleBulkMode && isSelected ? '<i data-lucide="check" class="w-2 h-2"></i>' : ''}
+                                            </button>
+                                        `;
+                                    }).join('')}
+                                </div>
+
+                                <div class="card-bg rounded-2xl border border-theme p-5 space-y-6">
+                                    <h3 class="text-sm font-bold text-theme flex items-center gap-2">
+                                        <i data-lucide="calendar" class="w-4 h-4 text-amber-500"></i>
+                                        ${this.state.adminScheduleBulkMode 
+                                            ? `Configuração em Massa (${this.state.adminScheduleBulkDays.length} dias)` 
+                                            : `Configuração de ${fullDaysLabels[selectedDay]}`}
+                                    </h3>
+
+                                    <!-- Intervalo de Almoço -->
+                                    <div class="grid grid-cols-2 gap-4 pt-2 border-t border-white/5">
+                                        <div class="space-y-2">
+                                            <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Início Almoço</label>
+                                            <input type="time" value="${barberConfig.lunch_start}" onchange="App.saveBarberConfig('${selectedBarberId}', { lunch_start: this.value })" class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500" />
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Fim Almoço</label>
+                                            <input type="time" value="${barberConfig.lunch_end}" onchange="App.saveBarberConfig('${selectedBarberId}', { lunch_end: this.value })" class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500" />
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-3">
+                                        <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest flex justify-between items-center">
+                                            Selecione os Slot Ativos
+                                            <span class="text-amber-500 normal-case font-bold">Clique para Ativar/Desativar</span>
+                                        </label>
+                                        
+                                        <div class="grid grid-cols-4 gap-2 max-h-[300px] overflow-y-auto pr-2 scrollbar-hide">
+                                            ${AVAILABLE_TIMES.map(time => {
+                                                const isActive = this.state.barberSlots.some(s => s.barber_id === selectedBarberId && s.day_of_week === selectedDay && s.slot_time === time);
+                                                const isLunch = time >= barberConfig.lunch_start && time < barberConfig.lunch_end;
+                                                
+                                                return `
+                                                    <button onclick="${isActive ? `App.removeBarberSlot('${selectedBarberId}', ${selectedDay}, '${time}')` : `App.saveBarberSlot('${selectedBarberId}', ${selectedDay}, '${time}')`}" 
+                                                        class="py-3 rounded-lg border text-[10px] font-black transition-all ${isActive ? 'bg-amber-500 border-amber-500 text-zinc-950 shadow-md scale-95' : isLunch ? 'bg-orange-500/10 border-orange-500/30 text-orange-500 opacity-50' : 'card-bg border-theme text-muted-theme opacity-30 hover:opacity-100 hover:border-amber-500/50'}">
+                                                        ${time}
+                                                    </button>
+                                                `;
+                                            }).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : `
+                            <!-- MODO EXCEÇÕES -->
+                            <div class="space-y-6 slide-in-right">
+                                <div class="card-bg rounded-2xl border border-theme p-5 space-y-4">
+                                     <div class="space-y-2">
+                                        <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest pl-1">Escolher Data</label>
+                                        <input type="date" value="${selectedDate}" onchange="App.setState({ adminScheduleDate: this.value })" class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500" />
+                                    </div>
+
+                                    ${selectedDate ? `
+                                        <div class="pt-4 border-t border-white/5 space-y-4">
+                                            <div class="flex items-center justify-between p-4 bg-zinc-900/50 rounded-xl border border-theme">
+                                                <div>
+                                                    <h4 class="text-sm font-bold text-theme">Marcar como Fechado?</h4>
+                                                    <p class="text-[10px] text-muted-theme">O barbeiro não aparecerá para agendamentos neste dia.</p>
+                                                </div>
+                                                <div class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" ${this.state.barberExceptions.find(ex => ex.barber_id === selectedBarberId && ex.specific_date === selectedDate)?.is_closed ? 'checked' : ''} onchange="App.toggleBarberException('${selectedBarberId}', '${selectedDate}', this.checked)" class="sr-only peer">
+                                                    <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                                                </div>
+                                            </div>
+
+                                            <div class="space-y-2 pt-4">
+                                                <h4 class="text-xs font-bold text-muted-theme uppercase tracking-widest">Exceções Salvas</h4>
+                                                <div class="space-y-2">
+                                                    ${this.state.barberExceptions.filter(ex => ex.barber_id === selectedBarberId).map(ex => `
+                                                        <div class="flex items-center justify-between p-3 card-bg border border-theme rounded-xl">
+                                                            <div class="flex items-center gap-3">
+                                                                <div class="p-2 rounded-lg ${ex.is_closed ? 'bg-red-500/20 text-red-500' : 'bg-emerald-500/20 text-emerald-500'}">
+                                                                    <i data-lucide="${ex.is_closed ? 'calendar-x' : 'calendar-check'}" class="w-4 h-4"></i>
+                                                                </div>
+                                                                <div>
+                                                                    <p class="text-xs font-bold text-theme">${App.inputToDbDate(ex.specific_date)}</p>
+                                                                    <p class="text-[10px] text-muted-theme">${ex.is_closed ? 'Dia Fechado' : 'Horário Customizado'}</p>
+                                                                </div>
+                                                            </div>
+                                                            <button onclick="App.deleteBarberException('${selectedBarberId}', '${ex.specific_date}')" class="p-2 text-muted-theme hover:text-red-500 transition-colors">
+                                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                                            </button>
+                                                        </div>
+                                                    `).join('')}
+                                                    ${this.state.barberExceptions.filter(ex => ex.barber_id === selectedBarberId).length === 0 ? '<p class="text-[10px] text-muted-theme italic opacity-50 py-4 text-center">Nenhuma exceção cadastrada.</p>' : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `}
+                    `}
                 </div>
             `;
         } else if (tab === 'accounts') {
@@ -1741,8 +1834,10 @@ Object.assign(App, {
                         ` : CLIENTES.map(c => `
                             <div class="card-bg border border-theme/50 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full input-bg flex items-center justify-center border border-theme font-bold text-theme">
-                                        ${(c.name || 'U')[0].toUpperCase()}
+                                    <div class="w-10 h-10 rounded-full input-bg flex items-center justify-center border border-theme font-bold text-theme overflow-hidden">
+                                        ${c.avatar ? `
+                                            <img src="${c.avatar}" class="w-full h-full object-cover" />
+                                        ` : (c.name || 'U')[0].toUpperCase()}
                                     </div>
                                     <div>
                                         <h4 class="font-bold text-theme text-sm">${c.name || 'Usuário Sem Nome'}</h4>
@@ -1757,7 +1852,7 @@ Object.assign(App, {
                                         <option value="admin" ${c.role === 'admin' ? 'selected' : ''}>Admin</option>
                                     </select>
                                     ${this.state.role === 'admin' ? `
-                                        <button onclick="App.updateUserRole('${c.id}', document.getElementById('role-select-${c.id}').value, '${App.escapeHTML(c.name)}', '')" class="p-2 bg-amber-500 text-zinc-950 rounded-lg hover:bg-amber-400 transition-colors shadow-sm font-bold text-xs active:scale-95 whitespace-nowrap">
+                                        <button onclick="App.updateUserRole('${c.id}', document.getElementById('role-select-${c.id}').value, '${App.escapeHTML(c.name)}', '${c.avatar || ''}')" class="p-2 bg-amber-500 text-zinc-950 rounded-lg hover:bg-amber-400 transition-colors shadow-sm font-bold text-xs active:scale-95 whitespace-nowrap">
                                             Salvar
                                         </button>
                                     ` : ''}

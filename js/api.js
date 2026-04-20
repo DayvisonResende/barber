@@ -72,13 +72,16 @@ Object.assign(App, {
 
     async loadInitialData() {
         // Disparar todas as consultas em paralelo
-        const [svcsRes, brbsRes, blocksRes, settingsRes, statsRes, specsRes] = await Promise.all([
+        const [svcsRes, brbsRes, blocksRes, settingsRes, statsRes, specsRes, bCfgRes, bSlotsRes, bExRes] = await Promise.all([
             supabaseClient.from('services').select('*'),
             supabaseClient.from('barbers').select('*'),
             supabaseClient.from('blocked_times').select('*'),
             supabaseClient.from('shop_settings').select('*').limit(1).single(),
-            supabaseClient.from('appointments').select('date, time, barber_id, total_duration').eq('status', 'pending'),
-            supabaseClient.from('barber_services').select('*')
+            supabaseClient.from('appointments').select('id, date, time, barber_id, total_duration').eq('status', 'pending'),
+            supabaseClient.from('barber_services').select('*'),
+            supabaseClient.from('barber_config').select('*'),
+            supabaseClient.from('barber_slots').select('*'),
+            supabaseClient.from('barber_exceptions').select('*')
         ]);
 
         // Processar Serviços
@@ -132,6 +135,11 @@ Object.assign(App, {
         } else if (this.state.shopSettings && !this.state.shopSettings.working_days) {
             this.state.shopSettings.working_days = [1, 2, 3, 4, 5, 6];
         }
+
+        // Processar Configurações de Escala dos Barbeiros
+        this.state.barberConfigs = bCfgRes.data || [];
+        this.state.barberSlots = bSlotsRes.data || [];
+        this.state.barberExceptions = bExRes.data || [];
 
     },
 
@@ -408,29 +416,37 @@ Object.assign(App, {
             if (!this.state.isAuthenticated) return null;
             
             try {
-                // Estratégia robusta: conta total de agendamentos pendentes
-                // e pega o ID mais recente para detectar qualquer mudança
-                let query = supabaseClient
+                // 1. Assinatura de Agendamentos (detecta novos lances, alterações na agenda ou mudança manual de preço)
+                let aptQuery = supabaseClient
                     .from('appointments')
-                    .select('id, service_names, date, time')
+                    .select('id, service_names, date, time, service_numeric_value')
                     .eq('status', 'pending');
 
-                // Aplicar mesmo filtro do loadAppointments por role
                 const { data: { user } } = await supabaseClient.auth.getUser();
                 if (!user) return null;
 
                 if (this.state.role === 'barber') {
-                    query = query.eq('barber_id', user.id);
+                    aptQuery = aptQuery.eq('barber_id', user.id);
                 } else if (this.state.role === 'client') {
-                    query = query.eq('client_id', user.id);
+                    aptQuery = aptQuery.eq('client_id', user.id);
                 }
 
-                const { data, error } = await query;
-                if (error || !data) return null;
+                // 2. Assinatura de Serviços (detecta mudanças em preços globais, nomes ou novos serviços)
+                const svcQuery = supabaseClient.from('services').select('id, name, price_value');
 
-                // Gera uma assinatura baseada no ID e no conteúdo crítico (serviço, data, hora)
-                return data.map(a => `${a.id}:${a.service_names}:${a.date}:${a.time}`).join('|');
+                // Executa em paralelo para performance
+                const [aptRes, svcRes] = await Promise.all([aptQuery, svcQuery]);
+                
+                if (aptRes.error || svcRes.error || !aptRes.data || !svcRes.data) return null;
+
+                // Gerar assinaturas ordenadas para evitar disparos falsos
+                // Incluímos o valor numérico do serviço no agendamento para detectar mudanças no "botão verde"
+                const aptSig = aptRes.data.map(a => `${a.id}:${a.service_names}:${a.date}:${a.time}:${a.service_numeric_value}`).sort().join('|');
+                const svcSig = svcRes.data.map(s => `${s.id}:${s.name}:${s.price_value}`).sort().join(';');
+
+                return `A[${aptSig}]-S[${svcSig}]`;
             } catch(e) {
+                console.error("Erro ao gerar assinatura de polling:", e);
                 return null;
             }
         };
@@ -1124,8 +1140,7 @@ Object.assign(App, {
             instagram_url: document.getElementById('shop-instagram').value,
             facebook_url: document.getElementById('shop-facebook').value,
             google_review_url: document.getElementById('shop-google').value,
-            commission_rate: document.getElementById('shop-commission') ? parseInt(document.getElementById('shop-commission').value) : (this.state.shopSettings.commission_rate || 100),
-            working_days: Array.from(document.querySelectorAll('.day-selector.active')).map(btn => parseInt(btn.dataset.day))
+            commission_rate: document.getElementById('shop-commission') ? parseInt(document.getElementById('shop-commission').value) : (this.state.shopSettings.commission_rate || 100)
         };
 
         const { error } = await supabaseClient
@@ -1159,6 +1174,30 @@ Object.assign(App, {
             this.render();
         } else {
             this.showNotification('Erro', 'Não foi possível atualizar o repasse.');
+        }
+    },
+
+    async toggleShopOpeningDay(dayIdx) {
+        const idx = parseInt(dayIdx);
+        let days = [...(this.state.shopSettings.working_days || [1,2,3,4,5,6])];
+        
+        if (days.includes(idx)) {
+            days = days.filter(d => d !== idx);
+        } else {
+            days.push(idx);
+        }
+        
+        // Salvar imediatamente
+        const { error } = await supabaseClient
+            .from('shop_settings')
+            .update({ working_days: days })
+            .eq('id', this.state.shopSettings.id);
+
+        if (!error) {
+            this.state.shopSettings.working_days = days;
+            this.render();
+        } else {
+            this.showNotification("Erro", "Não foi possível atualizar o funcionamento da casa.");
         }
     },
 
@@ -1619,6 +1658,223 @@ Object.assign(App, {
                 }
             }
         });
+    },
+
+    // --- Novas Lógicas de Escala ---
+
+    async saveBarberSlot(barberId, dayOfWeek, time) {
+        const isBulk = this.state.adminScheduleBulkMode && this.state.adminScheduleBulkDays.length > 0;
+        
+        let operation;
+        if (isBulk) {
+            const upserts = this.state.adminScheduleBulkDays.map(d => ({
+                barber_id: barberId,
+                day_of_week: d,
+                slot_time: time
+            }));
+            operation = supabaseClient.from('barber_slots').upsert(upserts, { onConflict: 'barber_id,day_of_week,slot_time' });
+        } else {
+            operation = supabaseClient.from('barber_slots').upsert({ 
+                barber_id: barberId, 
+                day_of_week: dayOfWeek, 
+                slot_time: time 
+            }, { onConflict: 'barber_id,day_of_week,slot_time' });
+        }
+
+        const { error } = await operation;
+        
+        if (!error) {
+            await this.refreshScheduleData();
+            return true;
+        }
+        return false;
+    },
+
+    async removeBarberSlot(barberId, dayOfWeek, time) {
+        const isBulk = this.state.adminScheduleBulkMode && this.state.adminScheduleBulkDays.length > 0;
+
+        let query = supabaseClient.from('barber_slots').delete();
+        
+        if (isBulk) {
+            query = query
+                .eq('barber_id', barberId)
+                .in('day_of_week', this.state.adminScheduleBulkDays)
+                .eq('slot_time', time);
+        } else {
+            query = query.match({ 
+                barber_id: barberId, 
+                day_of_week: dayOfWeek, 
+                slot_time: time 
+            });
+        }
+
+        const { error } = await query;
+        
+        if (!error) {
+            await this.refreshScheduleData();
+            return true;
+        }
+        return false;
+    },
+
+    toggleBulkDay(dayIdx) {
+        const idx = Number(dayIdx);
+        let days = [...(this.state.adminScheduleBulkDays || [])];
+        
+        if (days.includes(idx)) {
+            days = days.filter(d => d !== idx);
+        } else {
+            days.push(idx);
+        }
+        
+        // Mantém ordenado para consistência visual
+        days.sort((a, b) => a - b);
+        
+        // Sincroniza a visualização com o último dia clicado para feedback imediato
+        this.setState({ 
+            adminScheduleBulkDays: days,
+            adminScheduleDayOfWeek: idx
+        });
+    },
+
+    toggleBulkMode() {
+        const newMode = !this.state.adminScheduleBulkMode;
+        // Ao ativar o modo massa, pré-seleciona o dia atual
+        const newDays = newMode ? [this.state.adminScheduleDayOfWeek] : [];
+        this.setState({ 
+            adminScheduleBulkMode: newMode,
+            adminScheduleBulkDays: newDays
+        });
+    },
+
+    async saveBarberConfig(barberId, config) {
+        const { error } = await supabaseClient
+            .from('barber_config')
+            .upsert({ barber_id: barberId, ...config });
+        
+        if (!error) {
+            await this.refreshScheduleData();
+            return true;
+        }
+        return false;
+    },
+
+    async toggleBarberException(barberId, date, isClosed) {
+        const { error } = await supabaseClient
+            .from('barber_exceptions')
+            .upsert({ barber_id: barberId, specific_date: date, is_closed: isClosed });
+        
+        if (!error) {
+            await this.refreshScheduleData();
+            return true;
+        }
+        return false;
+    },
+
+    async deleteBarberException(barberId, date) {
+        const { error } = await supabaseClient
+            .from('barber_exceptions')
+            .delete()
+            .match({ barber_id: barberId, specific_date: date });
+        
+        if (!error) {
+            await this.refreshScheduleData();
+            return true;
+        }
+        return false;
+    },
+
+    async refreshScheduleData() {
+        const [bCfgRes, bSlotsRes, bExRes] = await Promise.all([
+            supabaseClient.from('barber_config').select('*'),
+            supabaseClient.from('barber_slots').select('*'),
+            supabaseClient.from('barber_exceptions').select('*')
+        ]);
+        this.state.barberConfigs = bCfgRes.data || [];
+        this.state.barberSlots = bSlotsRes.data || [];
+        this.state.barberExceptions = bExRes.data || [];
+        this.render();
+    },
+
+    /**
+     * Retorna os horários disponíveis para um barbeiro em uma data específica,
+     * considerando slots fixos, exceções, almoço e agendamentos existentes.
+     */
+    getBarberAvailableSlots(barberId, dateStr) {
+        if (!barberId || !dateStr) return [];
+
+        // Parsing de data robusto para evitar deslocamento de fuso
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, day);
+        const dayOfWeek = dateObj.getDay();
+
+        const bIdStr = String(barberId).toLowerCase();
+
+        // 1. Verificar Exceção para a data
+        const exception = this.state.barberExceptions.find(ex => 
+            String(ex.barber_id).toLowerCase() === bIdStr && 
+            ex.specific_date === dateStr
+        );
+        if (exception?.is_closed) return [];
+
+        // 2. Obter Slots Definidos
+        let activeSlots = this.state.barberSlots
+            .filter(s => String(s.barber_id).toLowerCase() === bIdStr && Number(s.day_of_week) === dayOfWeek)
+            .map(s => s.slot_time);
+
+        if (activeSlots.length === 0) return [];
+
+        // Ordenar horários
+        activeSlots.sort();
+
+        // 3. Filtrar Almoço
+        const config = this.state.barberConfigs.find(c => String(c.barber_id).toLowerCase() === bIdStr);
+        if (config && config.lunch_start && config.lunch_end) {
+            activeSlots = activeSlots.filter(time => {
+                return time < config.lunch_start || time >= config.lunch_end;
+            });
+        }
+
+        // 4. Filtrar Agendamentos Ocupados
+        const slotsWithStatus = activeSlots.map(time => {
+            const isOccupied = (this.state.allAppointmentsForStats || []).some(apt => {
+                if (String(apt.barber_id).toLowerCase() !== bIdStr || apt.date !== dateStr) return false;
+                
+                const slotMinutes = this.timeToMinutes(time);
+                const aptStartMinutes = this.timeToMinutes(apt.time);
+                const aptEndMinutes = aptStartMinutes + (apt.total_duration || 30);
+                
+                return slotMinutes >= aptStartMinutes && slotMinutes < aptEndMinutes;
+            });
+
+            return { time, isOccupied };
+        });
+
+        return slotsWithStatus;
+    },
+
+    timeToMinutes(timeStr) {
+        if (!timeStr) return 0;
+        const [h, m] = timeStr.split(':').map(Number);
+        return h * 60 + m;
+    },
+
+    minutesToTime(totalMinutes) {
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    },
+
+    // --- Helpers de Estado e UI ---
+    
+    setState(newState) {
+        this.state = { ...this.state, ...newState };
+        this.render();
+    },
+
+    setAdminScheduleBarber(val) {
+        this.state.adminScheduleBarberId = val || null;
+        this.render();
     }
 });
 

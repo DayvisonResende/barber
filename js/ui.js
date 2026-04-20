@@ -387,7 +387,7 @@ Object.assign(App, {
                 headerName.innerHTML = parts.map(part => {
                     const lowerPart = part.toLowerCase();
                     if (lowerPart === 'barber' || lowerPart === 'barbearia') {
-                        return `<span class="text-amber-500 ml-1 text-3xl font-normal">${part}</span>`;
+                        return `<span class="text-amber-500 ml-1 text-2xl md:text-3xl font-normal">${part}</span>`;
                     }
                     return part;
                 }).join('');
@@ -706,8 +706,12 @@ Object.assign(App, {
 
         for (let i = 1; i <= daysInMonth; i++) {
             const dateObj = new Date(year, month, i);
+            const dayOfWeek = dateObj.getDay();
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
 
+            const workingDays = this.state.shopSettings.working_days || [1,2,3,4,5,6];
+            const isShopClosed = !workingDays.includes(dayOfWeek);
+            const isStaff = ['admin', 'manager', 'barber'].includes(this.state.role);
             const isPast = dateObj < today;
             const isSelected = this.state.selectedDate === dateStr;
 
@@ -715,6 +719,13 @@ Object.assign(App, {
                 calendarHtml += `
                     <div class="flex justify-center items-center h-10 w-full text-muted-theme opacity-30 font-medium cursor-not-allowed">
                         ${i}
+                    </div>
+                `;
+            } else if (isShopClosed && !isStaff) {
+                calendarHtml += `
+                    <div class="flex justify-center items-center h-10 w-full cursor-pointer hover:bg-red-500/5 rounded-full group transition-colors relative" onclick="App.selectDate('${dateStr}')">
+                        <span class="text-red-500/40 font-medium group-hover:text-red-500/60">${i}</span>
+                        <div class="absolute bottom-1.5 w-1 h-1 bg-red-500/20 rounded-full"></div>
                     </div>
                 `;
             } else if (isSelected) {

@@ -44,7 +44,7 @@ Object.assign(App, {
 
         const modal = document.createElement('div');
         modal.id = 'staff-booking-mode-modal';
-        modal.className = 'fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-4 app-bg opacity-80 backdrop-blur-sm fade-in';
+        modal.className = 'fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-[2px] fade-in';
         modal.innerHTML = `
             <div class="w-full max-w-sm card-bg border border-theme rounded-3xl p-6 shadow-2xl slide-in-up">
                 <div class="text-center mb-6">
@@ -223,6 +223,9 @@ Object.assign(App, {
         const barberId = String(this.state.selectedBarber.user_id).toLowerCase().trim();
 
         const collisions = (this.state.allAppointmentsForStats || []).filter(apt => {
+            // Ignora o PRÓPRIO agendamento se estivermos editando ele
+            if (this.state.editingAppointmentId && apt.id === this.state.editingAppointmentId) return false;
+            
             // Compara data e barbeiro (garantindo strings limpas)
             if (apt.date !== selectedDate || String(apt.barber_id).toLowerCase().trim() !== barberId) return false;
             

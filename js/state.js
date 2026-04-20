@@ -41,6 +41,8 @@ const App = {
         adminShopTab: 'barbers', // 'barbers', 'services', 'schedules'
         adminScheduleDate: new Date().toISOString().split('T')[0],
         adminScheduleBarberId: null,
+        adminScheduleDayOfWeek: new Date().getDay(),
+        adminScheduleViewMode: 'fixed', // 'fixed' ou 'exceptions'
         editingDurationId: null, 
         isStaffBooking: false, // Indica se o barbeiro está agendando manualmente
         staffBookingMode: null, // null | 'registered' | 'walkin'
@@ -55,6 +57,8 @@ const App = {
         splitPaymentAmounts: { Pix: 0, Dinheiro: 0, Débito: 0, Crédito: 0 },
         editingServiceId: null,
         editingServicesId: null,
-        tempSelectedServices: []
+        tempSelectedServices: [],
+        adminScheduleBulkMode: false,
+        adminScheduleBulkDays: []
     }
 };
