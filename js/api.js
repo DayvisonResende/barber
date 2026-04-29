@@ -72,7 +72,7 @@ Object.assign(App, {
 
     async loadInitialData() {
         // Disparar todas as consultas em paralelo
-        const [svcsRes, brbsRes, blocksRes, settingsRes, statsRes, specsRes, bCfgRes, bSlotsRes, bExRes] = await Promise.all([
+        const [svcsRes, brbsRes, blocksRes, settingsRes, statsRes, specsRes, bCfgRes, bSlotsRes, bExRes, catsRes, prodsRes] = await Promise.all([
             supabaseClient.from('services').select('*'),
             supabaseClient.from('barbers').select('*'),
             supabaseClient.from('blocked_times').select('*'),
@@ -81,7 +81,9 @@ Object.assign(App, {
             supabaseClient.from('barber_services').select('*'),
             supabaseClient.from('barber_config').select('*'),
             supabaseClient.from('barber_slots').select('*'),
-            supabaseClient.from('barber_exceptions').select('*')
+            supabaseClient.from('barber_exceptions').select('*'),
+            supabaseClient.from('categories').select('*'),
+            supabaseClient.from('products').select('*')
         ]);
 
         // Processar Serviços
@@ -96,6 +98,9 @@ Object.assign(App, {
                 }));
             localStorage.setItem('services', JSON.stringify(SERVICES));
         }
+
+        if (catsRes && catsRes.data) CATEGORIES = catsRes.data;
+        if (prodsRes && prodsRes.data) PRODUCTS = prodsRes.data;
 
         // Processar Barbeiros
         if (brbsRes.data) BARBERS = brbsRes.data;
@@ -209,7 +214,8 @@ Object.assign(App, {
                     time: a.time,
                     status: a.status,
                     barber_id: a.barber_id,
-                    clientAvatar: a.client_avatar
+                    clientAvatar: a.client_avatar,
+                    comanda_items: a.comanda_items || []
                 };
             });
             
@@ -861,17 +867,22 @@ Object.assign(App, {
         }
 
         try {
-            const totalPrice = this.state.tempSelectedServices.reduce((sum, s) => sum + s.priceValue, 0);
+            const apt = this.state.appointments.find(a => a.id === id);
+            const comandaTotal = (apt && apt.comanda_items) ? apt.comanda_items.reduce((sum, item) => sum + (item.price * item.qty), 0) : 0;
+
+            const baseServicesPrice = this.state.tempSelectedServices.reduce((sum, s) => sum + s.priceValue, 0);
             const totalDuration = this.state.tempSelectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
             const serviceNames = this.state.tempSelectedServices.map(s => s.name).join(' + ');
-            const formattedPrice = `R$ ${totalPrice.toFixed(2).replace('.', ',')}`;
+
+            const grandTotal = baseServicesPrice + comandaTotal;
+            const formattedPrice = `R$ ${grandTotal.toFixed(2).replace('.', ',')}`;
 
             const { error } = await supabaseClient
                 .from('appointments')
                 .update({
                     service_names: serviceNames,
                     service_price: formattedPrice,
-                    service_numeric_value: totalPrice,
+                    service_numeric_value: grandTotal,
                     total_duration: totalDuration
                 })
                 .eq('id', id);
@@ -2304,6 +2315,178 @@ Object.assign(App, {
             return `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
         }
         return phone;
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // SISTEMA DE COMANDA DIGITAL (LITE)
+    // ─────────────────────────────────────────────────────────────────
+    
+    openComandaModal(appointmentId) {
+        this.renderComandaModal(appointmentId);
+    },
+
+    async addComandaItem(appointmentId, productId) {
+        const apt = this.state.appointments.find(a => a.id === appointmentId);
+        const product = PRODUCTS.find(p => p.id === productId);
+        if (!apt || !product) return;
+
+        // Confirmação para evitar toques acidentais
+        if (!confirm(`Deseja adicionar ${product.name} (R$ ${product.price.toFixed(2).replace('.', ',')}) à comanda?`)) {
+            return;
+        }
+
+        // Pega comanda atual ou inicia vazia
+        let comanda = apt.comanda_items || [];
+        
+        // Verifica se o item já existe para aumentar a quantidade
+        const existingItemIndex = comanda.findIndex(i => i.id === product.id);
+        if (existingItemIndex >= 0) {
+            comanda[existingItemIndex].qty += 1;
+        } else {
+            comanda.push({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                qty: 1
+            });
+        }
+
+        const newVal = apt.numericValue + product.price;
+
+        try {
+            const { error } = await supabaseClient
+                .from('appointments')
+                .update({ 
+                    comanda_items: comanda,
+                    service_numeric_value: newVal,
+                    service_price: `R$ ${newVal.toFixed(2).replace('.', ',')}`
+                })
+                .eq('id', appointmentId);
+            
+            if (error) throw error;
+
+            this.showNotification("Sucesso", `${product.name} adicionado à comanda!`);
+            document.getElementById('modal-container').innerHTML = ''; // Fecha modal
+            await this.loadAppointments();
+            this.render();
+            
+        } catch (error) {
+            console.error("Erro ao adicionar item na comanda:", error);
+            this.showNotification("Erro", "Falha ao adicionar item.");
+        }
+    },
+
+    async removeComandaItem(appointmentId, itemIndex) {
+        const apt = this.state.appointments.find(a => a.id === appointmentId);
+        if (!apt || !apt.comanda_items) return;
+
+        const item = apt.comanda_items[itemIndex];
+        if (!item) return;
+
+        if (!confirm(`Deseja remover 1x ${item.name} da comanda?`)) {
+            return;
+        }
+
+        let comanda = [...apt.comanda_items];
+        
+        // Remove 1 quantidade ou tira o item todo
+        if (comanda[itemIndex].qty > 1) {
+            comanda[itemIndex].qty -= 1;
+        } else {
+            comanda.splice(itemIndex, 1);
+        }
+
+        // Subtrai o valor
+        const newVal = apt.numericValue - item.price;
+
+        try {
+            const { error } = await supabaseClient
+                .from('appointments')
+                .update({ 
+                    comanda_items: comanda,
+                    service_numeric_value: newVal,
+                    service_price: `R$ ${newVal.toFixed(2).replace('.', ',')}`
+                })
+                .eq('id', appointmentId);
+            
+            if (error) throw error;
+
+            this.showNotification("Removido", "Item removido da comanda.");
+            await this.loadAppointments();
+            this.render();
+            
+        } catch (error) {
+            console.error("Erro ao remover item da comanda:", error);
+            this.showNotification("Erro", "Falha ao remover item.");
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // GERENCIAMENTO DE ESTOQUE (CATEGORIAS E PRODUTOS)
+    // ─────────────────────────────────────────────────────────────────
+
+    async addCategory(name) {
+        if (!name) return;
+        try {
+            const { error } = await supabaseClient.from('categories').insert({ name });
+            if (error) throw error;
+            this.showNotification("Sucesso", "Categoria criada.");
+            await this.loadInitialData();
+            this.render();
+        } catch(e) {
+            console.error("Erro ao criar categoria:", e);
+            this.showNotification("Erro", "Não foi possível criar categoria.");
+        }
+    },
+
+    async deleteCategory(id) {
+        if(!confirm("Tem certeza? Produtos desta categoria serão excluídos!")) return;
+        try {
+            const { error } = await supabaseClient.from('categories').delete().eq('id', id);
+            if (error) throw error;
+            this.showNotification("Sucesso", "Categoria excluída.");
+            await this.loadInitialData();
+            this.render();
+        } catch(e) {
+            console.error("Erro ao excluir categoria:", e);
+            this.showNotification("Erro", "Falha ao excluir.");
+        }
+    },
+
+    async addProduct(name, priceStr, categoryId) {
+        if (!name || !priceStr || !categoryId) {
+            this.showNotification("Erro", "Preencha todos os campos do produto.");
+            return;
+        }
+        const numericValue = parseFloat(priceStr.replace(',', '.'));
+        try {
+            const { error } = await supabaseClient.from('products').insert({
+                name: name,
+                price: numericValue,
+                category_id: categoryId
+            });
+            if (error) throw error;
+            this.showNotification("Sucesso", "Produto criado.");
+            await this.loadInitialData();
+            this.render();
+        } catch(e) {
+            console.error("Erro ao criar produto:", e);
+            this.showNotification("Erro", "Falha ao criar produto.");
+        }
+    },
+
+    async deleteProduct(id) {
+        if(!confirm("Tem certeza que deseja excluir este produto?")) return;
+        try {
+            const { error } = await supabaseClient.from('products').delete().eq('id', id);
+            if (error) throw error;
+            this.showNotification("Sucesso", "Produto excluído.");
+            await this.loadInitialData();
+            this.render();
+        } catch(e) {
+            console.error("Erro ao excluir produto:", e);
+            this.showNotification("Erro", "Falha ao excluir.");
+        }
     }
 });
 

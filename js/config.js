@@ -7,6 +7,8 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let SERVICES = [];
 let BARBERS = [];
 let CLIENTES = [];
+let CATEGORIES = [];
+let PRODUCTS = [];
 
 const AVAILABLE_TIMES = Array.from({ length: 288 }).map((_, i) => {
     const hours = Math.floor(i / 12).toString().padStart(2, '0');

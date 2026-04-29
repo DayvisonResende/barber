@@ -1120,6 +1120,39 @@ Object.assign(App, {
                                             <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Cancelar
                                         </button>
                                     </div>
+                                    
+                                    <!-- Comanda (Barbeiro) -->
+                                    <div class="mt-4 pt-4 border-t border-theme">
+                                        <div class="flex justify-between items-center mb-3">
+                                            <p class="text-xs font-semibold text-muted-theme uppercase tracking-wide flex items-center gap-1.5">
+                                                <i data-lucide="shopping-bag" class="w-3 h-3 text-amber-500"></i> Comanda
+                                            </p>
+                                            <button onclick="App.openComandaModal('${apt.id}')" class="text-[10px] bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 px-2 py-1 rounded font-bold uppercase transition-colors">
+                                                + Adicionar
+                                            </button>
+                                        </div>
+                                        ${(!apt.comanda_items || apt.comanda_items.length === 0) ? `
+                                            <p class="text-[10px] text-muted-theme/50 italic">Nenhum item na comanda.</p>
+                                        ` : `
+                                            <div class="space-y-2">
+                                                ${(apt.comanda_items || []).map((item, idx) => `
+                                                    <div class="flex justify-between items-center bg-zinc-900/50 p-2 rounded-lg border border-theme/50">
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="text-amber-500 font-bold text-xs">${item.qty}x</span>
+                                                            <span class="text-theme text-xs font-medium">${item.name}</span>
+                                                        </div>
+                                                        <div class="flex items-center gap-3">
+                                                            <span class="text-emerald-500 text-xs font-bold">R$ ${(item.price * item.qty).toFixed(2).replace('.', ',')}</span>
+                                                            <button onclick="App.removeComandaItem('${apt.id}', ${idx})" class="text-red-500 hover:text-red-400 p-1">
+                                                                <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        `}
+                                    </div>
+
                                     <div class="mt-4 pt-4 border-t border-theme">
                                         <p class="text-xs font-semibold text-muted-theme mb-2 uppercase tracking-wide">Como o cliente pagou?</p>
                                         ${this.state.confirmingPaymentId === apt.id ? `
@@ -1188,26 +1221,56 @@ Object.assign(App, {
                         ${clientApts.length === 0 ? `
                             <p class="text-muted-theme text-sm">Não tem nenhum agendamento futuro.</p>
                         ` : clientApts.map(apt => `
-                            <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm flex items-center gap-4">
-                                <div class="input-bg p-3 rounded-xl text-amber-500 flex-shrink-0">
-                                    <i data-lucide="scissors" class="w-6 h-6"></i>
+                            <div class="flex flex-col gap-2">
+                                <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm flex items-center gap-4">
+                                    <div class="input-bg p-3 rounded-xl text-amber-500 flex-shrink-0">
+                                        <i data-lucide="scissors" class="w-6 h-6"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="font-semibold text-theme">${apt.service.name} <span class="font-normal text-xs text-muted-theme">com ${apt.barberName || 'Marcos Barbeiro'}</span></h4>
+                                        <p class="text-xs text-muted-theme flex items-center gap-1 mt-1">
+                                            <i data-lucide="calendar" class="w-3 h-3"></i> ${apt.date} às ${apt.time}
+                                        </p>
+                                    </div>
+                                    <div class="text-right flex-shrink-0 flex flex-col items-end gap-2">
+                                        <p class="text-sm font-medium text-theme">${apt.service.price.replace('A partir de', '<span class="text-amber-500 font-bold italic">A partir de</span>')}</p>
+                                        ${(apt.comanda_items && apt.comanda_items.length > 0) ? `
+                                            <div class="text-[9px] text-amber-500 bg-amber-500/10 px-2 py-1.5 rounded-lg border border-amber-500/20 text-center font-bold leading-tight">
+                                                <i data-lucide="lock" class="w-3 h-3 inline-block mb-0.5"></i> Bloqueado<br/>(Comanda Ativa)
+                                            </div>
+                                        ` : `
+                                            <div class="flex gap-2">
+                                                <button onclick="App.editAppointment('${apt.id}')" class="p-2 input-bg text-amber-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Alterar Horário">
+                                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                                </button>
+                                                <button onclick="App.cancelAppointment('${apt.id}')" class="p-2 input-bg text-rose-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Cancelar">
+                                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                                </button>
+                                            </div>
+                                        `}
+                                    </div>
                                 </div>
-                                <div class="flex-1">
-                                    <h4 class="font-semibold text-theme">${apt.service.name} <span class="font-normal text-xs text-muted-theme">com ${apt.barberName || 'Marcos Barbeiro'}</span></h4>
-                                    <p class="text-xs text-muted-theme flex items-center gap-1 mt-1">
-                                        <i data-lucide="calendar" class="w-3 h-3"></i> ${apt.date} às ${apt.time}
-                                    </p>
-                                </div>
-                                <div class="text-right flex-shrink-0 flex flex-col items-end gap-2">
-                                    <p class="text-sm font-medium text-theme">${apt.service.price.replace('A partir de', '<span class="text-amber-500 font-bold italic">A partir de</span>')}</p>
-                                    <div class="flex gap-2">
-                                        <button onclick="App.editAppointment('${apt.id}')" class="p-2 input-bg text-amber-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Alterar Horário">
-                                            <i data-lucide="edit-3" class="w-4 h-4"></i>
-                                        </button>
-                                        <button onclick="App.cancelAppointment('${apt.id}')" class="p-2 input-bg text-rose-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Cancelar">
-                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                
+                                <!-- Comanda (Cliente) -->
+                                <div class="card-bg rounded-2xl border border-theme p-3 shadow-sm">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h4 class="text-xs font-bold text-theme flex items-center gap-1.5"><i data-lucide="shopping-bag" class="w-3.5 h-3.5 text-amber-500"></i> Comanda</h4>
+                                        <button onclick="App.openComandaModal('${apt.id}')" class="text-[10px] bg-amber-500 text-zinc-950 hover:bg-amber-400 px-2.5 py-1 rounded-md font-bold uppercase transition-colors shadow-sm active:scale-95">
+                                            + Pedir Item
                                         </button>
                                     </div>
+                                    ${(!apt.comanda_items || apt.comanda_items.length === 0) ? `
+                                        <p class="text-[10px] text-muted-theme italic">Nenhum item adicionado.</p>
+                                    ` : `
+                                        <div class="space-y-1.5 mt-2">
+                                            ${(apt.comanda_items || []).map(item => `
+                                                <div class="flex justify-between items-center text-xs">
+                                                    <span class="text-muted-theme"><span class="text-amber-500 font-bold">${item.qty}x</span> ${item.name}</span>
+                                                    <span class="text-emerald-500 font-bold">R$ ${(item.price * item.qty).toFixed(2).replace('.', ',')}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    `}
                                 </div>
                             </div>
                         `).join('')}
@@ -1938,8 +2001,7 @@ Object.assign(App, {
                                 <p class="text-[10px] text-muted-theme leading-tight">Exibe <span class="text-amber-500 font-bold">"A partir de R$ X,XX"</span> para o cliente. Ideal para serviços que variam conforme o tamanho do cabelo.</p>
                             </div>
                         </label>
-
-                        <button onclick="App.addService()" class="w-full py-3 rounded-xl font-bold transition-all duration-200 ${editingSvc ? 'bg-emerald-500 text-zinc-950 hover:bg-emerald-400' : 'bg-amber-500 text-zinc-950 hover:bg-amber-400'} shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                        </label>                        <button onclick="App.addService()" class="w-full py-3 rounded-xl font-bold transition-all duration-200 ${editingSvc ? 'bg-emerald-500 text-zinc-950 hover:bg-emerald-400' : 'bg-amber-500 text-zinc-950 hover:bg-amber-400'} shadow-lg active:scale-95 flex items-center justify-center gap-2">
                             <i data-lucide="${editingSvc ? 'save' : 'plus'}" class="w-4 h-4"></i> 
                             ${editingSvc ? 'Salvar Alterações' : 'Adicionar ao Catálogo'}
                         </button>
@@ -2425,7 +2487,92 @@ Object.assign(App, {
                     </div>
                 </div>
             `;
+        } else if (tab === 'estoque') {
+            contentHtml = `
+                <div class="space-y-6 fade-in">
+                    <!-- Gerenciar Categorias -->
+                    <div class="card-bg border border-theme p-5 rounded-3xl shadow-xl">
+                        <h3 class="text-sm font-bold text-theme uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <i data-lucide="tags" class="w-4 h-4 text-amber-500"></i> Categorias de Comanda
+                        </h3>
+                        <div class="flex gap-2 mb-4">
+                            <input type="text" id="new-category-name" placeholder="Ex: Bebidas, Pomadas..." class="flex-1 input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors text-sm" />
+                            <button onclick="App.addCategory(document.getElementById('new-category-name').value)" class="bg-amber-500 text-zinc-950 px-4 rounded-xl font-bold uppercase tracking-wider text-xs hover:bg-amber-400 active:scale-95 transition-all shadow-theme">
+                                Adicionar
+                            </button>
+                        </div>
+                        <div class="space-y-2">
+                            ${CATEGORIES.length === 0 ? '<p class="text-xs text-muted-theme italic">Nenhuma categoria cadastrada.</p>' : CATEGORIES.map(c => `
+                                <div class="flex justify-between items-center bg-zinc-900/50 p-3 rounded-xl border border-theme/50 hover:border-amber-500/30 transition-colors">
+                                    <span class="font-bold text-theme text-sm">${c.name}</span>
+                                    <button onclick="App.deleteCategory('${c.id}')" class="text-rose-500 hover:bg-rose-500/10 p-2 rounded-lg transition-colors">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Gerenciar Produtos -->
+                    <div class="card-bg border border-theme p-5 rounded-3xl shadow-xl">
+                        <h3 class="text-sm font-bold text-theme uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <i data-lucide="package" class="w-4 h-4 text-amber-500"></i> Produtos
+                        </h3>
+                        ${CATEGORIES.length === 0 ? `
+                            <p class="text-xs text-amber-500 italic">Crie uma categoria primeiro para adicionar produtos.</p>
+                        ` : `
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Nome *</label>
+                                    <input type="text" id="new-product-name" placeholder="Ex: Heineken LN" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors text-sm" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Preço (R$) *</label>
+                                    <input type="number" id="new-product-price" placeholder="10.00" step="0.01" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors text-sm" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Categoria *</label>
+                                    <select id="new-product-category" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors text-sm appearance-none cursor-pointer">
+                                        <option value="">Selecione...</option>
+                                        ${CATEGORIES.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                            <button onclick="App.addProduct(document.getElementById('new-product-name').value, document.getElementById('new-product-price').value, document.getElementById('new-product-category').value)" class="w-full bg-amber-500 text-zinc-950 py-3 rounded-xl font-black uppercase tracking-wider hover:bg-amber-400 active:scale-[0.98] transition-all shadow-theme mb-6">
+                                + Adicionar Produto
+                            </button>
+                        `}
+
+                        <div class="space-y-3">
+                            ${CATEGORIES.map(cat => {
+                                const catProducts = PRODUCTS.filter(p => p.category_id === cat.id);
+                                if (catProducts.length === 0) return '';
+                                return `
+                                    <div class="mb-4 last:mb-0">
+                                        <h4 class="text-[11px] text-muted-theme uppercase font-black tracking-widest mb-2 px-1 border-b border-theme/50 pb-1">${cat.name}</h4>
+                                        <div class="space-y-2">
+                                            ${catProducts.map(p => `
+                                                <div class="flex justify-between items-center bg-zinc-900/50 p-3 rounded-xl border border-theme/50 hover:border-amber-500/30 transition-colors">
+                                                    <div class="flex flex-col">
+                                                        <span class="font-bold text-theme text-sm">${p.name}</span>
+                                                        <span class="text-xs text-emerald-500 font-bold">R$ ${p.price.toFixed(2).replace('.', ',')}</span>
+                                                    </div>
+                                                    <button onclick="App.deleteProduct('${p.id}')" class="text-rose-500 hover:bg-rose-500/10 p-2 rounded-lg transition-colors">
+                                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                                    </button>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                            ${PRODUCTS.length === 0 ? '<p class="text-xs text-muted-theme italic text-center py-4">Nenhum produto cadastrado.</p>' : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
         }
+
 
         return `
             <div class="space-y-6 fade-in slide-in-up pb-6">
@@ -2459,6 +2606,9 @@ Object.assign(App, {
                     </button>
                     <button onclick="App.setAdminShopTab('financeiro')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'financeiro' ? 'input-bg text-amber-500 shadow-sm' : 'text-muted-theme hover:text-theme'}">
                         <i data-lucide="wallet" class="w-3.5 h-3.5"></i> Financeiro
+                    </button>
+                    <button onclick="App.setAdminShopTab('estoque')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'estoque' ? 'input-bg text-amber-500 shadow-sm' : 'text-muted-theme hover:text-theme'}">
+                        <i data-lucide="package" class="w-3.5 h-3.5"></i> Estoque
                     </button>
                 </div>
 
@@ -2829,5 +2979,67 @@ Object.assign(App, {
             </div>
         `;
         lucide.createIcons();
+    },
+
+    renderComandaModal(appointmentId) {
+        const modalContainer = document.getElementById('modal-container');
+        if (!modalContainer) return;
+
+        const apt = this.state.appointments.find(a => a.id === appointmentId);
+        if (!apt) return;
+
+        modalContainer.innerHTML = `
+            <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm fade-in">
+                <div class="card-bg w-full max-w-sm rounded-[2.5rem] p-8 border border-theme shadow-2xl scale-in relative overflow-hidden flex flex-col max-h-[80vh]">
+                    <div class="absolute -top-24 -right-24 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl"></div>
+                    
+                    <div class="relative flex flex-col min-h-0">
+                        <div class="flex justify-between items-center mb-6 shrink-0">
+                            <div>
+                                <h3 class="text-xl font-black text-theme">Comanda Digital</h3>
+                                <p class="text-[10px] text-muted-theme font-bold uppercase tracking-widest mt-0.5">Adicionar itens ao serviço</p>
+                            </div>
+                            <button onclick="document.getElementById('modal-container').innerHTML = '';" class="w-10 h-10 rounded-full card-bg flex items-center justify-center text-muted-theme hover:text-theme transition-colors border border-theme">
+                                <i data-lucide="x" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+
+                        ${CATEGORIES.length === 0 || PRODUCTS.length === 0 ? `
+                            <div class="text-center py-8 text-muted-theme">
+                                <i data-lucide="package-x" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+                                <p class="text-sm font-medium">Nenhum produto cadastrado.</p>
+                                <p class="text-[10px] mt-1">Vá no Painel Admin > Estoque.</p>
+                            </div>
+                        ` : `
+                            <div class="overflow-y-auto pr-2 space-y-4 mb-6 flex-1 min-h-0 custom-scrollbar">
+                                ${CATEGORIES.map(cat => {
+                                    const catProducts = PRODUCTS.filter(p => p.category_id === cat.id);
+                                    if (catProducts.length === 0) return '';
+                                    return `
+                                        <div>
+                                            <h4 class="text-[11px] text-amber-500 uppercase font-black tracking-widest mb-2 px-1 flex items-center gap-1.5"><i data-lucide="tag" class="w-3 h-3"></i> ${cat.name}</h4>
+                                            <div class="space-y-2">
+                                                ${catProducts.map(p => `
+                                                    <div class="flex items-center justify-between p-3 rounded-2xl border border-theme card-bg/50 hover:border-amber-500/30 transition-colors">
+                                                        <div>
+                                                            <p class="text-sm font-bold text-theme">${p.name}</p>
+                                                            <p class="text-xs text-emerald-500 font-bold">R$ ${p.price.toFixed(2).replace('.', ',')}</p>
+                                                        </div>
+                                                        <button onclick="App.addComandaItem('${appointmentId}', '${p.id}')" class="bg-amber-500 text-zinc-950 w-8 h-8 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md">
+                                                            <i data-lucide="plus" class="w-4 h-4"></i>
+                                                        </button>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `}
+                    </div>
+                </div>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons({ root: modalContainer });
     }
 });
