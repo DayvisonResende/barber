@@ -1796,6 +1796,142 @@ Object.assign(App, {
         this.render();
     },
 
+    // ─────────────────────────────────────────────────────────────────
+    // ADMIN: Configuração de Horários do Barbeiro (novo sistema)
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Salva a configuração de horário do barbeiro (work_start, work_end,
+     * working_days, lunch_start, lunch_end) na tabela barber_config.
+     * Faz UPSERT baseado em barber_id.
+     */
+    async saveBarberConfig(barberId, updates) {
+        if (!barberId) return;
+
+        // Buscar config atual para fazer merge
+        const current = this.state.barberConfigs.find(c =>
+            String(c.barber_id).toLowerCase() === String(barberId).toLowerCase()
+        ) || { barber_id: barberId };
+
+        const merged = { ...current, ...updates, barber_id: barberId };
+
+        const { error } = await supabaseClient
+            .from('barber_config')
+            .upsert(merged, { onConflict: 'barber_id' });
+
+        if (error) {
+            this.showNotification('Erro ao salvar configuração', error.message);
+            return;
+        }
+
+        await this.refreshScheduleData();
+        this.showNotification('Configuração salva ✓', 'Horários atualizados com sucesso.');
+    },
+
+    /**
+     * Salva os dias de trabalho do barbeiro (array de ints [0..6]).
+     * Chamado pelo painel de checkboxes de dias da semana.
+     */
+    async saveBarberWorkingDays(barberId, days) {
+        await this.saveBarberConfig(barberId, { working_days: days });
+    },
+
+    /**
+     * Toggle de um dia de trabalho individual do barbeiro.
+     */
+    async toggleBarberWorkingDay(barberId, dayIdx) {
+        const config = this.state.barberConfigs.find(c =>
+            String(c.barber_id).toLowerCase() === String(barberId).toLowerCase()
+        );
+        const currentDays = config?.working_days ?? [1, 2, 3, 4, 5, 6];
+        let newDays;
+        if (currentDays.includes(dayIdx)) {
+            newDays = currentDays.filter(d => d !== dayIdx);
+        } else {
+            newDays = [...currentDays, dayIdx].sort();
+        }
+        await this.saveBarberConfig(barberId, { working_days: newDays });
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // ADMIN: Exceções de Agenda (folgas, feriados)
+    // ─────────────────────────────────────────────────────────────────
+
+    async toggleBarberException(barberId, dateStr, isClosed) {
+        if (!barberId || !dateStr) return;
+
+        const { error } = await supabaseClient
+            .from('barber_exceptions')
+            .upsert({ barber_id: barberId, specific_date: dateStr, is_closed: isClosed }, { onConflict: 'barber_id,specific_date' });
+
+        if (error) {
+            this.showNotification('Erro', error.message);
+            return;
+        }
+        await this.refreshScheduleData();
+        this.showNotification(isClosed ? 'Dia bloqueado' : 'Dia desbloqueado', `${dateStr} atualizado.`);
+    },
+
+    async deleteBarberException(barberId, dateStr) {
+        const { error } = await supabaseClient
+            .from('barber_exceptions')
+            .delete()
+            .eq('barber_id', barberId)
+            .eq('specific_date', dateStr);
+
+        if (error) {
+            this.showNotification('Erro', error.message);
+            return;
+        }
+        await this.refreshScheduleData();
+        this.showNotification('Exceção removida', 'Agenda restaurada para o padrão.');
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // ADMIN: Legado — barber_slots (mantido para retrocompatibilidade)
+    // ─────────────────────────────────────────────────────────────────
+
+    async saveBarberSlot(barberId, dayOfWeek, slotTime) {
+        const { error } = await supabaseClient
+            .from('barber_slots')
+            .upsert({ barber_id: barberId, day_of_week: dayOfWeek, slot_time: slotTime },
+                { onConflict: 'barber_id,day_of_week,slot_time' });
+        if (error) { this.showNotification('Erro', error.message); return; }
+        await this.refreshScheduleData();
+    },
+
+    async removeBarberSlot(barberId, dayOfWeek, slotTime) {
+        const { error } = await supabaseClient
+            .from('barber_slots')
+            .delete()
+            .eq('barber_id', barberId)
+            .eq('day_of_week', dayOfWeek)
+            .eq('slot_time', slotTime);
+        if (error) { this.showNotification('Erro', error.message); return; }
+        await this.refreshScheduleData();
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // ADMIN: Helpers de UI para seleção em massa de dias
+    // ─────────────────────────────────────────────────────────────────
+
+    toggleBulkMode() {
+        this.state.adminScheduleBulkMode = !this.state.adminScheduleBulkMode;
+        this.state.adminScheduleBulkDays = [];
+        this.render();
+    },
+
+    toggleBulkDay(dayIdx) {
+        const days = this.state.adminScheduleBulkDays;
+        const idx = days.indexOf(dayIdx);
+        if (idx > -1) {
+            this.state.adminScheduleBulkDays = days.filter(d => d !== dayIdx);
+        } else {
+            this.state.adminScheduleBulkDays = [...days, dayIdx];
+        }
+        this.render();
+    },
+
     /**
      * Retorna os horários disponíveis para um barbeiro em uma data específica,
      * considerando slots fixos, exceções, almoço e agendamentos existentes.
@@ -1875,6 +2011,300 @@ Object.assign(App, {
     setAdminScheduleBarber(val) {
         this.state.adminScheduleBarberId = val || null;
         this.render();
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 🚀 NOVO MOTOR DE AGENDAMENTO v2 — Tempo Contínuo
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Verifica se dois intervalos de tempo se sobrepõem.
+     * Regra: conflito existe quando NÃO é verdade que um termina antes do outro começar.
+     * Fórmula: !(A.fim <= B.inicio || A.inicio >= B.fim)
+     */
+    hasIntervalConflict(aStart, aEnd, bStart, bEnd) {
+        return !(aEnd <= bStart || aStart >= bEnd);
+    },
+
+    /**
+     * Retorna o range de trabalho de um barbeiro em uma data específica.
+     * Usa barber_slots (horários salvos) para derivar início e fim do expediente.
+     * Retorna null se o barbeiro não trabalha nesse dia.
+     * @returns {{ inicioMin: number, fimMin: number } | null}
+     */
+    getBarberWorkRange(barberId, dateStr) {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, day);
+        const dayOfWeek = dateObj.getDay();
+        const bIdStr = String(barberId).toLowerCase();
+
+        // 1. Checar exceção para a data (folga/feriado)
+        const exception = (this.state.barberExceptions || []).find(ex =>
+            String(ex.barber_id).toLowerCase() === bIdStr &&
+            ex.specific_date === dateStr
+        );
+        if (exception?.is_closed) return null;
+
+        // 2. Buscar config do barbeiro
+        const config = (this.state.barberConfigs || []).find(c =>
+            String(c.barber_id).toLowerCase() === bIdStr
+        );
+
+        // 3. Verificar se o barbeiro trabalha nesse dia da semana
+        //    barber_config.working_days é array de ints [0..6] ou null (trabalha todos os dias habilitados)
+        if (config?.working_days && Array.isArray(config.working_days)) {
+            if (!config.working_days.includes(dayOfWeek)) return null;
+        }
+
+        // 4. Obter horário de início e fim do expediente
+        //    Prioridade: barber_config.work_start/work_end → barber_slots derivação → padrão da loja
+        let inicioMin, fimMin;
+
+        if (config?.work_start && config?.work_end) {
+            // ✅ Config direta (novo sistema)
+            inicioMin = this.timeToMinutes(config.work_start);
+            fimMin = this.timeToMinutes(config.work_end);
+        } else {
+            // Fallback: derivar dos barber_slots existentes
+            const daySlots = (this.state.barberSlots || [])
+                .filter(s =>
+                    String(s.barber_id).toLowerCase() === bIdStr &&
+                    Number(s.day_of_week) === dayOfWeek
+                )
+                .map(s => s.slot_time)
+                .sort();
+
+            if (daySlots.length > 0) {
+                inicioMin = this.timeToMinutes(daySlots[0]);
+                fimMin = this.timeToMinutes(daySlots[daySlots.length - 1]) + 5;
+            } else {
+                // Fallback final: usar horário padrão da loja (08:00 → 18:00)
+                const shopStart = this.state.shopSettings?.work_start || '08:00';
+                const shopEnd = this.state.shopSettings?.work_end || '18:00';
+                inicioMin = this.timeToMinutes(shopStart);
+                fimMin = this.timeToMinutes(shopEnd);
+            }
+        }
+
+        if (inicioMin >= fimMin) return null;
+        return { inicioMin, fimMin };
+    },
+
+
+    /**
+     * Retorna todos os intervalos de tempo ocupados de um barbeiro em uma data.
+     * Inclui agendamentos existentes (pending) e o intervalo de almoço.
+     * @returns {Array<{ inicio: number, fim: number }>}
+     */
+    getBarberBusyIntervals(barberId, dateStr) {
+        const bIdStr = String(barberId).toLowerCase();
+        const intervals = [];
+
+        // 1. Agendamentos existentes (status pending)
+        const appointments = (this.state.allAppointmentsForStats || []).filter(apt =>
+            String(apt.barber_id).toLowerCase() === bIdStr &&
+            apt.date === dateStr
+        );
+
+        appointments.forEach(apt => {
+            const start = this.timeToMinutes(apt.time);
+            const duration = apt.total_duration || 30;
+            intervals.push({ inicio: start, fim: start + duration });
+        });
+
+        // 2. Intervalo de almoço (barber_config)
+        const config = (this.state.barberConfigs || []).find(c =>
+            String(c.barber_id).toLowerCase() === bIdStr
+        );
+        if (config?.lunch_start && config?.lunch_end) {
+            intervals.push({
+                inicio: this.timeToMinutes(config.lunch_start),
+                fim: this.timeToMinutes(config.lunch_end)
+            });
+        }
+
+        // 3. Horários bloqueados manualmente (blocked_times) para esta data e barbeiro
+        const blockedFull = this.state.blockedTimesFull || [];
+
+        // Bloqueios globais (sem barber_id e sem date) — afetam todos
+        const globalBlocks = blockedFull.filter(b => !b.barber_id && !b.date);
+
+        // Bloqueios específicos deste barbeiro nesta data
+        const specificBlocks = blockedFull.filter(b =>
+            String(b.barber_id || '').toLowerCase() === bIdStr && b.date === dateStr
+        );
+
+        [...globalBlocks, ...specificBlocks].forEach(b => {
+            const t = this.timeToMinutes(b.blocked_time);
+            intervals.push({ inicio: t, fim: t + 5 }); // bloqueia o slot de 5 min
+        });
+
+        return intervals;
+    },
+
+    /**
+     * Motor Principal: Calcula horários disponíveis para um serviço em uma data.
+     * Agrupa por horário com lista de barbeiros disponíveis em cada slot.
+     *
+     * @param {Object} params
+     * @param {string} params.data - Data no formato YYYY-MM-DD
+     * @param {number} [params.servicoId] - ID do serviço (usado para buscar duração se duracaoTotal não fornecida)
+     * @param {number} [params.duracaoTotal] - Duração total em minutos (prioridade sobre servicoId para multi-serviço)
+     * @param {number} [params.granularidadeMin=15] - Intervalo entre slots em minutos
+     * @param {string} [params.editingAppointmentId=null] - ID do agendamento sendo editado
+     * @returns {Object} { "09:00": [barber1, barber2], "09:30": [barber1] }
+     */
+    getHorariosDisponiveis({ data, servicoId, servicoIds, duracaoTotal, granularidadeMin = 15, editingAppointmentId = null }) {
+        // Resolver duração: prioridade para duracaoTotal (multi-serviço), fallback para servicoId
+        let duracao = duracaoTotal || 0;
+        if (!duracao && servicoId) {
+            const servico = SERVICES.find(s => s.id === servicoId);
+            if (!servico) return {};
+            duracao = servico.durationMinutes || 30;
+        }
+        if (!duracao) duracao = 30; // guarda final: nunca retornar vazio por duração zero
+
+        // Normalizar lista de IDs dos serviços (para filtro de especialidades)
+        const idsServicos = servicoIds || (servicoId ? [servicoId] : []);
+        console.log('[Motor v2] data:', data, '| duração:', duracao, 'min | serviços:', idsServicos);
+
+        const resultado = {};
+
+        // Verificar dias de funcionamento da barbearia
+        const [year, month, day] = data.split('-').map(Number);
+        const dayOfWeek = new Date(year, month - 1, day).getDay();
+        const workingDays = this.state.shopSettings?.working_days || [1, 2, 3, 4, 5, 6];
+        if (!workingDays.includes(dayOfWeek)) return {};
+
+        // Para cada barbeiro ativo
+        const activeBarbers = BARBERS.filter(b => b.is_active !== false && b.active !== false);
+
+        activeBarbers.forEach(barber => {
+            const bId = barber.user_id;
+
+            // 1. Obter range de trabalho
+            const workRange = this.getBarberWorkRange(bId, data);
+            if (!workRange) {
+                console.log(`[Motor v2] ${barber.name}: sem expediente neste dia`);
+                return;
+            }
+
+            const { inicioMin, fimMin } = workRange;
+            console.log(`[Motor v2] ${barber.name}: expediente ${this.minutesToTime(inicioMin)} – ${this.minutesToTime(fimMin)}`);
+
+            // 2. Filtrar especialidades: checar se o barbeiro realiza ALGUM dos serviços selecionados
+            //    Se idsServicos estiver vazio (sem filtro), permite qualquer barbeiro
+            const especialidades = (this.state.barberServices || []).filter(s =>
+                s.barber_id === barber.id
+            ).map(s => s.service_id);
+
+            if (especialidades.length > 0 && idsServicos.length > 0) {
+                const fazAlgum = idsServicos.some(id => especialidades.includes(id));
+                if (!fazAlgum) {
+                    console.log(`[Motor v2] ${barber.name}: não realiza estes serviços, ignorado`);
+                    return;
+                }
+            }
+
+            // 3. Obter intervalos ocupados deste barbeiro nesta data
+            let busyIntervals = this.getBarberBusyIntervals(bId, data);
+
+            // Se estamos editando um agendamento, remove-o dos intervalos ocupados
+            if (editingAppointmentId) {
+                const editingApt = (this.state.allAppointmentsForStats || []).find(
+                    a => a.id === editingAppointmentId
+                );
+                if (editingApt && String(editingApt.barber_id).toLowerCase() === String(bId).toLowerCase()) {
+                    const editStart = this.timeToMinutes(editingApt.time);
+                    const editEnd = editStart + (editingApt.total_duration || 30);
+                    busyIntervals = busyIntervals.filter(
+                        i => !(i.inicio === editStart && i.fim === editEnd)
+                    );
+                }
+            }
+
+            // 4. Gerar candidatos de slots dentro do expediente
+            for (let t = inicioMin; t + duracao <= fimMin; t += granularidadeMin) {
+                const slotInicio = t;
+                const slotFim = t + duracao;
+
+                // Verificar se o slot conflita com algum intervalo ocupado
+                const conflito = busyIntervals.some(interval =>
+                    this.hasIntervalConflict(slotInicio, slotFim, interval.inicio, interval.fim)
+                );
+
+                if (!conflito) {
+                    const timeStr = this.minutesToTime(t);
+                    if (!resultado[timeStr]) resultado[timeStr] = [];
+                    resultado[timeStr].push(barber);
+                }
+            }
+        });
+
+        return resultado;
+    },
+
+    /**
+     * Pré-computa a disponibilidade de cada dia do mês para um serviço.
+     * Usado para mostrar dots verde/cinza no calendário.
+     * @returns {Object} { "2026-04-28": true, "2026-04-29": false }
+     */
+    getCalendarAvailability(year, month, servicoId) {
+        if (!servicoId) return {};
+
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const availability = {};
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateObj = new Date(year, month, d);
+            if (dateObj < today) {
+                availability[this.dateToStr(dateObj)] = false;
+                continue;
+            }
+
+            const dateStr = this.dateToStr(dateObj);
+            const slots = this.getHorariosDisponiveis({ data: dateStr, servicoId });
+            availability[dateStr] = Object.keys(slots).length > 0;
+        }
+
+        return availability;
+    },
+
+    /**
+     * Converte objeto Date para string YYYY-MM-DD sem problemas de timezone.
+     */
+    dateToStr(dateObj) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    },
+
+    /**
+     * Formata número de minutos para exibição (ex: 90 → "1h 30min", 30 → "30min")
+     */
+    formatDuration(minutes) {
+        if (minutes < 60) return `${minutes} min`;
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return m > 0 ? `${h}h ${m}min` : `${h}h`;
+    },
+
+    /**
+     * Formata phone para exibição amigável
+     */
+    formatDisplayPhone(phone) {
+        if (!phone) return '';
+        const digits = String(phone).replace(/\D/g, '');
+        if (digits.length === 11) {
+            return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+        } else if (digits.length === 10) {
+            return `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
+        }
+        return phone;
     }
 });
+
 

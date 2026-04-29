@@ -669,11 +669,15 @@ Object.assign(App, {
         const year = this.state.currentYear;
         const month = this.state.currentMonth;
 
-        const firstDay = new Date(year, month, 1).getDay(); // 0 (Sun) to 6 (Sat)
+        const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+
+        // Pre-computar disponibilidade para o mês se estivermos no fluxo de agendamento
+        const availability = this.state.bookingCalendarAvailability || {};
+        const isInBookingFlow = this.state.isBooking && this.state.bookingStep === 'date';
 
         let calendarHtml = `
             <div class="card-bg border border-theme rounded-2xl p-4 shadow-sm w-full font-sans">
@@ -714,6 +718,15 @@ Object.assign(App, {
             const isStaff = ['admin', 'manager', 'barber'].includes(this.state.role);
             const isPast = dateObj < today;
             const isSelected = this.state.selectedDate === dateStr;
+            const hasSlots = availability[dateStr];
+            const availChecked = dateStr in availability;
+
+            // Dot de disponibilidade (só exibe no fluxo de agendamento)
+            const dotHtml = isInBookingFlow && !isPast && !isShopClosed
+                ? availChecked
+                    ? `<div class="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${hasSlots ? 'bg-amber-500' : 'bg-zinc-600'}"></div>`
+                    : ''
+                : '';
 
             if (isPast) {
                 calendarHtml += `
@@ -730,14 +743,16 @@ Object.assign(App, {
                 `;
             } else if (isSelected) {
                 calendarHtml += `
-                    <div class="flex justify-center items-center h-10 w-full cursor-pointer" onclick="App.selectDate('${dateStr}')">
+                    <div class="flex justify-center items-center h-10 w-full cursor-pointer relative" onclick="App.selectDate('${dateStr}')">
                         <span class="bg-amber-500 text-zinc-950 rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-md shadow-amber-500/20">${i}</span>
+                        ${dotHtml}
                     </div>
                 `;
             } else {
                 calendarHtml += `
-                    <div class="flex justify-center items-center h-10 w-full cursor-pointer hover:input-bg/60 rounded-full group transition-colors" onclick="App.selectDate('${dateStr}')">
+                    <div class="flex justify-center items-center h-10 w-full cursor-pointer hover:input-bg/60 rounded-full group transition-colors relative" onclick="App.selectDate('${dateStr}')">
                         <span class="text-theme font-medium group-hover:text-amber-500">${i}</span>
+                        ${dotHtml}
                     </div>
                 `;
             }

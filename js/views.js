@@ -307,6 +307,365 @@ Object.assign(App, {
     },
 
     renderBookingFlow() {
+        const step = this.state.bookingStep;
+        const isEditing = !!this.state.editingAppointmentId;
+        const isStaff = ['admin', 'manager', 'barber'].includes(this.state.role);
+
+        // ── Progress indicator ──
+        const steps = ['date', 'service', 'slots', 'confirm'];
+        const stepIdx = steps.indexOf(step);
+        const stepLabels = ['Data', 'Serviço', 'Horário', 'Confirmar'];
+
+        const progressHtml = `
+            <div class="flex items-center gap-1 mb-6">
+                ${steps.map((s, i) => `
+                    <div class="flex items-center gap-1 ${i < steps.length - 1 ? 'flex-1' : ''}">
+                        <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 transition-all
+                            ${i < stepIdx ? 'bg-amber-500 text-zinc-950' :
+                              i === stepIdx ? 'bg-amber-500 text-zinc-950 ring-4 ring-amber-500/20' :
+                              'input-bg text-muted-theme border border-theme'}">
+                            ${i < stepIdx ? '<i data-lucide="check" class="w-3 h-3"></i>' : i + 1}
+                        </div>
+                        ${i < steps.length - 1 ? `<div class="flex-1 h-px ${i < stepIdx ? 'bg-amber-500' : 'bg-zinc-700'}"></div>` : ''}
+                    </div>
+                `).join('')}
+            </div>`;
+
+        // ── STEP 1: DATE ──
+        if (step === 'date') {
+            return `
+            <div class="space-y-5 fade-in slide-in-up">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-theme">${isEditing ? 'Alterar Horário' : 'Novo Agendamento'}</h2>
+                        <p class="text-xs text-muted-theme mt-0.5">Escolha a data do seu atendimento</p>
+                    </div>
+                    <button onclick="App.cancelBooking()" class="p-2 input-bg rounded-full text-muted-theme hover:text-theme transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                ${progressHtml}
+                ${this.renderCalendar()}
+                <p class="text-center text-[10px] text-muted-theme">
+                    <span class="inline-flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span> Selecione uma data para continuar
+                    </span>
+                </p>
+            </div>`;
+        }
+
+        // ── STEP 2: SERVICE (multi-select) ──
+        if (step === 'service') {
+            const dateObj = new Date(this.state.selectedDate + 'T00:00:00');
+            const dateFormatted = dateObj.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+            const selected = this.state.bookingSelectedServices || [];
+            const totalDuration = selected.reduce((s, sv) => s + sv.durationMinutes, 0);
+            const totalValue = selected.reduce((s, sv) => s + sv.priceValue, 0);
+            const hasVariable = selected.some(sv => sv.price_variable);
+            const hasSelected = selected.length > 0;
+
+            return `
+            <div class="space-y-5 fade-in slide-in-up">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-theme">Serviços</h2>
+                        <p class="text-xs text-muted-theme mt-0.5 capitalize">${dateFormatted}</p>
+                    </div>
+                    <button onclick="App.cancelBooking()" class="p-2 input-bg rounded-full text-muted-theme hover:text-theme transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                ${progressHtml}
+                <button onclick="App.backToDate()" class="flex items-center gap-1.5 text-xs text-muted-theme hover:text-amber-500 transition-colors">
+                    <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Trocar data
+                </button>
+                <p class="text-[11px] text-muted-theme font-medium">Selecione um ou mais serviços:</p>
+                <div class="space-y-2 pb-32">
+                    ${SERVICES.map(svc => {
+                        const isChecked = selected.some(s => s.id === svc.id);
+                        return `
+                        <div onclick="App.toggleBookingService(${svc.id})"
+                            class="flex items-center gap-4 p-4 card-bg border rounded-2xl cursor-pointer transition-all duration-200 active:scale-[0.98] shadow-sm
+                                ${isChecked ? 'border-amber-500 bg-amber-500/5 shadow-amber-500/10' : 'border-theme hover:border-amber-500/30'}">
+                            <!-- Checkbox visual -->
+                            <div class="w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center transition-all duration-150
+                                ${isChecked ? 'bg-amber-500 border-amber-500 shadow-md shadow-amber-500/30' : 'border-2 border-zinc-600 bg-transparent'}">
+                                ${isChecked ? '<i data-lucide="check" class="w-4 h-4 text-zinc-950 font-black"></i>' : ''}
+                            </div>
+                            <!-- Info -->
+                            <div class="flex-1 min-w-0">
+                                <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(svc.name)}</p>
+                                <p class="text-[11px] text-muted-theme mt-0.5 flex items-center gap-2">
+                                    <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i>${svc.duration}</span>
+                                    <span class="opacity-30">•</span>
+                                    <span class="${isChecked ? 'text-amber-500 font-semibold' : ''}">
+                                        ${svc.price_variable ? '<span class="text-[10px] italic opacity-70">A partir de</span> ' : ''}${svc.price}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+
+                <!-- Footer fixo com total + botão -->
+                <div class="fixed bottom-20 left-0 right-0 px-4 z-30">
+                    <div class="max-w-lg mx-auto">
+                        <div class="card-bg border border-theme rounded-2xl shadow-2xl overflow-hidden">
+                            ${hasSelected ? `
+                                <div class="px-4 pt-3 pb-2 flex items-center justify-between border-b border-theme/50">
+                                    <div class="flex items-center gap-3 text-sm">
+                                        <div class="flex items-center gap-1 text-muted-theme">
+                                            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                                            <span class="font-bold text-theme">${this.formatDuration ? this.formatDuration(totalDuration) : totalDuration + ' min'}</span>
+                                        </div>
+                                        <span class="text-zinc-700">·</span>
+                                        <div>
+                                            ${hasVariable ? '<span class="text-[10px] text-amber-500 italic font-bold">A partir de </span>' : ''}
+                                            <span class="font-black text-amber-500">R$ ${totalValue.toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] font-bold text-muted-theme uppercase tracking-widest">
+                                        ${selected.length} serviço${selected.length > 1 ? 's' : ''}
+                                    </span>
+                                </div>
+                            ` : ''}
+                            <div class="p-3">
+                                <button onclick="App.confirmServiceSelection()"
+                                    class="w-full py-3.5 rounded-xl font-black text-sm transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98]
+                                        ${hasSelected
+                                            ? 'bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-lg shadow-amber-500/20'
+                                            : 'input-bg text-muted-theme cursor-not-allowed opacity-60'}">
+                                    <i data-lucide="clock" class="w-4 h-4"></i>
+                                    ${hasSelected ? 'Ver Horários Disponíveis' : 'Selecione ao menos 1 serviço'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // ── STEP 3: SLOTS ──
+        if (step === 'slots') {
+            const svc = this.state.bookingSelectedService;
+            const dateObj = new Date(this.state.selectedDate + 'T00:00:00');
+            const dateFormatted = dateObj.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+            const slots = this.state.bookingAvailableSlots;
+            const isLoading = this.state.bookingIsLoadingSlots;
+            const sortedTimes = Object.keys(slots).sort();
+
+            // Filtrar horários passados se for hoje
+            const now = new Date();
+            const todayStr = this.dateToStr ? this.dateToStr(now) : now.toISOString().split('T')[0];
+            const currentMin = now.getHours() * 60 + now.getMinutes();
+            const validTimes = isStaff
+                ? sortedTimes
+                : sortedTimes.filter(t => {
+                    if (this.state.selectedDate !== todayStr) return true;
+                    const [h, m] = t.split(':').map(Number);
+                    return (h * 60 + m) > currentMin;
+                });
+
+            return `
+            <div class="space-y-5 fade-in slide-in-up">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-theme">Horários</h2>
+                        <p class="text-xs text-muted-theme mt-0.5 capitalize">${dateFormatted}</p>
+                    </div>
+                    <button onclick="App.cancelBooking()" class="p-2 input-bg rounded-full text-muted-theme hover:text-theme transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                ${progressHtml}
+                <div class="flex items-center justify-between">
+                    <button onclick="App.backToService()" class="flex items-center gap-1.5 text-xs text-muted-theme hover:text-amber-500 transition-colors">
+                        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Trocar serviço
+                    </button>
+                    ${svc ? `
+                        <span class="text-[11px] font-bold text-amber-500 bg-amber-500/10 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                            <i data-lucide="scissors" class="w-3 h-3"></i> ${App.escapeHTML(svc.name)} · ${svc.duration}
+                        </span>` : ''}
+                </div>
+
+                ${isLoading ? `
+                    <div class="flex flex-col items-center justify-center py-16 space-y-3">
+                        <div class="w-10 h-10 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                        <p class="text-xs text-muted-theme">Calculando disponibilidade...</p>
+                    </div>
+                ` : validTimes.length === 0 ? `
+                    <div class="flex flex-col items-center justify-center py-16 text-center space-y-4">
+                        <div class="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center">
+                            <i data-lucide="calendar-x" class="w-8 h-8 text-zinc-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-theme">Sem horários disponíveis</h4>
+                            <p class="text-xs text-muted-theme mt-1">Nenhum barbeiro disponível para este dia e serviço.<br>Tente outra data.</p>
+                        </div>
+                        <button onclick="App.backToDate()" class="px-6 py-3 bg-amber-500 text-zinc-950 rounded-xl font-bold text-sm active:scale-95 transition-all">
+                            Escolher outra data
+                        </button>
+                    </div>
+                ` : `
+                    <div class="space-y-3 pb-6">
+                        <p class="text-[10px] text-muted-theme uppercase font-bold tracking-widest">${validTimes.length} horário(s) disponível(is)</p>
+                        ${validTimes.map(time => `
+                            <div class="card-bg border border-theme rounded-2xl p-4 shadow-sm">
+                                <p class="text-2xl font-black text-theme mb-3 flex items-center gap-2">
+                                    <i data-lucide="clock" class="w-5 h-5 text-amber-500"></i>${time}
+                                </p>
+                                <div class="flex flex-wrap gap-2">
+                                    ${slots[time].map(barber => `
+                                        <button onclick="App.selectTimeAndBarberNew('${time}', ${barber.id})"
+                                            class="flex items-center gap-2.5 px-3 py-2 input-bg hover:bg-amber-500/10 border border-theme hover:border-amber-500/40 rounded-xl transition-all duration-200 active:scale-[0.97] group">
+                                            <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+                                                ${barber.avatar
+                                                    ? `<img src="${barber.avatar}" class="w-full h-full object-cover" />`
+                                                    : `<span class="text-sm font-black text-amber-500/70">${(barber.name?.[0] || 'B').toUpperCase()}</span>`
+                                                }
+                                            </div>
+                                            <span class="text-sm font-semibold text-theme group-hover:text-amber-500 transition-colors">${App.escapeHTML(barber.name.split(' ')[0])}</span>
+                                        </button>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
+            </div>`;
+        }
+
+        // ── STEP 4: CONFIRM ──
+        if (step === 'confirm') {
+            const svc = this.state.bookingSelectedService;
+            const services = this.state.selectedServices.length > 0 ? this.state.selectedServices : (svc ? [svc] : []);
+            const barber = this.state.selectedBarber;
+            const totalValue = services.reduce((s, sv) => s + sv.priceValue, 0);
+            const totalDuration = services.reduce((s, sv) => s + sv.durationMinutes, 0);
+            const dateObj = new Date(this.state.selectedDate + 'T00:00:00');
+            const dateFormatted = dateObj.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+            const hasVariable = services.some(s => s.price_variable);
+
+            return `
+            <div class="space-y-5 fade-in slide-in-up">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-theme">Confirmar</h2>
+                        <p class="text-xs text-muted-theme mt-0.5">Revise seu agendamento</p>
+                    </div>
+                    <button onclick="App.cancelBooking()" class="p-2 input-bg rounded-full text-muted-theme hover:text-theme transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                ${progressHtml}
+
+                <button onclick="App.backToService()" class="flex items-center gap-1.5 text-xs text-muted-theme hover:text-amber-500 transition-colors">
+                    <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Voltar
+                </button>
+
+                <!-- Resumo -->
+                <div class="card-bg border border-amber-500/20 rounded-3xl p-5 space-y-4 shadow-xl">
+                    <div class="flex items-center gap-3 pb-4 border-b border-theme/50">
+                        <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-zinc-800 border-2 border-amber-500/30 flex items-center justify-center">
+                            ${barber?.avatar
+                                ? `<img src="${barber.avatar}" class="w-full h-full object-cover" />`
+                                : `<span class="text-xl font-black text-amber-500/70">${(barber?.name?.[0] || 'B').toUpperCase()}</span>`
+                            }
+                        </div>
+                        <div>
+                            <p class="font-bold text-theme">${App.escapeHTML(barber?.name || '')}</p>
+                            <p class="text-xs text-muted-theme">Profissional selecionado</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-0.5">
+                            <p class="text-[10px] text-muted-theme uppercase font-bold tracking-widest">Data</p>
+                            <p class="font-semibold text-theme text-sm capitalize">${dateFormatted}</p>
+                        </div>
+                        <div class="space-y-0.5">
+                            <p class="text-[10px] text-muted-theme uppercase font-bold tracking-widest">Horário</p>
+                            <p class="font-semibold text-theme text-sm">${this.state.selectedTime}</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5 pt-2 border-t border-theme/50">
+                        <p class="text-[10px] text-muted-theme uppercase font-bold tracking-widest mb-2">Serviço(s)</p>
+                        ${services.map(sv => `
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-theme font-medium">${App.escapeHTML(sv.name)}</span>
+                                <span class="text-amber-500 font-bold">${sv.price_variable ? '<span class="text-[10px] italic text-muted-theme mr-1">A partir de</span>' : ''}R$ ${sv.priceValue.toFixed(2).replace('.', ',')}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="flex items-center justify-between pt-3 border-t border-theme/50">
+                        <div class="flex items-center gap-1.5 text-xs text-muted-theme">
+                            <i data-lucide="clock" class="w-3.5 h-3.5"></i> ${this.formatDuration ? this.formatDuration(totalDuration) : totalDuration + ' min'}
+                        </div>
+                        <div class="text-right">
+                            ${hasVariable ? '<p class="text-[9px] text-amber-500 font-black uppercase tracking-widest italic leading-none">A partir de</p>' : ''}
+                            <p class="text-2xl font-black text-amber-500">R$ ${totalValue.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Staff: cliente -->
+                ${this.state.isStaffBooking ? `
+                    <div class="card-bg border border-theme rounded-2xl p-4 space-y-3 shadow-sm">
+                        ${this.state.staffBookingMode === 'registered' ? `
+                            <p class="text-[10px] text-amber-500 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                                <i data-lucide="user-check" class="w-3 h-3"></i> Cliente Cadastrado
+                            </p>
+                            ${this.state.staffSelectedClient ? `
+                                <div class="flex items-center gap-3 p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl">
+                                    <div class="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 bg-zinc-800 flex items-center justify-center border border-amber-500/30">
+                                        ${this.state.staffSelectedClient.avatar
+                                            ? `<img src="${this.state.staffSelectedClient.avatar}" class="w-full h-full object-cover" />`
+                                            : `<span class="font-black text-amber-500/70">${(this.state.staffSelectedClient.name?.[0]||'C').toUpperCase()}</span>`
+                                        }
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(this.state.staffSelectedClient.name)}</p>
+                                        <p class="text-[11px] text-muted-theme">${App.escapeHTML(App.formatDisplayPhone(this.state.staffSelectedClient.phone)||'Sem telefone')}</p>
+                                    </div>
+                                    <button onclick="App.clearStaffClient()" class="p-1.5 input-bg border border-theme rounded-lg transition-colors">
+                                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-muted-theme"></i>
+                                    </button>
+                                </div>
+                            ` : `
+                                <div class="relative">
+                                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-theme pointer-events-none"></i>
+                                    <input type="text" id="staff-client-search-input" placeholder="Buscar cliente por nome ou telefone..."
+                                        class="w-full input-bg border border-theme rounded-xl p-3 pl-9 text-theme focus:border-amber-500 outline-none transition-colors text-sm"
+                                        oninput="App.searchStaffClients(this.value)" autocomplete="off" />
+                                </div>
+                                <div id="staff-client-search-results" class="max-h-48 overflow-y-auto rounded-xl input-bg border border-theme/50">
+                                    <p class="text-[11px] text-muted-theme text-center py-3">Digite ao menos 2 caracteres.</p>
+                                </div>
+                            `}
+                        ` : `
+                            <p class="text-[10px] text-emerald-500 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                                <i data-lucide="user-plus" class="w-3 h-3"></i> Cliente Walk-in
+                            </p>
+                            <input type="text" id="client-name-manual" placeholder="Nome do Cliente" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors text-sm" />
+                            <input type="tel" id="client-phone-manual" inputmode="numeric" placeholder="Telefone (Opcional)" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors text-sm" />
+                        `}
+                    </div>
+                ` : ''}
+
+                <button onclick="App.confirmBooking()" class="w-full py-4 rounded-2xl font-black text-lg transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-lg shadow-amber-500/20">
+                    <i data-lucide="check-circle" class="w-6 h-6"></i>
+                    ${isEditing ? 'Confirmar Alteração' : 'Confirmar Agendamento'}
+                </button>
+            </div>`;
+        }
+
+        return '';
+    },
+
+    // ── LEGADO: mantido para referência interna ──
+    renderBookingFlowLegacy() {
         const today = new Date().toISOString().split('T')[0];
         return `
             <div class="space-y-6 fade-in slide-in-up">
@@ -1691,78 +2050,111 @@ Object.assign(App, {
                         </div>
 
                         ${viewMode === 'fixed' ? `
-                            <!-- MODO ESCALA FIXA -->
-                            <div class="space-y-6 slide-in-right">
-                                <!-- Bulk Mode Toggle -->
-                                <div class="flex items-center justify-between px-2">
-                                    <h4 class="text-[10px] font-black uppercase text-muted-theme tracking-widest flex items-center gap-2">
-                                        <i data-lucide="layers" class="w-3 h-3"></i> Multi-seleção de dias
-                                    </h4>
-                                    <button onclick="App.toggleBulkMode()" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${this.state.adminScheduleBulkMode ? 'bg-amber-500' : 'bg-zinc-700'}">
-                                        <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${this.state.adminScheduleBulkMode ? 'translate-x-6' : 'translate-x-1'}"></span>
+                            <!-- MODO ESCALA FIXA (novo sistema: horário início/fim + dias) -->
+                            <div class="space-y-5 slide-in-right">
+
+                                <!-- Dias de Trabalho -->
+                                <div class="card-bg rounded-2xl border border-theme p-5 space-y-4">
+                                    <h3 class="text-sm font-bold text-theme flex items-center gap-2">
+                                        <i data-lucide="calendar-days" class="w-4 h-4 text-amber-500"></i>
+                                        Dias de Trabalho
+                                    </h3>
+                                    <div class="flex justify-between gap-1.5">
+                                        ${daysLabels.map((label, idx) => {
+                                            const workingDays = barberConfig.working_days ?? [1,2,3,4,5,6];
+                                            const isWorking = workingDays.includes(idx);
+                                            return `
+                                                <button onclick="App.toggleBarberWorkingDay('${selectedBarberId}', ${idx})"
+                                                    class="flex-1 min-w-[40px] py-3 rounded-xl border text-[10px] font-black uppercase transition-all
+                                                        ${isWorking ? 'bg-amber-500 border-amber-500 text-zinc-950 shadow-md shadow-amber-500/20' : 'card-bg border-theme text-muted-theme opacity-40 hover:opacity-70'}">
+                                                    ${label}
+                                                </button>`;
+                                        }).join('')}
+                                    </div>
+                                    <p class="text-[10px] text-muted-theme italic pl-1">Clique para ativar/desativar o dia de trabalho deste barbeiro.</p>
+                                </div>
+
+                                <!-- Horário de Expediente -->
+                                <div class="card-bg rounded-2xl border border-theme p-5 space-y-4">
+                                    <h3 class="text-sm font-bold text-theme flex items-center gap-2">
+                                        <i data-lucide="clock" class="w-4 h-4 text-amber-500"></i>
+                                        Horário de Expediente
+                                    </h3>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="space-y-2">
+                                            <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Início</label>
+                                            <input type="time"
+                                                id="admin-work-start-${selectedBarberId}"
+                                                value="${barberConfig.work_start || '09:00'}"
+                                                class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500 text-sm font-bold" />
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Fim</label>
+                                            <input type="time"
+                                                id="admin-work-end-${selectedBarberId}"
+                                                value="${barberConfig.work_end || '19:00'}"
+                                                class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500 text-sm font-bold" />
+                                        </div>
+                                    </div>
+
+                                    <div class="pt-3 border-t border-theme/50 space-y-2">
+                                        <h4 class="text-[10px] text-amber-500/80 uppercase font-black tracking-widest flex items-center gap-1.5">
+                                            <i data-lucide="coffee" class="w-3 h-3"></i> Intervalo de Almoço
+                                        </h4>
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div class="space-y-2">
+                                                <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Início</label>
+                                                <input type="time"
+                                                    id="admin-lunch-start-${selectedBarberId}"
+                                                    value="${barberConfig.lunch_start || '12:00'}"
+                                                    class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500 text-sm" />
+                                            </div>
+                                            <div class="space-y-2">
+                                                <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Fim</label>
+                                                <input type="time"
+                                                    id="admin-lunch-end-${selectedBarberId}"
+                                                    value="${barberConfig.lunch_end || '13:00'}"
+                                                    class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500 text-sm" />
+                                            </div>
+                                        </div>
+                                        <p class="text-[10px] text-muted-theme italic pl-1">Horários de almoço são bloqueados automaticamente para agendamentos.</p>
+                                    </div>
+
+                                    <button onclick="App.saveBarberConfig('${selectedBarberId}', {
+                                        work_start: document.getElementById('admin-work-start-${selectedBarberId}').value,
+                                        work_end: document.getElementById('admin-work-end-${selectedBarberId}').value,
+                                        lunch_start: document.getElementById('admin-lunch-start-${selectedBarberId}').value,
+                                        lunch_end: document.getElementById('admin-lunch-end-${selectedBarberId}').value
+                                    })"
+                                        class="w-full py-3.5 rounded-xl bg-amber-500 text-zinc-950 font-black text-sm flex items-center justify-center gap-2 hover:bg-amber-400 transition-all active:scale-[0.98] shadow-lg shadow-amber-500/20 mt-2">
+                                        <i data-lucide="save" class="w-4 h-4"></i> Salvar Configuração
                                     </button>
                                 </div>
 
-                                <!-- Seleção de Dia -->
-                                <div class="flex justify-between gap-1 overflow-x-auto pb-2 scrollbar-hide">
-                                    ${daysLabels.map((label, idx) => {
-                                        const isSelected = this.state.adminScheduleBulkMode 
-                                            ? this.state.adminScheduleBulkDays.includes(idx)
-                                            : selectedDay === idx;
-                                            
-                                        const onClick = this.state.adminScheduleBulkMode
-                                            ? `App.toggleBulkDay(${idx})`
-                                            : `App.setState({ adminScheduleDayOfWeek: ${idx} })`;
-
-                                        return `
-                                            <button onclick="${onClick}" class="flex-1 min-w-[45px] py-3 rounded-xl border transition-all flex flex-col items-center gap-1 ${isSelected ? 'bg-amber-500 border-amber-500 text-zinc-950 font-bold' : 'card-bg border-theme text-muted-theme hover:border-amber-500/50'}">
-                                                <span class="text-[9px] uppercase tracking-tighter">${label}</span>
-                                                ${this.state.adminScheduleBulkMode && isSelected ? '<i data-lucide="check" class="w-2 h-2"></i>' : ''}
-                                            </button>
-                                        `;
-                                    }).join('')}
-                                </div>
-
-                                <div class="card-bg rounded-2xl border border-theme p-5 space-y-6">
-                                    <h3 class="text-sm font-bold text-theme flex items-center gap-2">
-                                        <i data-lucide="calendar" class="w-4 h-4 text-amber-500"></i>
-                                        ${this.state.adminScheduleBulkMode 
-                                            ? `Configuração em Massa (${this.state.adminScheduleBulkDays.length} dias)` 
-                                            : `Configuração de ${fullDaysLabels[selectedDay]}`}
-                                    </h3>
-
-                                    <!-- Intervalo de Almoço -->
-                                    <div class="grid grid-cols-2 gap-4 pt-2 border-t border-white/5">
-                                        <div class="space-y-2">
-                                            <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Início Almoço</label>
-                                            <input type="time" value="${barberConfig.lunch_start}" onchange="App.saveBarberConfig('${selectedBarberId}', { lunch_start: this.value })" class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500" />
-                                        </div>
-                                        <div class="space-y-2">
-                                            <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Fim Almoço</label>
-                                            <input type="time" value="${barberConfig.lunch_end}" onchange="App.saveBarberConfig('${selectedBarberId}', { lunch_end: this.value })" class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500" />
-                                        </div>
-                                    </div>
-
-                                    <div class="space-y-3">
-                                        <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest flex justify-between items-center">
-                                            Selecione os Slot Ativos
-                                            <span class="text-amber-500 normal-case font-bold">Clique para Ativar/Desativar</span>
-                                        </label>
-                                        
-                                        <div class="grid grid-cols-4 gap-2 max-h-[300px] overflow-y-auto pr-2 scrollbar-hide">
-                                            ${AVAILABLE_TIMES.map(time => {
-                                                const isActive = this.state.barberSlots.some(s => s.barber_id === selectedBarberId && s.day_of_week === selectedDay && s.slot_time === time);
-                                                const isLunch = time >= barberConfig.lunch_start && time < barberConfig.lunch_end;
-                                                
-                                                return `
-                                                    <button onclick="${isActive ? `App.removeBarberSlot('${selectedBarberId}', ${selectedDay}, '${time}')` : `App.saveBarberSlot('${selectedBarberId}', ${selectedDay}, '${time}')`}" 
-                                                        class="py-3 rounded-lg border text-[10px] font-black transition-all ${isActive ? 'bg-amber-500 border-amber-500 text-zinc-950 shadow-md scale-95' : isLunch ? 'bg-orange-500/10 border-orange-500/30 text-orange-500 opacity-50' : 'card-bg border-theme text-muted-theme opacity-30 hover:opacity-100 hover:border-amber-500/50'}">
-                                                        ${time}
-                                                    </button>
-                                                `;
-                                            }).join('')}
-                                        </div>
-                                    </div>
+                                <!-- Preview dos slots que serão gerados -->
+                                <div class="card-bg rounded-2xl border border-dashed border-amber-500/20 p-4 space-y-2">
+                                    <p class="text-[10px] text-amber-500/60 uppercase font-black tracking-widest flex items-center gap-1.5">
+                                        <i data-lucide="eye" class="w-3 h-3"></i> Preview dos Horários Gerados
+                                    </p>
+                                    <p class="text-[11px] text-muted-theme leading-relaxed">
+                                        ${(() => {
+                                            const start = barberConfig.work_start || '09:00';
+                                            const end = barberConfig.work_end || '19:00';
+                                            const lStart = barberConfig.lunch_start || '12:00';
+                                            const lEnd = barberConfig.lunch_end || '13:00';
+                                            const startMin = this.timeToMinutes(start);
+                                            const endMin = this.timeToMinutes(end);
+                                            const lStartMin = this.timeToMinutes(lStart);
+                                            const lEndMin = this.timeToMinutes(lEnd);
+                                            const slots = [];
+                                            for (let t = startMin; t < endMin; t += 15) {
+                                                if (t >= lStartMin && t < lEndMin) continue;
+                                                slots.push(this.minutesToTime(t));
+                                            }
+                                            if (slots.length === 0) return '<span class="text-red-400">Nenhum slot — revise o horário.</span>';
+                                            return `<span class="text-amber-500 font-bold">${slots.length} slots</span> de 15 em 15 min: <span class="font-mono text-theme">${slots.slice(0,3).join(', ')}${slots.length > 3 ? ` ... ${slots[slots.length-1]}` : ''}</span>`;
+                                        })()}
+                                    </p>
                                 </div>
                             </div>
                         ` : `

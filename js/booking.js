@@ -1,16 +1,44 @@
 Object.assign(App, {
+
+    // ─────────────────────────────────────────────────────────────────
+    // INICIALIZAÇÃO DO FLUXO DE AGENDAMENTO
+    // ─────────────────────────────────────────────────────────────────
+
     startBooking() {
         this.state.isBooking = true;
-        this.state.selectedServices = [];
-        this.state.selectedBarber = null;
+        this.state.bookingStep = 'date';
         this.state.selectedDate = '';
         this.state.selectedTime = '';
-        this.state.activeBookingStep = 1;
-        this.state.editingAppointmentId = null; // Limpa qualquer edição anterior
+        this.state.selectedBarber = null;
+        this.state.selectedServices = [];          // multi-serviço
+        this.state.bookingSelectedService = null;  // legado (compat)
+        this.state.bookingSelectedServices = [];   // novo: array multi-select
+        this.state.bookingAvailableSlots = {};
+        this.state.bookingIsLoadingSlots = false;
+        this.state.editingAppointmentId = null;
         this.state.currentMonth = new Date().getMonth();
         this.state.currentYear = new Date().getFullYear();
+        this.state.bookingCalendarAvailability = {};
         this.render();
     },
+
+    cancelBooking() {
+        this.state.isBooking = false;
+        this.state.isStaffBooking = false;
+        this.state.staffBookingMode = null;
+        this.state.staffSelectedClient = null;
+        this.state.bookingStep = 'date';
+        this.state.bookingSelectedService = null;
+        this.state.bookingSelectedServices = [];
+        this.state.selectedServices = [];
+        this.state.bookingAvailableSlots = {};
+        this.state.editingAppointmentId = null;
+        this.render();
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // NAVEGAÇÃO DO CALENDÁRIO
+    // ─────────────────────────────────────────────────────────────────
 
     prevMonth() {
         if (this.state.currentMonth === 0) {
@@ -32,13 +60,334 @@ Object.assign(App, {
         this.render();
     },
 
+    // ─────────────────────────────────────────────────────────────────
+    // PASSO 1: SELEÇÃO DE DATA
+    // ─────────────────────────────────────────────────────────────────
+
+    selectDate(date) {
+        this.state.selectedDate = date;
+        this.state.selectedTime = '';
+        this.state.selectedBarber = null;
+        this.state.bookingAvailableSlots = {};
+        // Avança para seleção de serviço
+        this.state.bookingStep = 'service';
+        this.render();
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // PASSO 2: SELEÇÃO DE SERVIÇO(S) — multi-select
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Toggle de seleção de serviço. Chamado pelo checkbox de cada serviço.
+     * O usuário pode selecionar vários antes de confirmar.
+     */
+    toggleBookingService(serviceId) {
+        const svc = SERVICES.find(s => s.id === serviceId);
+        if (!svc) return;
+
+        const list = this.state.bookingSelectedServices || [];
+        const idx = list.findIndex(s => s.id === serviceId);
+        if (idx > -1) {
+            this.state.bookingSelectedServices = list.filter(s => s.id !== serviceId);
+        } else {
+            this.state.bookingSelectedServices = [...list, svc];
+        }
+        this.render();
+    },
+
+    /**
+     * Confirma a seleção de serviços e avança para os slots.
+     * Soma a duração de todos os serviços selecionados.
+     */
+    confirmServiceSelection() {
+        const services = this.state.bookingSelectedServices || [];
+        if (services.length === 0) {
+            this.showNotification('Selecione ao menos 1 serviço', 'Escolha o serviço desejado antes de continuar.');
+            return;
+        }
+
+        const duracaoTotal = services.reduce((sum, s) => sum + (s.durationMinutes || 30), 0);
+
+        // Sincroniza com selectedServices (legado) e bookingSelectedService (primeiro item)
+        this.state.selectedServices = services;
+        this.state.bookingSelectedService = services[0];
+        this.state.selectedTime = '';
+        this.state.selectedBarber = null;
+        this.state.bookingIsLoadingSlots = true;
+        this.state.bookingStep = 'slots';
+        this.render();
+
+        // Motor de disponibilidade com duração total dos serviços combinados
+        const slots = this.getHorariosDisponiveis({
+            data: this.state.selectedDate,
+            duracaoTotal,
+            servicoIds: services.map(s => s.id),
+            granularidadeMin: 15,
+            editingAppointmentId: this.state.editingAppointmentId
+        });
+
+        this.state.bookingAvailableSlots = slots;
+        this.state.bookingIsLoadingSlots = false;
+        this.render();
+    },
+
+    // Compat legado — não removido para não quebrar outros contextos
+    selectService(serviceId) {
+        this.state.bookingSelectedServices = [];
+        this.toggleBookingService(serviceId);
+        this.confirmServiceSelection();
+    },
+
+    // Volta para seleção de serviço (mantém os serviços já marcados)
+    backToService() {
+        this.state.bookingStep = 'service';
+        this.state.selectedTime = '';
+        this.state.selectedBarber = null;
+        this.state.bookingAvailableSlots = {};
+        // Não apaga bookingSelectedServices para o usuário não perder o que já marcou
+        this.render();
+    },
+
+    // Volta para seleção de data (limpa tudo)
+    backToDate() {
+        this.state.bookingStep = 'date';
+        this.state.selectedDate = '';
+        this.state.selectedTime = '';
+        this.state.selectedBarber = null;
+        this.state.bookingSelectedService = null;
+        this.state.bookingSelectedServices = [];
+        this.state.selectedServices = [];
+        this.state.bookingAvailableSlots = {};
+        this.render();
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // PASSO 3: SELEÇÃO DE HORÁRIO + BARBEIRO
+    // ─────────────────────────────────────────────────────────────────
+
+    selectTimeAndBarberNew(time, barberId) {
+        const barber = BARBERS.find(b => b.id === barberId);
+        if (!barber) return;
+
+        this.state.selectedTime = time;
+        this.state.selectedBarber = barber;
+        this.state.bookingStep = 'confirm';
+        this.render();
+    },
+
+    // Mantém compatibilidade com código legado que chama selectTimeAndBarber
+    selectTimeAndBarber(time, barberId) {
+        this.selectTimeAndBarberNew(time, barberId);
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // MULTI-SERVIÇO: toggle para staff (opcional, via confirm step)
+    // ─────────────────────────────────────────────────────────────────
+
+    toggleService(id) {
+        const svc = SERVICES.find(s => s.id === id);
+        if (!svc) return;
+        const index = this.state.selectedServices.findIndex(s => s.id === id);
+        if (index > -1) {
+            this.state.selectedServices.splice(index, 1);
+        } else {
+            this.state.selectedServices.push(svc);
+        }
+        // Atualiza o serviço principal para refletir o combo
+        this.state.bookingSelectedService = this.state.selectedServices[0] || null;
+        this.render();
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // PASSO 4: CONFIRMAÇÃO DO AGENDAMENTO
+    // ─────────────────────────────────────────────────────────────────
+
+    async confirmBooking() {
+        const { selectedDate, selectedTime, selectedBarber, selectedServices, bookingSelectedService } = this.state;
+
+        // Usar selectedServices ou bookingSelectedService como fallback
+        const services = selectedServices.length > 0 ? selectedServices : (bookingSelectedService ? [bookingSelectedService] : []);
+
+        if (!selectedDate || !selectedTime || !selectedBarber || services.length === 0) {
+            this.showNotification('Dados Incompletos', 'Selecione data, horário, barbeiro e serviço.');
+            return;
+        }
+
+        // Validação modo staff: cliente cadastrado deve estar selecionado
+        if (this.state.isStaffBooking && this.state.staffBookingMode === 'registered' && !this.state.staffSelectedClient) {
+            this.showNotification('Selecione o cliente', 'Pesquise e selecione o cliente cadastrado antes de confirmar.');
+            return;
+        }
+
+        // ── VALIDAÇÃO ANTI-RACE CONDITION: Re-busca dados frescos do servidor ──
+        await this.loadInitialData();
+
+        const totalValue = services.reduce((sum, s) => sum + s.priceValue, 0);
+        const totalDuration = services.reduce((sum, s) => sum + s.durationMinutes, 0);
+        const serviceNames = services.map(s => s.name).join(' + ');
+
+        const barberId = String(selectedBarber.user_id).toLowerCase().trim();
+        const newStart = this.timeToMinutes(selectedTime);
+        const newEnd = newStart + totalDuration;
+
+        // Verificar colisões por JANELA DE TEMPO REAL (não mais por minuto exato)
+        const collisions = (this.state.allAppointmentsForStats || []).filter(apt => {
+            // Ignorar o próprio agendamento se estiver editando
+            if (this.state.editingAppointmentId && apt.id === this.state.editingAppointmentId) return false;
+
+            // Filtrar por data e barbeiro
+            if (apt.date !== selectedDate || String(apt.barber_id).toLowerCase().trim() !== barberId) return false;
+
+            const aptStart = this.timeToMinutes(apt.time);
+            const aptEnd = aptStart + (apt.total_duration || 30);
+
+            // Regra de conflito por janela de tempo real
+            return this.hasIntervalConflict(newStart, newEnd, aptStart, aptEnd);
+        });
+
+        if (collisions.length > 0) {
+            console.warn('🚫 COLISÃO DETECTADA (janela real):', collisions);
+            this.showNotification(
+                'Horário Ocupado',
+                'Este horário conflita com outro agendamento. Por favor, escolha outro.'
+            );
+            this.state.bookingStep = 'slots';
+            // Recalcular slots com dados frescos
+            this.state.bookingAvailableSlots = this.getHorariosDisponiveis({
+                data: selectedDate,
+                servicoId: services[0]?.id,
+                granularidadeMin: 15,
+                editingAppointmentId: this.state.editingAppointmentId
+            });
+            this.render();
+            return;
+        }
+
+        // ── Determinar dados do cliente ──
+        let clientId = null;
+        let clientName = 'Cliente';
+        let clientPhone = '';
+        let clientAvatar = null;
+
+        if (this.state.isStaffBooking) {
+            if (this.state.staffBookingMode === 'registered' && this.state.staffSelectedClient) {
+                clientId = this.state.staffSelectedClient.id;
+                clientName = this.state.staffSelectedClient.name;
+                clientPhone = this.state.staffSelectedClient.phone;
+                clientAvatar = this.state.staffSelectedClient.avatar;
+            } else {
+                clientName = document.getElementById('client-name-manual')?.value || 'Cliente Avulso';
+                clientPhone = document.getElementById('client-phone-manual')?.value || '';
+            }
+        } else {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) {
+                this.showNotification('Erro', 'Você precisa estar logado.');
+                return;
+            }
+            clientId = user.id;
+            const { data: profile } = await supabaseClient
+                .from('profiles')
+                .select('name, phone, avatar')
+                .eq('id', user.id)
+                .single();
+            clientName = profile?.name || 'Cliente';
+            clientPhone = profile?.phone || '';
+            clientAvatar = profile?.avatar || null;
+        }
+
+        // ── Salvar agendamento ──
+        const appointmentData = {
+            client_id: clientId,
+            client_name: clientName,
+            client_phone: clientPhone,
+            client_avatar: clientAvatar,
+            barber_id: barberId,
+            barber_name: selectedBarber.name,
+            service_names: serviceNames,
+            service_price: `R$ ${totalValue.toFixed(2).replace('.', ',')}`,
+            service_numeric_value: totalValue,
+            total_duration: totalDuration,
+            date: selectedDate,
+            time: selectedTime,
+            status: 'pending'
+        };
+
+        let result;
+        if (this.state.editingAppointmentId) {
+            result = await supabaseClient
+                .from('appointments')
+                .update(appointmentData)
+                .eq('id', this.state.editingAppointmentId);
+        } else {
+            result = await supabaseClient.from('appointments').insert(appointmentData);
+        }
+
+        if (result.error) {
+            this.showNotification('Erro ao Agendar', result.error.message);
+            return;
+        }
+
+        // ── Sucesso ──
+        const wasEditing = !!this.state.editingAppointmentId;
+
+        this.state.isBooking = false;
+        this.state.isStaffBooking = false;
+        this.state.staffBookingMode = null;
+        this.state.staffSelectedClient = null;
+        this.state.editingAppointmentId = null;
+        this.state.bookingStep = 'date';
+        this.state.bookingSelectedService = null;
+        this.state.bookingAvailableSlots = {};
+
+        this.triggerConfetti();
+        this.showNotification(
+            wasEditing ? 'Alteração Confirmada!' : 'Agendamento Confirmado! ✂️',
+            `${serviceNames} com ${selectedBarber.name.split(' ')[0]} às ${selectedTime}.`
+        );
+
+        await this.loadInitialData();
+        await this.loadAppointments();
+        this.render();
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // CANCELAR / EDITAR AGENDAMENTO
+    // ─────────────────────────────────────────────────────────────────
+
+
+    editAppointment(id) {
+        const apt = this.state.appointments.find(a => a.id === id);
+        if (!apt) return;
+
+        const serviceNames = (apt.service?.name || '').split(' + ');
+        const services = SERVICES.filter(s => serviceNames.includes(s.name));
+        const barber = BARBERS.find(b => b.name === apt.barberName) || BARBERS[0];
+
+        this.state.isBooking = true;
+        this.state.editingAppointmentId = id;
+        this.state.bookingStep = 'date';
+        this.state.selectedDate = apt.date;
+        this.state.selectedTime = apt.time;
+        this.state.selectedBarber = barber;
+        this.state.selectedServices = services;
+        this.state.bookingSelectedService = services[0] || null;
+        this.state.currentMonth = new Date(apt.date + 'T00:00:00').getMonth();
+        this.state.currentYear = new Date(apt.date + 'T00:00:00').getFullYear();
+        this.state.bookingCalendarAvailability = {};
+        this.render();
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // STAFF BOOKING — Agendamento Manual pelo Barbeiro/Admin
+    // ─────────────────────────────────────────────────────────────────
+
     startStaffBooking() {
-        // Abre o modal de seleção de tipo de agendamento
         this.openStaffBookingModal();
     },
 
     openStaffBookingModal() {
-        // Remove modal anterior se existir
         const existing = document.getElementById('staff-booking-mode-modal');
         if (existing) existing.remove();
 
@@ -90,7 +439,6 @@ Object.assign(App, {
     },
 
     setStaffBookingMode(mode) {
-        // Fecha o modal de seleção
         const modal = document.getElementById('staff-booking-mode-modal');
         if (modal) modal.remove();
 
@@ -115,7 +463,7 @@ Object.assign(App, {
             const nameMatch = (c.name || '').toLowerCase().includes(q);
             const phoneMatch = (c.phone || '').replace(/\D/g, '').includes(q.replace(/\D/g, ''));
             return nameMatch || phoneMatch;
-        }).slice(0, 8); // Limite de 8 resultados
+        }).slice(0, 8);
 
         if (results.length === 0) {
             resultsEl.innerHTML = '<p class="text-[11px] text-muted-theme text-center py-4">Nenhum cliente encontrado.</p>';
@@ -163,214 +511,9 @@ Object.assign(App, {
         this.render();
     },
 
-    setBookingStep(step) {
-        // Automatically clear dependent variables if we navigate backward intentionally to modify things
-        if (step === 1 && this.state.activeBookingStep !== 1) {
-            this.state.selectedTime = '';
-            this.state.selectedBarber = null;
-            this.state.selectedServices = [];
-        } else if (step === 2 && this.state.activeBookingStep !== 2) {
-            this.state.selectedServices = [];
-        }
-        this.state.activeBookingStep = step;
-        this.render();
-    },
-
-    cancelBooking() {
-        this.state.isBooking = false;
-        this.state.isStaffBooking = false;
-        this.state.staffBookingMode = null;
-        this.state.staffSelectedClient = null;
-        this.render();
-    },
-
-    selectDate(date) {
-        this.state.selectedDate = date;
-        this.state.selectedTime = '';
-        this.state.selectedBarber = null;
-        this.state.selectedServices = []; // Reiniciar serviços pois mudou a data
-        this.state.activeBookingStep = 2;
-        this.render();
-    },
-
-    selectTimeAndBarber(time, barberId) {
-        this.state.selectedTime = time;
-        // Search by integer ID from UI, but ensure we store the full object including user_id (UUID)
-        this.state.selectedBarber = BARBERS.find(b => b.id === barberId);
-        this.state.activeBookingStep = 3;
-        this.render();
-    },
-
-    async confirmBooking() {
-        if (this.state.selectedServices.length === 0 || !this.state.selectedBarber || !this.state.selectedDate || !this.state.selectedTime) return;
-
-        // Validação: modo "cliente cadastrado" exige que o cliente tenha sido selecionado
-        if (this.state.isStaffBooking && this.state.staffBookingMode === 'registered' && !this.state.staffSelectedClient) {
-            this.showNotification('Selecione o cliente', 'Pesquise e selecione o cliente cadastrado antes de confirmar.');
-            return;
-        }
-
-        // --- TRAVA DE SEGURANÇA: Verificação de colisão em tempo real ---
-        // 1. Recarrega os dados mais recentes do servidor para garantir visibilidade total
-        await this.loadInitialData();
-        
-        const totalValue = this.state.selectedServices.reduce((sum, s) => sum + s.priceValue, 0);
-        const totalDuration = this.state.selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
-        const serviceNames = this.state.selectedServices.map(s => s.name).join(' + ');
-        
-        const selectedTime = this.state.selectedTime;
-        const selectedDate = this.state.selectedDate;
-        const barberId = String(this.state.selectedBarber.user_id).toLowerCase().trim();
-
-        const collisions = (this.state.allAppointmentsForStats || []).filter(apt => {
-            // Ignora o PRÓPRIO agendamento se estivermos editando ele
-            if (this.state.editingAppointmentId && apt.id === this.state.editingAppointmentId) return false;
-            
-            // Compara data e barbeiro (garantindo strings limpas)
-            if (apt.date !== selectedDate || String(apt.barber_id).toLowerCase().trim() !== barberId) return false;
-            
-            const [aptH, aptM] = apt.time.split(':').map(Number);
-            const aptStartTotal = aptH * 60 + aptM;
-            const aptEndTotal = aptStartTotal + (apt.total_duration || 30);
-            
-            const [thisH, thisM] = selectedTime.split(':').map(Number);
-            const thisTotal = thisH * 60 + thisM;
-            const thisEndTotal = thisTotal + totalDuration;
-
-            // Proteção simplificada: Apenas evita que dois agendamentos comecem NO MESMO MINUTO.
-            // Isso permite que o barbeiro gerencie sobreposições de duração (durations que "vazam").
-            return (thisTotal === aptStartTotal);
-        });
-
-        if (collisions.length > 0) {
-            console.warn("COLISÃO DETECTADA:", collisions);
-            this.showNotification("Horário Ocupado", "Este horário acaba de ser reservado ou está em conflito com outro agendamento.");
-            this.state.activeBookingStep = 2; 
-            this.render();
-            return;
-        }
-        // --- FIM DA TRAVA ---
-
-        let clientId = null;
-        let clientName = 'Cliente';
-        let clientPhone = '';
-        let clientAvatar = null;
-
-        if (this.state.isStaffBooking) {
-            if (this.state.staffBookingMode === 'registered' && this.state.staffSelectedClient) {
-                // Agendamento para CLIENTE CADASTRADO — vincula ao perfil existente
-                clientId = this.state.staffSelectedClient.id;
-                clientName = this.state.staffSelectedClient.name;
-                clientPhone = this.state.staffSelectedClient.phone;
-                clientAvatar = this.state.staffSelectedClient.avatar;
-            } else {
-                // Agendamento AVULSO (Walk-in) — sem vínculo a conta
-                clientName = document.getElementById('client-name-manual')?.value || 'Cliente Avulso';
-                clientPhone = document.getElementById('client-phone-manual')?.value || '';
-            }
-        } else {
-            // Agendamento padrão pelo CLIENTE logado
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            if (!user) {
-                this.showNotification("Erro", "Você precisa estar logado.");
-                return;
-            }
-            clientId = user.id;
-            const { data: profile } = await supabaseClient.from('profiles').select('name, phone, avatar').eq('id', user.id).single();
-            clientName = profile?.name || 'Cliente';
-            clientPhone = profile?.phone || '';
-            clientAvatar = profile?.avatar || null;
-        }
-
-        const appointmentData = {
-            client_id: clientId,
-            client_name: clientName,
-            client_phone: clientPhone, 
-            client_avatar: clientAvatar,
-            barber_id: barberId,
-            barber_name: this.state.selectedBarber.name,
-            service_names: serviceNames,
-            service_price: `R$ ${totalValue.toFixed(2).replace('.', ',')}`,
-            service_numeric_value: totalValue,
-            total_duration: totalDuration,
-            date: selectedDate,
-            time: selectedTime,
-            status: 'pending'
-        };
-
-        let result;
-        if (this.state.editingAppointmentId) {
-            result = await supabaseClient.from('appointments').update(appointmentData).eq('id', this.state.editingAppointmentId);
-        } else {
-            result = await supabaseClient.from('appointments').insert(appointmentData);
-        }
-
-        if (result.error) {
-            this.showNotification("Erro ao Agendar", result.error.message);
-            return;
-        }
-
-        this.state.isBooking = false;
-        this.state.isStaffBooking = false;
-        this.state.staffBookingMode = null;
-        this.state.staffSelectedClient = null;
-        this.state.editingAppointmentId = null;
-
-        // Efeito Visual e Físico de Sucesso
-        this.triggerConfetti();
-
-        this.showNotification(
-            this.state.editingAppointmentId ? "Alteração Confirmada!" : "Agendamento Confirmado!", 
-            "O agendamento foi registrado na agenda."
-        );
-
-        await this.loadInitialData();
-        await this.loadAppointments();
-        this.render();
-    },
-
-    async cancelAppointment(id) {
-        this.showConfirmModal({
-            title: "Cancelar Horário?",
-            message: "Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.",
-            icon: "alert-triangle",
-            isDestructive: true,
-            onConfirm: async () => {
-                const { error } = await supabaseClient.from('appointments')
-                    .update({ status: 'cancelled' })
-                    .eq('id', id);
-
-                if (error) {
-                    this.showNotification("Erro ao cancelar", error.message);
-                    return;
-                }
-
-                this.showNotification("Cancelado", "O seu agendamento foi cancelado com sucesso.");
-                await this.loadInitialData();
-                await this.loadAppointments();
-                this.render();
-            }
-        });
-    },
-
-    editAppointment(id) {
-        const apt = this.state.appointments.find(a => a.id === id);
-        if (!apt) return;
-
-        // Limpar e preparar o estado de agendamento com os dados atuais
-        this.state.isBooking = true;
-        this.state.editingAppointmentId = id;
-        this.state.activeBookingStep = 1;
-        this.state.selectedDate = apt.date;
-        this.state.selectedTime = apt.time;
-        this.state.selectedBarber = BARBERS.find(b => b.name === apt.barberName) || BARBERS[0];
-        
-        // Mapear serviços de volta (isso assume que os nomes batem)
-        const names = apt.service.name.split(' + ');
-        this.state.selectedServices = SERVICES.filter(s => names.includes(s.name));
-
-        this.render();
-    },
+    // ─────────────────────────────────────────────────────────────────
+    // PAGAMENTO — Completar agendamento
+    // ─────────────────────────────────────────────────────────────────
 
     initCompleteAppointment(id, paymentMethod) {
         this.state.confirmingPaymentId = id;
@@ -381,6 +524,18 @@ Object.assign(App, {
     cancelCompleteAppointment() {
         this.state.confirmingPaymentId = null;
         this.state.confirmingPaymentMethod = null;
+        this.render();
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // LEGADO — Mantidos para compatibilidade
+    // ─────────────────────────────────────────────────────────────────
+
+    // Método legado para compatibilidade (não usado no novo fluxo)
+    setBookingStep(step) {
+        const stepMap = { 1: 'date', 2: 'slots', 3: 'confirm' };
+        this.state.bookingStep = stepMap[step] || 'date';
+        this.state.activeBookingStep = step;
         this.render();
     }
 });
