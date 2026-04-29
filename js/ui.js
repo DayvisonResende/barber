@@ -284,6 +284,37 @@ Object.assign(App, {
         if (modal) modal.classList.add('hidden');
     },
 
+    showInfoModal({ title, message, icon = 'info', iconColor = 'text-amber-500', iconBg = 'bg-amber-500/10' }) {
+        const existing = document.getElementById('info-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'info-modal';
+        modal.className = 'fixed inset-0 z-[150] flex items-center justify-center px-6 fade-in';
+        modal.innerHTML = `
+            <div class="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm" onclick="document.getElementById('info-modal').remove()"></div>
+            <div class="relative bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl w-full max-w-sm scale-in">
+                <div class="flex flex-col items-center text-center gap-4">
+                    <div class="${iconBg} p-4 rounded-2xl">
+                        <i data-lucide="${icon}" class="w-8 h-8 ${iconColor}"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-theme">${title}</h3>
+                        <p class="text-sm text-muted-theme mt-2 leading-relaxed">${message}</p>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <button onclick="document.getElementById('info-modal').remove()"
+                        class="w-full py-3 rounded-xl font-bold transition-all duration-200 bg-zinc-800 text-theme border border-zinc-700 hover:bg-zinc-700">
+                        Entendi
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        if (window.lucide) window.lucide.createIcons();
+    },
+
     clearNotifications() {
         this.state.unreadCount = 0;
         this.updateHeaderUI();
@@ -736,7 +767,7 @@ Object.assign(App, {
                 `;
             } else if (isShopClosed && !isStaff) {
                 calendarHtml += `
-                    <div class="flex justify-center items-center h-10 w-full cursor-pointer hover:bg-red-500/5 rounded-full group transition-colors relative" onclick="App.selectDate('${dateStr}')">
+                    <div class="flex justify-center items-center h-10 w-full cursor-pointer hover:bg-red-500/5 rounded-full group transition-colors relative" onclick="App.showInfoModal({title: 'Barbearia Fechada', message: 'Não há expediente neste dia. Por favor, escolha outra data para o seu agendamento.', icon: 'calendar-x', iconColor: 'text-red-500', iconBg: 'bg-red-500/10'})">
                         <span class="text-red-500/40 font-medium group-hover:text-red-500/60">${i}</span>
                         <div class="absolute bottom-1.5 w-1 h-1 bg-red-500/20 rounded-full"></div>
                     </div>
