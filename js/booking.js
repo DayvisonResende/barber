@@ -123,7 +123,7 @@ Object.assign(App, {
             data: this.state.selectedDate,
             duracaoTotal,
             servicoIds: services.map(s => s.id),
-            granularidadeMin: 15,
+            granularidadeMin: 5,
             editingAppointmentId: this.state.editingAppointmentId
         });
 
@@ -257,7 +257,7 @@ Object.assign(App, {
             this.state.bookingAvailableSlots = this.getHorariosDisponiveis({
                 data: selectedDate,
                 servicoId: services[0]?.id,
-                granularidadeMin: 15,
+                granularidadeMin: 5,
                 editingAppointmentId: this.state.editingAppointmentId
             });
             this.render();

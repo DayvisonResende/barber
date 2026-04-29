@@ -2150,11 +2150,11 @@ Object.assign(App, {
      * @param {string} params.data - Data no formato YYYY-MM-DD
      * @param {number} [params.servicoId] - ID do serviço (usado para buscar duração se duracaoTotal não fornecida)
      * @param {number} [params.duracaoTotal] - Duração total em minutos (prioridade sobre servicoId para multi-serviço)
-     * @param {number} [params.granularidadeMin=15] - Intervalo entre slots em minutos
+     * @param {number} [params.granularidadeMin=5] - Intervalo entre slots em minutos
      * @param {string} [params.editingAppointmentId=null] - ID do agendamento sendo editado
      * @returns {Object} { "09:00": [barber1, barber2], "09:30": [barber1] }
      */
-    getHorariosDisponiveis({ data, servicoId, servicoIds, duracaoTotal, granularidadeMin = 15, editingAppointmentId = null }) {
+    getHorariosDisponiveis({ data, servicoId, servicoIds, duracaoTotal, granularidadeMin = 5, editingAppointmentId = null }) {
         // Resolver duração: prioridade para duracaoTotal (multi-serviço), fallback para servicoId
         let duracao = duracaoTotal || 0;
         if (!duracao && servicoId) {
