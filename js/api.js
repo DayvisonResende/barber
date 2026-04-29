@@ -2330,50 +2330,52 @@ Object.assign(App, {
         const product = PRODUCTS.find(p => p.id === productId);
         if (!apt || !product) return;
 
-        // Confirmação para evitar toques acidentais
-        if (!confirm(`Deseja adicionar ${product.name} (R$ ${product.price.toFixed(2).replace('.', ',')}) à comanda?`)) {
-            return;
-        }
+        this.showConfirmModal({
+            title: "Adicionar à Comanda?",
+            message: `Deseja adicionar ${product.name} (R$ ${product.price.toFixed(2).replace('.', ',')}) à comanda?`,
+            icon: "shopping-bag",
+            onConfirm: async () => {
+                // Pega comanda atual ou inicia vazia
+                let comanda = apt.comanda_items || [];
+                
+                // Verifica se o item já existe para aumentar a quantidade
+                const existingItemIndex = comanda.findIndex(i => i.id === product.id);
+                if (existingItemIndex >= 0) {
+                    comanda[existingItemIndex].qty += 1;
+                } else {
+                    comanda.push({
+                        id: product.id,
+                        name: product.name,
+                        price: product.price,
+                        qty: 1
+                    });
+                }
 
-        // Pega comanda atual ou inicia vazia
-        let comanda = apt.comanda_items || [];
-        
-        // Verifica se o item já existe para aumentar a quantidade
-        const existingItemIndex = comanda.findIndex(i => i.id === product.id);
-        if (existingItemIndex >= 0) {
-            comanda[existingItemIndex].qty += 1;
-        } else {
-            comanda.push({
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                qty: 1
-            });
-        }
+                const newVal = apt.numericValue + product.price;
 
-        const newVal = apt.numericValue + product.price;
+                try {
+                    const { error } = await supabaseClient
+                        .from('appointments')
+                        .update({ 
+                            comanda_items: comanda,
+                            service_numeric_value: newVal,
+                            service_price: `R$ ${newVal.toFixed(2).replace('.', ',')}`
+                        })
+                        .eq('id', appointmentId);
+                    
+                    if (error) throw error;
 
-        try {
-            const { error } = await supabaseClient
-                .from('appointments')
-                .update({ 
-                    comanda_items: comanda,
-                    service_numeric_value: newVal,
-                    service_price: `R$ ${newVal.toFixed(2).replace('.', ',')}`
-                })
-                .eq('id', appointmentId);
-            
-            if (error) throw error;
-
-            this.showNotification("Sucesso", `${product.name} adicionado à comanda!`);
-            document.getElementById('modal-container').innerHTML = ''; // Fecha modal
-            await this.loadAppointments();
-            this.render();
-            
-        } catch (error) {
-            console.error("Erro ao adicionar item na comanda:", error);
-            this.showNotification("Erro", "Falha ao adicionar item.");
-        }
+                    this.showNotification("Sucesso", `${product.name} adicionado à comanda!`);
+                    document.getElementById('modal-container').innerHTML = ''; // Fecha modal
+                    await this.loadAppointments();
+                    this.render();
+                    
+                } catch (error) {
+                    console.error("Erro ao adicionar item na comanda:", error);
+                    this.showNotification("Erro", "Falha ao adicionar item.");
+                }
+            }
+        });
     },
 
     async removeComandaItem(appointmentId, itemIndex) {
