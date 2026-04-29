@@ -2147,12 +2147,12 @@ Object.assign(App, {
                                             const lStartMin = this.timeToMinutes(lStart);
                                             const lEndMin = this.timeToMinutes(lEnd);
                                             const slots = [];
-                                            for (let t = startMin; t < endMin; t += 15) {
+                                            for (let t = startMin; t < endMin; t += 5) {
                                                 if (t >= lStartMin && t < lEndMin) continue;
                                                 slots.push(this.minutesToTime(t));
                                             }
                                             if (slots.length === 0) return '<span class="text-red-400">Nenhum slot — revise o horário.</span>';
-                                            return `<span class="text-amber-500 font-bold">${slots.length} slots</span> de 15 em 15 min: <span class="font-mono text-theme">${slots.slice(0,3).join(', ')}${slots.length > 3 ? ` ... ${slots[slots.length-1]}` : ''}</span>`;
+                                            return `<span class="text-amber-500 font-bold">${slots.length} slots</span> de 5 em 5 min: <span class="font-mono text-theme">${slots.slice(0,3).join(', ')}${slots.length > 3 ? ` ... ${slots[slots.length-1]}` : ''}</span>`;
                                         })()}
                                     </p>
                                 </div>
