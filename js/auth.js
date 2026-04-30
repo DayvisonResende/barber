@@ -82,7 +82,7 @@ Object.assign(App, {
                 data: {
                     name: name,
                     cpf: cleanCpf,
-                    birth_date: this.inputToDbDate(birthDate),
+                    birth_date: App.inputToDbDate(birthDate),
                     phone: cleanPhone
                 }
             }
@@ -157,17 +157,23 @@ Object.assign(App, {
         const phoneWith55 = '55' + phoneNo55;
 
         const cpfClean = cpf.replace(/\D/g, '');
-        const birthForDb = this.inputToDbDate(birthDate);
+        const birthForDb = App.inputToDbDate(birthDate);
 
         // 1. Verificar se existe um perfil com esse CPF e Data de Nascimento
-        // Usamos .in para aceitar tanto o formato limpo antigo quanto o 55 atual.
-        const { data: profile, error } = await supabaseClient
+        // Usamos .in() para aceitar tanto o formato limpo quanto o formato com máscara (ex: cadastros antigos ou manuais no DB).
+        const { data: profiles, error } = await supabaseClient
             .from('profiles')
             .select('id, name, phone, role')
-            .eq('cpf', cpfClean)
-            .eq('birth_date', birthForDb)
+            .in('cpf', [cpf, cpfClean])
+            .in('birth_date', [birthDate, birthForDb])
             .in('phone', [phoneNo55, phoneWith55, phone, rawPhone])
-            .single();
+            .limit(1);
+
+        if (error) {
+            console.error('Erro ao verificar usuário:', error);
+        }
+
+        const profile = profiles && profiles.length > 0 ? profiles[0] : null;
 
         if (!profile) {
             this.showNotification("Dados Incorretos", "Nenhum usuário bate com os dados informados.");
