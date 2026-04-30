@@ -3,7 +3,7 @@ Object.assign(App, {
         const name = this.state.shopSettings?.name || 'FinnoTrato';
         const highlightRegex = /(barber|barbearia)/i;
         let formattedName = name;
-        
+
         if (highlightRegex.test(name)) {
             const parts = name.split(highlightRegex);
             formattedName = parts.map(part => {
@@ -34,7 +34,7 @@ Object.assign(App, {
 
     renderReminderCard(reminder) {
         if (!reminder) return '';
-        
+
         return `
             <!-- Botão do Sino Flutuante -->
             <div onclick="App.toggleReminderPopup()" class="floating-bell pulse-warm">
@@ -119,20 +119,20 @@ Object.assign(App, {
 
                     <h1 class="text-[2.75rem] font-bold tracking-tight text-theme logo-font leading-tight">
                         ${(() => {
-                            const name = this.state.shopSettings?.name || 'FinnoTratoBarber';
-                            const highlightRegex = /(barber|barbearia)/i;
-                            if (highlightRegex.test(name)) {
-                                const parts = name.split(highlightRegex);
-                                return parts.map(part => {
-                                    const lowerPart = part.toLowerCase();
-                                    if (lowerPart === 'barber' || lowerPart === 'barbearia') {
-                                        return `<span class="text-amber-500">${part}</span>`;
-                                    }
-                                    return part;
-                                }).join('');
-                            }
-                            return name;
-                        })()}
+                const name = this.state.shopSettings?.name || 'FinnoTratoBarber';
+                const highlightRegex = /(barber|barbearia)/i;
+                if (highlightRegex.test(name)) {
+                    const parts = name.split(highlightRegex);
+                    return parts.map(part => {
+                        const lowerPart = part.toLowerCase();
+                        if (lowerPart === 'barber' || lowerPart === 'barbearia') {
+                            return `<span class="text-amber-500">${part}</span>`;
+                        }
+                        return part;
+                    }).join('');
+                }
+                return name;
+            })()}
                     </h1>
                     <p class="text-muted-theme text-sm text-center px-6">${this.state.shopSettings?.slogan || 'O seu estilo nas suas mãos.'}</p>
                 </div>
@@ -322,8 +322,8 @@ Object.assign(App, {
                     <div class="flex items-center gap-1 ${i < steps.length - 1 ? 'flex-1' : ''}">
                         <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 transition-all
                             ${i < stepIdx ? 'bg-amber-500 text-zinc-950' :
-                              i === stepIdx ? 'bg-amber-500 text-zinc-950 ring-4 ring-amber-500/20' :
-                              'input-bg text-muted-theme border border-theme'}">
+                i === stepIdx ? 'bg-amber-500 text-zinc-950 ring-4 ring-amber-500/20' :
+                    'input-bg text-muted-theme border border-theme'}">
                             ${i < stepIdx ? '<i data-lucide="check" class="w-3 h-3"></i>' : i + 1}
                         </div>
                         ${i < steps.length - 1 ? `<div class="flex-1 h-px ${i < stepIdx ? 'bg-amber-500' : 'bg-zinc-700'}"></div>` : ''}
@@ -382,8 +382,8 @@ Object.assign(App, {
                 <p class="text-[11px] text-muted-theme font-medium">Selecione um ou mais serviços:</p>
                 <div class="space-y-2">
                     ${SERVICES.map(svc => {
-                        const isChecked = selected.some(s => s.id === svc.id);
-                        return `
+                const isChecked = selected.some(s => s.id === svc.id);
+                return `
                         <div onclick="App.toggleBookingService(${svc.id})"
                             class="flex items-center gap-4 p-4 card-bg border rounded-2xl cursor-pointer transition-all duration-200 active:scale-[0.98] shadow-sm
                                 ${isChecked ? 'border-amber-500 bg-amber-500/5 shadow-amber-500/10' : 'border-theme hover:border-amber-500/30'}">
@@ -404,7 +404,7 @@ Object.assign(App, {
                                 </p>
                             </div>
                         </div>`;
-                    }).join('')}
+            }).join('')}
                 </div>
 
                 <!-- Footer com total + botão (posicionado após a lista) -->
@@ -433,8 +433,8 @@ Object.assign(App, {
                                 <button onclick="App.confirmServiceSelection()"
                                     class="w-full py-3.5 rounded-xl font-black text-sm transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98]
                                         ${hasSelected
-                                            ? 'bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-lg shadow-amber-500/20'
-                                            : 'input-bg text-muted-theme cursor-not-allowed opacity-60'}">
+                    ? 'bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-lg shadow-amber-500/20'
+                    : 'input-bg text-muted-theme cursor-not-allowed opacity-60'}">
                                     <i data-lucide="clock" class="w-4 h-4"></i>
                                     ${hasSelected ? 'Ver Horários Disponíveis' : 'Selecione ao menos 1 serviço'}
                                 </button>
@@ -520,9 +520,9 @@ Object.assign(App, {
                                             class="flex items-center gap-2.5 px-3 py-2 input-bg hover:bg-amber-500/10 border border-theme hover:border-amber-500/40 rounded-xl transition-all duration-200 active:scale-[0.97] group">
                                             <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-zinc-800 border border-zinc-700 flex items-center justify-center">
                                                 ${barber.avatar
-                                                    ? `<img src="${barber.avatar}" class="w-full h-full object-cover" />`
-                                                    : `<span class="text-sm font-black text-amber-500/70">${(barber.name?.[0] || 'B').toUpperCase()}</span>`
-                                                }
+                    ? `<img src="${barber.avatar}" class="w-full h-full object-cover" />`
+                    : `<span class="text-sm font-black text-amber-500/70">${(barber.name?.[0] || 'B').toUpperCase()}</span>`
+                }
                                             </div>
                                             <span class="text-sm font-semibold text-theme group-hover:text-amber-500 transition-colors">${App.escapeHTML(barber.name.split(' ')[0])}</span>
                                         </button>
@@ -568,9 +568,9 @@ Object.assign(App, {
                     <div class="flex items-center gap-3 pb-4 border-b border-theme/50">
                         <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-zinc-800 border-2 border-amber-500/30 flex items-center justify-center">
                             ${barber?.avatar
-                                ? `<img src="${barber.avatar}" class="w-full h-full object-cover" />`
-                                : `<span class="text-xl font-black text-amber-500/70">${(barber?.name?.[0] || 'B').toUpperCase()}</span>`
-                            }
+                    ? `<img src="${barber.avatar}" class="w-full h-full object-cover" />`
+                    : `<span class="text-xl font-black text-amber-500/70">${(barber?.name?.[0] || 'B').toUpperCase()}</span>`
+                }
                         </div>
                         <div>
                             <p class="font-bold text-theme">${App.escapeHTML(barber?.name || '')}</p>
@@ -621,13 +621,13 @@ Object.assign(App, {
                                 <div class="flex items-center gap-3 p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl">
                                     <div class="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 bg-zinc-800 flex items-center justify-center border border-amber-500/30">
                                         ${this.state.staffSelectedClient.avatar
-                                            ? `<img src="${this.state.staffSelectedClient.avatar}" class="w-full h-full object-cover" />`
-                                            : `<span class="font-black text-amber-500/70">${(this.state.staffSelectedClient.name?.[0]||'C').toUpperCase()}</span>`
-                                        }
+                                ? `<img src="${this.state.staffSelectedClient.avatar}" class="w-full h-full object-cover" />`
+                                : `<span class="font-black text-amber-500/70">${(this.state.staffSelectedClient.name?.[0] || 'C').toUpperCase()}</span>`
+                            }
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(this.state.staffSelectedClient.name)}</p>
-                                        <p class="text-[11px] text-muted-theme">${App.escapeHTML(App.formatDisplayPhone(this.state.staffSelectedClient.phone)||'Sem telefone')}</p>
+                                        <p class="text-[11px] text-muted-theme">${App.escapeHTML(App.formatDisplayPhone(this.state.staffSelectedClient.phone) || 'Sem telefone')}</p>
                                     </div>
                                     <button onclick="App.clearStaffClient()" class="p-1.5 input-bg border border-theme rounded-lg transition-colors">
                                         <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-muted-theme"></i>
@@ -714,16 +714,16 @@ Object.assign(App, {
                     ${this.state.activeBookingStep === 2 ? `
                         <div class="p-4 fade-in input-bg space-y-3 max-h-80 overflow-y-auto scrollbar-hide">
                         ${(() => {
-                            const dateObj = new Date(this.state.selectedDate + 'T00:00:00');
-                            const dayOfWeek = dateObj.getDay();
-                            const isStaff = ['admin', 'manager', 'barber'].includes(this.state.role);
-                            
-                            // NOVO: Verificação de Barbearia Aberta (Ignorada para staff se necessário, mas mantida por padrão)
-                            const workingDays = this.state.shopSettings.working_days || [1,2,3,4,5,6];
-                            const isShopOpen = workingDays.includes(dayOfWeek);
+                    const dateObj = new Date(this.state.selectedDate + 'T00:00:00');
+                    const dayOfWeek = dateObj.getDay();
+                    const isStaff = ['admin', 'manager', 'barber'].includes(this.state.role);
 
-                            if (!isShopOpen && !isStaff) {
-                                return `
+                    // NOVO: Verificação de Barbearia Aberta (Ignorada para staff se necessário, mas mantida por padrão)
+                    const workingDays = this.state.shopSettings.working_days || [1, 2, 3, 4, 5, 6];
+                    const isShopOpen = workingDays.includes(dayOfWeek);
+
+                    if (!isShopOpen && !isStaff) {
+                        return `
                                     <div class="flex flex-col items-center justify-center py-10 text-center space-y-4">
                                         <div class="w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center text-red-500">
                                             <i data-lucide="calendar-x" class="w-8 h-8"></i>
@@ -734,41 +734,41 @@ Object.assign(App, {
                                         </div>
                                     </div>
                                 `;
-                            }
+                    }
 
-                            const now = new Date();
-                            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                            const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                    const now = new Date();
+                    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                    const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-                            // Agrupar slots por horário: { "09:00": [barber1, barber2], "09:45": [barber1] }
-                            const slotsByTime = {};
+                    // Agrupar slots por horário: { "09:00": [barber1, barber2], "09:45": [barber1] }
+                    const slotsByTime = {};
 
-                            // Filtro resiliente: se is_active/active for undefined, assume que é ativo (retrocompatibilidade)
-                            const activeBarbers = BARBERS.filter(b => b.is_active !== false && b.active !== false);
-                            
-                            activeBarbers.forEach(barber => {
-                                const available = this.getBarberAvailableSlots(barber.user_id, this.state.selectedDate);
-                                
-                                // Debug log para ajudar o suporte (visível no console)
-                                if (available.length === 0) {
-                                    console.log(`ℹ️ Nenhuma disponibilidade para ${barber.name} em ${this.state.selectedDate}`);
-                                }
+                    // Filtro resiliente: se is_active/active for undefined, assume que é ativo (retrocompatibilidade)
+                    const activeBarbers = BARBERS.filter(b => b.is_active !== false && b.active !== false);
 
-                                available.forEach(slot => {
-                                    if (slot.isOccupied) return;
+                    activeBarbers.forEach(barber => {
+                        const available = this.getBarberAvailableSlots(barber.user_id, this.state.selectedDate);
 
-                                    // Se não for staff, não mostrar horários retroativos do dia de hoje
-                                    if (!isStaff && this.state.selectedDate === todayStr && slot.time <= currentTimeStr) return;
+                        // Debug log para ajudar o suporte (visível no console)
+                        if (available.length === 0) {
+                            console.log(`ℹ️ Nenhuma disponibilidade para ${barber.name} em ${this.state.selectedDate}`);
+                        }
 
-                                    if (!slotsByTime[slot.time]) slotsByTime[slot.time] = [];
-                                    slotsByTime[slot.time].push(barber);
-                                });
-                            });
+                        available.forEach(slot => {
+                            if (slot.isOccupied) return;
 
-                            const sortedTimes = Object.keys(slotsByTime).sort();
+                            // Se não for staff, não mostrar horários retroativos do dia de hoje
+                            if (!isStaff && this.state.selectedDate === todayStr && slot.time <= currentTimeStr) return;
 
-                            if (sortedTimes.length === 0) {
-                                return `
+                            if (!slotsByTime[slot.time]) slotsByTime[slot.time] = [];
+                            slotsByTime[slot.time].push(barber);
+                        });
+                    });
+
+                    const sortedTimes = Object.keys(slotsByTime).sort();
+
+                    if (sortedTimes.length === 0) {
+                        return `
                                     <div class="flex flex-col items-center justify-center py-10 text-center space-y-4">
                                         <div class="w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center text-amber-500">
                                             <i data-lucide="clock" class="w-8 h-8"></i>
@@ -779,15 +779,15 @@ Object.assign(App, {
                                         </div>
                                     </div>
                                 `;
-                            }
+                    }
 
-                            return sortedTimes.map(time => `
+                    return sortedTimes.map(time => `
                                 <div class="p-3 card-bg border border-theme rounded-xl flex items-center justify-between shadow-sm">
                                     <span class="text-xl font-bold text-theme">${time}</span>
                                     <div class="flex gap-4">
                                         ${slotsByTime[time].map(barber => {
-                                            const isSelected = this.state.selectedTime === time && this.state.selectedBarber?.id === barber.id;
-                                            return `
+                        const isSelected = this.state.selectedTime === time && this.state.selectedBarber?.id === barber.id;
+                        return `
                                                 <div onclick="App.selectTimeAndBarber('${time}', ${barber.id})" class="cursor-pointer transition-all flex flex-col items-center gap-1 ${isSelected ? 'scale-110' : 'hover:scale-105 opacity-80 hover:opacity-100'}">
                                                     <div class="relative">
                                                         ${barber.avatar ? `
@@ -802,11 +802,11 @@ Object.assign(App, {
                                                     <span class="text-[10px] ${isSelected ? 'text-amber-500 font-bold' : 'text-muted-theme font-medium'}">${barber.name.split(' ')[0]}</span>
                                                 </div>
                                             `;
-                                        }).join('')}
+                    }).join('')}
                                     </div>
                                 </div>
                             `).join('');
-                        })()}
+                })()}
                         </div>
                     ` : ''}
                 </div>
@@ -827,22 +827,22 @@ Object.assign(App, {
                     ${this.state.activeBookingStep === 3 ? `
                         <div class="p-4 fade-in input-bg grid gap-2">
                             ${(() => {
-                                // Filtrar serviços baseados no barbeiro selecionado
-                                let availableServices = SERVICES;
-                                const barberId = this.state.selectedBarber?.id;
-                                
-                                if (barberId) {
-                                    const mappedServices = this.state.barberServices.filter(s => s.barber_id === barberId).map(s => s.service_id);
-                                    // Se o barbeiro tem especialidades cadastradas, filtra por elas. 
-                                    // Se não tem nada (vazio), assume que faz tudo (retrocompatibilidade).
-                                    if (mappedServices.length > 0) {
-                                        availableServices = SERVICES.filter(svc => mappedServices.includes(svc.id));
-                                    }
-                                }
+                    // Filtrar serviços baseados no barbeiro selecionado
+                    let availableServices = SERVICES;
+                    const barberId = this.state.selectedBarber?.id;
 
-                                return availableServices.map(svc => {
-                                    const isSelected = this.state.selectedServices.some(s => s.id === svc.id);
-                                    return `
+                    if (barberId) {
+                        const mappedServices = this.state.barberServices.filter(s => s.barber_id === barberId).map(s => s.service_id);
+                        // Se o barbeiro tem especialidades cadastradas, filtra por elas. 
+                        // Se não tem nada (vazio), assume que faz tudo (retrocompatibilidade).
+                        if (mappedServices.length > 0) {
+                            availableServices = SERVICES.filter(svc => mappedServices.includes(svc.id));
+                        }
+                    }
+
+                    return availableServices.map(svc => {
+                        const isSelected = this.state.selectedServices.some(s => s.id === svc.id);
+                        return `
                                         <div onclick="App.toggleService(${svc.id})" class="p-4 rounded-xl border cursor-pointer transition-all ${isSelected ? 'border-amber-500 bg-amber-500/10' : 'border-theme input-bg hover:border-zinc-700'} flex items-center gap-3">
                                             <div class="w-5 h-5 rounded border ${isSelected ? 'bg-amber-500 border-amber-500 text-zinc-950 flex items-center justify-center' : 'border-zinc-600'}">
                                                 ${isSelected ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}
@@ -855,8 +855,8 @@ Object.assign(App, {
                                             </div>
                                         </div>
                                     `;
-                                }).join('') || '<div class="p-8 text-center text-muted-theme text-xs opacity-80">Nenhum serviço disponível com este profissional para os parâmetros selecionados.</div>';
-                            })()}
+                    }).join('') || '<div class="p-8 text-center text-muted-theme text-xs opacity-80">Nenhum serviço disponível com este profissional para os parâmetros selecionados.</div>';
+                })()}
                         </div>
                     ` : ''}
                 </div>
@@ -888,9 +888,9 @@ Object.assign(App, {
                                         <div class="flex items-center gap-3 p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl">
                                             <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-zinc-700 flex items-center justify-center border-2 border-amber-500/30">
                                                 ${this.state.staffSelectedClient.avatar
-                                                    ? `<img src="${this.state.staffSelectedClient.avatar}" class="w-full h-full object-cover" />`
-                                                    : `<span class="text-base font-black text-amber-500/70">${(this.state.staffSelectedClient.name?.[0] || 'C').toUpperCase()}</span>`
-                                                }
+                                ? `<img src="${this.state.staffSelectedClient.avatar}" class="w-full h-full object-cover" />`
+                                : `<span class="text-base font-black text-amber-500/70">${(this.state.staffSelectedClient.name?.[0] || 'C').toUpperCase()}</span>`
+                            }
                                             </div>
                                             <div class="flex-1 min-w-0">
                                                 <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(this.state.staffSelectedClient.name)}</p>
@@ -1001,8 +1001,8 @@ Object.assign(App, {
                     ` : `
                         <div class="space-y-4">
                             ${filteredApts.map(apt => {
-                                const clientInitial = (apt.clientName[0] || 'C').toUpperCase();
-                                return `
+                const clientInitial = (apt.clientName[0] || 'C').toUpperCase();
+                return `
                                 <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm border-l-4 border-l-amber-500">
                                     <div class="flex justify-between items-start gap-3">
                                         <!-- Avatar do Cliente -->
@@ -1021,16 +1021,16 @@ Object.assign(App, {
                                                     <div class="w-full bg-zinc-900/40 border border-amber-500/30 rounded-xl p-3 flex flex-col gap-3 fade-in shadow-inner">
                                                         <div class="flex flex-wrap gap-1.5">
                                                             ${SERVICES.filter(s => {
-                                                                const specialties = (this.state.barberServices || []).filter(bs => String(bs.barber_id) === String(apt.barber_id)).map(bs => bs.service_id);
-                                                                return specialties.length === 0 || specialties.includes(s.id);
-                                                            }).map(s => {
-                                                                const isSelected = (this.state.tempSelectedServices || []).some(ts => ts.id === s.id);
-                                                                return `
+                    const specialties = (this.state.barberServices || []).filter(bs => String(bs.barber_id) === String(apt.barber_id)).map(bs => bs.service_id);
+                    return specialties.length === 0 || specialties.includes(s.id);
+                }).map(s => {
+                    const isSelected = (this.state.tempSelectedServices || []).some(ts => ts.id === s.id);
+                    return `
                                                                     <button onclick="App.toggleEditService(${s.id})" class="px-2 py-1 rounded-md text-[9px] font-bold uppercase transition-all ${isSelected ? 'bg-amber-500 text-zinc-950 shadow-sm' : 'bg-zinc-800 text-muted-theme border border-transparent hover:border-amber-500/30'}">
                                                                         ${s.name}
                                                                     </button>
                                                                 `;
-                                                            }).join('')}
+                }).join('')}
                                                         </div>
                                                         <div class="flex gap-2">
                                                             <button onclick="App.updateAppointmentServices('${apt.id}')" class="flex-1 py-1.5 bg-amber-500 text-zinc-950 rounded-lg text-[10px] font-black uppercase shadow-sm active:scale-95">Salvar</button>
@@ -1066,7 +1066,7 @@ Object.assign(App, {
                                                 ${this.state.editingDurationId === apt.id ? `
                                                     <div class="flex items-center gap-1 fade-in">
                                                         <select id="adj-dur-${apt.id}" class="bg-zinc-800 border border-amber-500 rounded px-1 text-[10px] text-amber-500 font-bold outline-none">
-                                                            ${[5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120].map(m => `<option value="${m}" ${apt.total_duration === m ? 'selected' : ''}>${m} min</option>`).join('')}
+                                                            ${[5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120].map(m => `<option value="${m}" ${apt.total_duration === m ? 'selected' : ''}>${m} min</option>`).join('')}
                                                         </select>
                                                         <button onclick="App.updateAppointmentDuration('${apt.id}', document.getElementById('adj-dur-${apt.id}').value)" class="p-1 bg-amber-500 text-zinc-950 rounded hover:bg-amber-400">
                                                             <i data-lucide="check" class="w-3 h-3"></i>
@@ -1189,7 +1189,7 @@ Object.assign(App, {
                                     </div>
                                 </div>
                                 `;
-                            }).join('')}
+            }).join('')}
                         </div>
                     `}
                     <!-- Modal de pagamento dividido gerenciado via #modal-container em ui.js -->
@@ -1209,7 +1209,7 @@ Object.assign(App, {
         return `
                 <div class="space-y-6 fade-in slide-in-up">
                     <div class="flex items-center justify-between">
-                        <h2 class="text-2xl font-bold text-theme">Meus Serviço(s)</h2>
+                        <h2 class="text-2xl font-bold text-theme">Meu(s) Serviço(s)</h2>
                     </div>
 
                     <button onclick="App.startBooking()" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-md shadow-amber-500/20">
@@ -1347,7 +1347,7 @@ Object.assign(App, {
             const myPayouts = payouts.filter(p => String(p.barber_id) === String(this.state.userProfile?.id));
             const lastFull = myPayouts.find(p => p.type === 'full');
             const lastFullTime = lastFull ? new Date(lastFull.payout_date).getTime() : 0;
-            
+
             myAdvancesList = myPayouts.filter(p => p.type === 'advance' && new Date(p.payout_date).getTime() > lastFullTime);
             myAdvancesTotal = myAdvancesList.reduce((sum, p) => sum + Number(p.amount), 0);
             periodTotal = Math.max(0, periodTotal - myAdvancesTotal);
@@ -1505,8 +1505,8 @@ Object.assign(App, {
                         <div class="space-y-3 pb-8">
                             ${myAdvancesHtml}
                             ${displayTxs.map(tx => {
-                                const isExpanded = this.state.expandedTransactionId === tx.id;
-                                return `
+            const isExpanded = this.state.expandedTransactionId === tx.id;
+            return `
                                 <div onclick="App.toggleTransactionExpand('${tx.id}')" class="card-bg rounded-xl border ${isExpanded ? 'border-amber-500/50 bg-amber-500/5 shadow-amber-500/10' : 'border-theme shadow-sm'} p-3 shadow-md flex items-start justify-between hover:border-amber-500/30 transition-all gap-3 cursor-pointer group">
                                     <div class="flex items-start gap-3 min-w-0 flex-1">
                                         <div class="input-bg p-2 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:input-bg transition-colors">
@@ -1534,7 +1534,7 @@ Object.assign(App, {
                                     </div>
                                 </div>
                                 `;
-                            }).join('')}
+        }).join('')}
                         </div>
                     `}
                 </div>
@@ -2073,8 +2073,8 @@ Object.assign(App, {
                         
                         <div class="flex flex-wrap gap-2">
                             ${['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day, idx) => {
-                                const isOpen = (this.state.shopSettings.working_days || [1,2,3,4,5,6]).includes(idx);
-                                return `
+                const isOpen = (this.state.shopSettings.working_days || [1, 2, 3, 4, 5, 6]).includes(idx);
+                return `
                                     <button 
                                         onclick="App.toggleShopOpeningDay(${idx})"
                                         class="flex-1 min-w-[45px] py-3 rounded-xl text-[10px] font-black uppercase transition-all border border-theme ${isOpen ? 'bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/20' : 'input-bg text-muted-theme opacity-50'}"
@@ -2082,7 +2082,7 @@ Object.assign(App, {
                                         ${day}
                                     </button>
                                 `;
-                            }).join('')}
+            }).join('')}
                         </div>
                         <p class="text-[9px] text-amber-500/60 font-medium pl-1 italic">Estes são os dias que a barbearia aparece disponível para os clientes.</p>
                     </div>
@@ -2123,15 +2123,15 @@ Object.assign(App, {
                                     </h3>
                                     <div class="flex justify-between gap-1.5">
                                         ${daysLabels.map((label, idx) => {
-                                            const workingDays = barberConfig.working_days ?? [1,2,3,4,5,6];
-                                            const isWorking = workingDays.includes(idx);
-                                            return `
+                const workingDays = barberConfig.working_days ?? [1, 2, 3, 4, 5, 6];
+                const isWorking = workingDays.includes(idx);
+                return `
                                                 <button onclick="App.toggleBarberWorkingDay('${selectedBarberId}', ${idx})"
                                                     class="flex-1 min-w-[40px] py-3 rounded-xl border text-[10px] font-black uppercase transition-all
                                                         ${isWorking ? 'bg-amber-500 border-amber-500 text-zinc-950 shadow-md shadow-amber-500/20' : 'card-bg border-theme text-muted-theme opacity-40 hover:opacity-70'}">
                                                     ${label}
                                                 </button>`;
-                                        }).join('')}
+            }).join('')}
                                     </div>
                                     <p class="text-[10px] text-muted-theme italic pl-1">Clique para ativar/desativar o dia de trabalho deste barbeiro.</p>
                                 </div>
@@ -2200,22 +2200,22 @@ Object.assign(App, {
                                     </p>
                                     <p class="text-[11px] text-muted-theme leading-relaxed">
                                         ${(() => {
-                                            const start = barberConfig.work_start || '09:00';
-                                            const end = barberConfig.work_end || '19:00';
-                                            const lStart = barberConfig.lunch_start || '12:00';
-                                            const lEnd = barberConfig.lunch_end || '13:00';
-                                            const startMin = this.timeToMinutes(start);
-                                            const endMin = this.timeToMinutes(end);
-                                            const lStartMin = this.timeToMinutes(lStart);
-                                            const lEndMin = this.timeToMinutes(lEnd);
-                                            const slots = [];
-                                            for (let t = startMin; t < endMin; t += 5) {
-                                                if (t >= lStartMin && t < lEndMin) continue;
-                                                slots.push(this.minutesToTime(t));
-                                            }
-                                            if (slots.length === 0) return '<span class="text-red-400">Nenhum slot — revise o horário.</span>';
-                                            return `<span class="text-amber-500 font-bold">${slots.length} slots</span> de 5 em 5 min: <span class="font-mono text-theme">${slots.slice(0,3).join(', ')}${slots.length > 3 ? ` ... ${slots[slots.length-1]}` : ''}</span>`;
-                                        })()}
+                        const start = barberConfig.work_start || '09:00';
+                        const end = barberConfig.work_end || '19:00';
+                        const lStart = barberConfig.lunch_start || '12:00';
+                        const lEnd = barberConfig.lunch_end || '13:00';
+                        const startMin = this.timeToMinutes(start);
+                        const endMin = this.timeToMinutes(end);
+                        const lStartMin = this.timeToMinutes(lStart);
+                        const lEndMin = this.timeToMinutes(lEnd);
+                        const slots = [];
+                        for (let t = startMin; t < endMin; t += 5) {
+                            if (t >= lStartMin && t < lEndMin) continue;
+                            slots.push(this.minutesToTime(t));
+                        }
+                        if (slots.length === 0) return '<span class="text-red-400">Nenhum slot — revise o horário.</span>';
+                        return `<span class="text-amber-500 font-bold">${slots.length} slots</span> de 5 em 5 min: <span class="font-mono text-theme">${slots.slice(0, 3).join(', ')}${slots.length > 3 ? ` ... ${slots[slots.length - 1]}` : ''}</span>`;
+                    })()}
                                     </p>
                                 </div>
                             </div>
@@ -2278,7 +2278,7 @@ Object.assign(App, {
                 'manager': 'Gerente',
                 'admin': 'Administrador'
             };
-            
+
             contentHtml = `
                 <div class="space-y-4 fade-in">
                     <div class="input-bg/50 border border-theme/50 rounded-xl p-4 mb-2 flex items-start gap-3">
@@ -2423,17 +2423,17 @@ Object.assign(App, {
                         
                         <div class="space-y-3">
                             ${BARBERS.map(b => {
-                                const bTxs = txs.filter(t => String(t.barberId) === String(b.user_id) && !t.isSettled);
-                                const bEarnings = bTxs.reduce((s, t) => s + (t.numericValue * commissionRate), 0);
-                                
-                                const bPayouts = payouts.filter(p => String(p.barber_id) === String(b.user_id));
-                                const lastBFull = bPayouts.find(p => p.type === 'full');
-                                const lastBFullTime = lastBFull ? new Date(lastBFull.payout_date).getTime() : 0;
-                                
-                                const bAdvances = bPayouts.filter(p => p.type === 'advance' && new Date(p.payout_date).getTime() > lastBFullTime).reduce((s, p) => s + Number(p.amount), 0);
-                                const bFinalBalance = Math.max(0, bEarnings - bAdvances);
+                const bTxs = txs.filter(t => String(t.barberId) === String(b.user_id) && !t.isSettled);
+                const bEarnings = bTxs.reduce((s, t) => s + (t.numericValue * commissionRate), 0);
 
-                                return `
+                const bPayouts = payouts.filter(p => String(p.barber_id) === String(b.user_id));
+                const lastBFull = bPayouts.find(p => p.type === 'full');
+                const lastBFullTime = lastBFull ? new Date(lastBFull.payout_date).getTime() : 0;
+
+                const bAdvances = bPayouts.filter(p => p.type === 'advance' && new Date(p.payout_date).getTime() > lastBFullTime).reduce((s, p) => s + Number(p.amount), 0);
+                const bFinalBalance = Math.max(0, bEarnings - bAdvances);
+
+                return `
                                     <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm flex items-center justify-between gap-3 hover:border-amber-500/30 transition-all">
                                         <div class="min-w-0">
                                             <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(b.name)}</p>
@@ -2446,7 +2446,7 @@ Object.assign(App, {
                                         </div>
                                     </div>
                                 `;
-                            }).join('')}
+            }).join('')}
                         </div>
                     </div>
 
@@ -2457,13 +2457,13 @@ Object.assign(App, {
                         </h3>
                         <div class="space-y-2">
                             ${(() => {
-                                const activePayouts = payouts.filter(p => BARBERS.some(b => String(b.user_id) === String(p.barber_id)));
-                                if (activePayouts.length === 0) {
-                                    return '<p class="text-xs text-muted-theme text-center py-4 italic">Nenhum pagamento registrado na base de ativos.</p>';
-                                }
-                                return activePayouts.slice(0, 10).map(p => {
-                                    const barber = BARBERS.find(b => String(b.user_id) === String(p.barber_id));
-                                    return `
+                    const activePayouts = payouts.filter(p => BARBERS.some(b => String(b.user_id) === String(p.barber_id)));
+                    if (activePayouts.length === 0) {
+                        return '<p class="text-xs text-muted-theme text-center py-4 italic">Nenhum pagamento registrado na base de ativos.</p>';
+                    }
+                    return activePayouts.slice(0, 10).map(p => {
+                        const barber = BARBERS.find(b => String(b.user_id) === String(p.barber_id));
+                        return `
                                         <div class="card-bg border border-theme/50 p-3 rounded-xl flex items-center justify-between">
                                             <div class="text-[10px]">
                                                 <p class="font-bold text-theme uppercase tracking-tighter">${App.escapeHTML(barber.name)}</p>
@@ -2472,8 +2472,8 @@ Object.assign(App, {
                                             <p class="font-black text-amber-500 text-sm">R$ ${p.amount.toFixed(2).replace('.', ',')}</p>
                                         </div>
                                     `;
-                                }).join('');
-                            })()}
+                    }).join('');
+                })()}
                         </div>
                     </div>
 
@@ -2545,9 +2545,9 @@ Object.assign(App, {
 
                         <div class="space-y-3">
                             ${CATEGORIES.map(cat => {
-                                const catProducts = PRODUCTS.filter(p => p.category_id === cat.id);
-                                if (catProducts.length === 0) return '';
-                                return `
+                const catProducts = PRODUCTS.filter(p => p.category_id === cat.id);
+                if (catProducts.length === 0) return '';
+                return `
                                     <div class="mb-4 last:mb-0">
                                         <h4 class="text-[11px] text-muted-theme uppercase font-black tracking-widest mb-2 px-1 border-b border-theme/50 pb-1">${cat.name}</h4>
                                         <div class="space-y-2">
@@ -2565,7 +2565,7 @@ Object.assign(App, {
                                         </div>
                                     </div>
                                 `;
-                            }).join('')}
+            }).join('')}
                             ${PRODUCTS.length === 0 ? '<p class="text-xs text-muted-theme italic text-center py-4">Nenhum produto cadastrado.</p>' : ''}
                         </div>
                     </div>
@@ -2882,12 +2882,12 @@ Object.assign(App, {
                         </div>
 
                         <div class="space-y-4">
-                            ${Object.entries({ 
-                                'Dinheiro': { icon: 'banknote', color: 'emerald' },
-                                'Pix': { icon: 'zap', color: 'teal' },
-                                'Débito': { icon: 'credit-card', color: 'blue' },
-                                'Crédito': { icon: 'credit-card', color: 'amber' }
-                            }).map(([method, style]) => `
+                            ${Object.entries({
+            'Dinheiro': { icon: 'banknote', color: 'emerald' },
+            'Pix': { icon: 'zap', color: 'teal' },
+            'Débito': { icon: 'credit-card', color: 'blue' },
+            'Crédito': { icon: 'credit-card', color: 'amber' }
+        }).map(([method, style]) => `
                                 <div class="space-y-1.5">
                                     <label class="text-[10px] text-muted-theme font-black uppercase tracking-widest ml-1 flex items-center gap-2">
                                         <i data-lucide="${style.icon}" class="w-3.5 h-3.5 text-${style.color}-500"></i> ${method}
@@ -2952,8 +2952,8 @@ Object.assign(App, {
 
                         <div class="overflow-y-auto pr-2 space-y-2 mb-6 flex-1 min-h-0 custom-scrollbar">
                             ${SERVICES.map(svc => {
-                                const isSelected = currentServices.includes(svc.id);
-                                return `
+            const isSelected = currentServices.includes(svc.id);
+            return `
                                     <label class="flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${isSelected ? 'border-amber-500 bg-amber-500/10' : 'border-theme card-bg/50 hover:border-theme'}">
                                         <input type="checkbox" name="barber-service" value="${svc.id}" ${isSelected ? 'checked' : ''} class="w-5 h-5 rounded border-theme card-bg text-amber-500 focus:ring-amber-500/20" />
                                         <div class="flex-1">
@@ -2962,7 +2962,7 @@ Object.assign(App, {
                                         </div>
                                     </label>
                                 `;
-                            }).join('')}
+        }).join('')}
                         </div>
 
                         <button 
@@ -3013,9 +3013,9 @@ Object.assign(App, {
                         ` : `
                             <div class="overflow-y-auto pr-2 space-y-4 mb-6 flex-1 min-h-0 custom-scrollbar">
                                 ${CATEGORIES.map((cat, idx) => {
-                                    const catProducts = PRODUCTS.filter(p => p.category_id === cat.id);
-                                    if (catProducts.length === 0) return '';
-                                    return `
+            const catProducts = PRODUCTS.filter(p => p.category_id === cat.id);
+            if (catProducts.length === 0) return '';
+            return `
                                         <div class="border border-theme rounded-[2.5rem] overflow-hidden bg-zinc-900/40 mb-3 last:mb-0 shadow-sm">
                                             <button 
                                                 onclick="
@@ -3069,7 +3069,7 @@ Object.assign(App, {
                                             </div>
                                         </div>
                                     `;
-                                }).join('')}
+        }).join('')}
                             </div>
                         `}
                     </div>
