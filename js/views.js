@@ -3047,15 +3047,15 @@ Object.assign(App, {
                                                         <div class="flex flex-col p-4 rounded-2xl border border-theme bg-zinc-950/40 hover:border-amber-500/30 transition-all duration-300 group">
                                                             <div>
                                                                 <p class="text-sm font-bold text-theme group-hover:text-amber-500 transition-colors leading-tight">${p.name}</p>
-                                                                <p class="text-xs text-emerald-500 font-black mt-1">R$ ${p.price.toFixed(2).replace('.', ',')}</p>
+                                                                <p class="text-xs text-emerald-500 font-black mt-1" id="price-${p.id}" data-price="${p.price}">R$ ${p.price.toFixed(2).replace('.', ',')}</p>
                                                             </div>
                                                             <div class="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-theme/40">
                                                                 <div class="flex items-center bg-zinc-900 border border-theme rounded-lg h-10 px-1 shadow-inner shrink-0">
-                                                                    <button onclick="event.stopPropagation(); const q=this.nextElementSibling; let v=parseInt(q.innerText); if(v>1) q.innerText=v-1;" class="w-9 h-9 flex items-center justify-center text-muted-theme hover:text-white active:scale-95 transition-all">
+                                                                    <button onclick="event.stopPropagation(); const q=this.nextElementSibling; let v=parseInt(q.innerText); if(v>1) { q.innerText=v-1; const pel = document.getElementById('price-${p.id}'); pel.innerText = 'R$ ' + (parseFloat(pel.dataset.price)*(v-1)).toFixed(2).replace('.',','); }" class="w-9 h-9 flex items-center justify-center text-muted-theme hover:text-white active:scale-95 transition-all">
                                                                         <i data-lucide="minus" class="w-4 h-4"></i>
                                                                     </button>
                                                                     <span class="w-6 text-center text-xs font-bold text-theme select-none" id="qty-${p.id}">1</span>
-                                                                    <button onclick="event.stopPropagation(); const q=this.previousElementSibling; q.innerText=parseInt(q.innerText)+1;" class="w-9 h-9 flex items-center justify-center text-muted-theme hover:text-white active:scale-95 transition-all">
+                                                                    <button onclick="event.stopPropagation(); const q=this.previousElementSibling; let v=parseInt(q.innerText)+1; q.innerText=v; const pel = document.getElementById('price-${p.id}'); pel.innerText = 'R$ ' + (parseFloat(pel.dataset.price)*v).toFixed(2).replace('.',',');" class="w-9 h-9 flex items-center justify-center text-muted-theme hover:text-white active:scale-95 transition-all">
                                                                         <i data-lucide="plus" class="w-4 h-4"></i>
                                                                     </button>
                                                                 </div>
