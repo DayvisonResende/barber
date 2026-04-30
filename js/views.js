@@ -2990,7 +2990,7 @@ Object.assign(App, {
 
         modalContainer.innerHTML = `
             <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm fade-in">
-                <div class="card-bg w-full max-w-sm rounded-[2.5rem] p-8 border border-theme shadow-2xl scale-in relative overflow-hidden flex flex-col max-h-[80vh]">
+                <div class="card-bg w-full max-w-sm rounded-[2.5rem] p-8 border border-theme shadow-2xl scale-in relative overflow-hidden flex flex-col h-[85vh]">
                     <div class="absolute -top-24 -right-24 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl"></div>
                     
                     <div class="relative flex flex-col min-h-0">
@@ -3012,24 +3012,49 @@ Object.assign(App, {
                             </div>
                         ` : `
                             <div class="overflow-y-auto pr-2 space-y-4 mb-6 flex-1 min-h-0 custom-scrollbar">
-                                ${CATEGORIES.map(cat => {
+                                ${CATEGORIES.map((cat, idx) => {
                                     const catProducts = PRODUCTS.filter(p => p.category_id === cat.id);
                                     if (catProducts.length === 0) return '';
                                     return `
-                                        <div>
-                                            <h4 class="text-[11px] text-amber-500 uppercase font-black tracking-widest mb-2 px-1 flex items-center gap-1.5"><i data-lucide="tag" class="w-3 h-3"></i> ${cat.name}</h4>
-                                            <div class="space-y-2">
-                                                ${catProducts.map(p => `
-                                                    <div class="flex items-center justify-between p-3 rounded-2xl border border-theme card-bg/50 hover:border-amber-500/30 transition-colors">
-                                                        <div>
-                                                            <p class="text-sm font-bold text-theme">${p.name}</p>
-                                                            <p class="text-xs text-emerald-500 font-bold">R$ ${p.price.toFixed(2).replace('.', ',')}</p>
+                                        <div class="border border-theme rounded-[2.5rem] overflow-hidden bg-zinc-900/40 mb-3 last:mb-0 shadow-sm">
+                                            <button 
+                                                onclick="
+                                                    const content = this.nextElementSibling;
+                                                    const icon = this.querySelector('.chevron-icon');
+                                                    const isOpen = content.classList.toggle('open');
+                                                    if (isOpen) {
+                                                        content.style.maxHeight = content.scrollHeight + 'px';
+                                                        content.style.opacity = '1';
+                                                        icon.style.transform = 'rotate(180deg)';
+                                                    } else {
+                                                        content.style.maxHeight = '0px';
+                                                        content.style.opacity = '0';
+                                                        icon.style.transform = 'rotate(0deg)';
+                                                    }
+                                                "
+                                                class="w-full flex items-center justify-between p-6 hover:bg-zinc-800/40 transition-all duration-300 active:scale-[0.99]"
+                                            >
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
+                                                    <h4 class="text-xs text-theme uppercase font-black tracking-widest">${cat.name}</h4>
+                                                </div>
+                                                <i data-lucide="chevron-down" class="chevron-icon w-5 h-5 text-muted-theme transition-transform duration-500 ease-in-out"></i>
+                                            </button>
+                                            
+                                            <div class="accordion-content transition-all duration-500 ease-in-out" style="max-height: 0px; opacity: 0; overflow: hidden;">
+                                                <div class="p-6 pt-0 space-y-3">
+                                                    ${catProducts.map(p => `
+                                                        <div class="flex items-center justify-between p-4 rounded-[1.5rem] border border-theme bg-zinc-950/40 hover:border-amber-500/30 transition-all duration-300 group active:scale-[0.97]">
+                                                            <div class="flex-1">
+                                                                <p class="text-sm font-bold text-theme group-hover:text-amber-500 transition-colors">${p.name}</p>
+                                                                <p class="text-[11px] text-emerald-500 font-black mt-1">R$ ${p.price.toFixed(2).replace('.', ',')}</p>
+                                                            </div>
+                                                            <button onclick="App.addComandaItem('${appointmentId}', '${p.id}')" class="bg-amber-500 text-zinc-950 w-11 h-11 rounded-full flex items-center justify-center hover:rotate-90 active:scale-90 transition-all shadow-lg shadow-amber-500/20">
+                                                                <i data-lucide="plus" class="w-6 h-6"></i>
+                                                            </button>
                                                         </div>
-                                                        <button onclick="App.addComandaItem('${appointmentId}', '${p.id}')" class="bg-amber-500 text-zinc-950 w-8 h-8 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md">
-                                                            <i data-lucide="plus" class="w-4 h-4"></i>
-                                                        </button>
-                                                    </div>
-                                                `).join('')}
+                                                    `).join('')}
+                                                </div>
                                             </div>
                                         </div>
                                     `;
