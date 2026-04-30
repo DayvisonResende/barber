@@ -2325,14 +2325,14 @@ Object.assign(App, {
         this.renderComandaModal(appointmentId);
     },
 
-    async addComandaItem(appointmentId, productId) {
+    async addComandaItem(appointmentId, productId, qty = 1) {
         const apt = this.state.appointments.find(a => a.id === appointmentId);
         const product = PRODUCTS.find(p => p.id === productId);
         if (!apt || !product) return;
 
         this.showConfirmModal({
             title: "Adicionar à Comanda?",
-            message: `Deseja adicionar ${product.name} (R$ ${product.price.toFixed(2).replace('.', ',')}) à comanda?`,
+            message: `Deseja adicionar ${qty}x ${product.name} (R$ ${(product.price * qty).toFixed(2).replace('.', ',')}) à comanda?`,
             icon: "shopping-bag",
             onConfirm: async () => {
                 // Pega comanda atual ou inicia vazia
@@ -2341,17 +2341,17 @@ Object.assign(App, {
                 // Verifica se o item já existe para aumentar a quantidade
                 const existingItemIndex = comanda.findIndex(i => i.id === product.id);
                 if (existingItemIndex >= 0) {
-                    comanda[existingItemIndex].qty += 1;
+                    comanda[existingItemIndex].qty += qty;
                 } else {
                     comanda.push({
                         id: product.id,
                         name: product.name,
                         price: product.price,
-                        qty: 1
+                        qty: qty
                     });
                 }
 
-                const newVal = apt.numericValue + product.price;
+                const newVal = apt.numericValue + (product.price * qty);
 
                 try {
                     const { error } = await supabaseClient
@@ -2365,7 +2365,7 @@ Object.assign(App, {
                     
                     if (error) throw error;
 
-                    this.showNotification("Sucesso", `${product.name} adicionado à comanda!`);
+                    this.showNotification("Sucesso", `${qty}x ${product.name} adicionado à comanda!`);
                     document.getElementById('modal-container').innerHTML = ''; // Fecha modal
                     await this.loadAppointments();
                     this.render();

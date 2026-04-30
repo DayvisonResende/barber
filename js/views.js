@@ -380,7 +380,7 @@ Object.assign(App, {
                     <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Trocar data
                 </button>
                 <p class="text-[11px] text-muted-theme font-medium">Selecione um ou mais serviços:</p>
-                <div class="space-y-2 pb-32">
+                <div class="space-y-2">
                     ${SERVICES.map(svc => {
                         const isChecked = selected.some(s => s.id === svc.id);
                         return `
@@ -407,10 +407,10 @@ Object.assign(App, {
                     }).join('')}
                 </div>
 
-                <!-- Footer fixo com total + botão -->
-                <div class="fixed bottom-20 left-0 right-0 px-4 z-30">
+                <!-- Footer com total + botão (posicionado após a lista) -->
+                <div class="mt-8 pb-4">
                     <div class="max-w-lg mx-auto">
-                        <div class="card-bg border border-theme rounded-2xl shadow-2xl overflow-hidden">
+                        <div class="card-bg border border-theme rounded-2xl shadow-sm overflow-hidden">
                             ${hasSelected ? `
                                 <div class="px-4 pt-3 pb-2 flex items-center justify-between border-b border-theme/50">
                                     <div class="flex items-center gap-3 text-sm">
@@ -2990,7 +2990,7 @@ Object.assign(App, {
 
         modalContainer.innerHTML = `
             <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm fade-in">
-                <div class="card-bg w-full max-w-sm rounded-[2.5rem] p-8 border border-theme shadow-2xl scale-in relative overflow-hidden flex flex-col h-[85vh]">
+                <div class="card-bg w-full max-w-md rounded-[2.5rem] p-6 md:p-8 border border-theme shadow-2xl scale-in relative overflow-hidden flex flex-col h-[85vh]">
                     <div class="absolute -top-24 -right-24 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl"></div>
                     
                     <div class="relative flex flex-col min-h-0">
@@ -3044,14 +3044,25 @@ Object.assign(App, {
                                             <div class="accordion-content transition-all duration-500 ease-in-out" style="max-height: 0px; opacity: 0; overflow: hidden;">
                                                 <div class="p-6 pt-0 space-y-3">
                                                     ${catProducts.map(p => `
-                                                        <div class="flex items-center justify-between p-4 rounded-[1.5rem] border border-theme bg-zinc-950/40 hover:border-amber-500/30 transition-all duration-300 group active:scale-[0.97]">
-                                                            <div class="flex-1">
-                                                                <p class="text-sm font-bold text-theme group-hover:text-amber-500 transition-colors">${p.name}</p>
-                                                                <p class="text-[11px] text-emerald-500 font-black mt-1">R$ ${p.price.toFixed(2).replace('.', ',')}</p>
+                                                        <div class="flex flex-col p-4 rounded-2xl border border-theme bg-zinc-950/40 hover:border-amber-500/30 transition-all duration-300 group">
+                                                            <div>
+                                                                <p class="text-sm font-bold text-theme group-hover:text-amber-500 transition-colors leading-tight">${p.name}</p>
+                                                                <p class="text-xs text-emerald-500 font-black mt-1">R$ ${p.price.toFixed(2).replace('.', ',')}</p>
                                                             </div>
-                                                            <button onclick="App.addComandaItem('${appointmentId}', '${p.id}')" class="bg-amber-500 text-zinc-950 w-11 h-11 rounded-full flex items-center justify-center hover:rotate-90 active:scale-90 transition-all shadow-lg shadow-amber-500/20">
-                                                                <i data-lucide="plus" class="w-6 h-6"></i>
-                                                            </button>
+                                                            <div class="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-theme/40">
+                                                                <div class="flex items-center bg-zinc-900 border border-theme rounded-lg h-10 px-1 shadow-inner shrink-0">
+                                                                    <button onclick="event.stopPropagation(); const q=this.nextElementSibling; let v=parseInt(q.innerText); if(v>1) q.innerText=v-1;" class="w-9 h-9 flex items-center justify-center text-muted-theme hover:text-white active:scale-95 transition-all">
+                                                                        <i data-lucide="minus" class="w-4 h-4"></i>
+                                                                    </button>
+                                                                    <span class="w-6 text-center text-xs font-bold text-theme select-none" id="qty-${p.id}">1</span>
+                                                                    <button onclick="event.stopPropagation(); const q=this.previousElementSibling; q.innerText=parseInt(q.innerText)+1;" class="w-9 h-9 flex items-center justify-center text-muted-theme hover:text-white active:scale-95 transition-all">
+                                                                        <i data-lucide="plus" class="w-4 h-4"></i>
+                                                                    </button>
+                                                                </div>
+                                                                <button onclick="event.stopPropagation(); App.addComandaItem('${appointmentId}', '${p.id}', parseInt(document.getElementById('qty-${p.id}').innerText))" class="bg-amber-500 text-zinc-950 w-10 h-10 rounded-xl flex items-center justify-center hover:scale-[1.05] active:scale-95 transition-all shadow-lg shadow-amber-500/20 shrink-0">
+                                                                    <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     `).join('')}
                                                 </div>
