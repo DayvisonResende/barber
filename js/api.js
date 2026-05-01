@@ -1657,7 +1657,7 @@ Object.assign(App, {
                     
                     if (error) {
                         console.error('Erro na função Supabase de exclusão do Admin:', error);
-                        throw new Error("Você precisa rodar a função admin_delete_user no painel Supabase primeiro!");
+                        throw new Error(error.message || "Você precisa rodar a função admin_delete_user no painel Supabase primeiro!");
                     }
 
                     this.showNotification("Excluído com Sucesso", `O cliente ${userName} foi completamente apagado do sistema.`);

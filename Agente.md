@@ -55,86 +55,73 @@ Este documento serve como:
 * Edição de preços e durações em tempo real pelo staff.
 * Branding dinâmico com suporte a fontes específicas em áreas-chave.
 * **Novo Sistema de Horários:** Escala flexível baseada em slots "Ativos", suporte a almoço configurável e exceções por data.
+* **Comanda Digital Avançada:** Multiplicação dinâmica de valores por quantidade e atualização de preço em tempo real na UI.
+* **Recuperação de Acesso Robusta:** Verificação de identidade tolerante a máscaras (CPF/Data) via Supabase RPC.
+* **Segurança Fortalecida:** Row Level Security (RLS) ativo em tabelas críticas e função de exclusão profunda (deep delete) de usuários.
 
 **O que está incompleto:**
 * Sistema de fidelidade/pontos.
-* Notificações Push via navegador (atualmente apenas visual no app).
+* Notificações Push via navegador (configuração de permissões concluída, mas envio em massa pendente).
 
 **O que está com problemas:**
-* **Sincronização:** O sistema usa *Polling* de 15 segundos em vez de *Supabase Realtime* nativo em algumas telas, o que pode aumentar o consumo de banda.
+* **Sincronização:** O sistema usa *Polling* de 15 segundos em vez de *Supabase Realtime* nativo em algumas telas.
 
-**Performance atual:** Estável para baixo volume, mas os arquivos `api.js` (1.6k+ linhas) e `views.js` (2.3k+ linhas) estão ficando grandes e difíceis de manter.
-
-**Integrações existentes:** Supabase (Auth/DB).
+**Performance atual:** Estável, mas `api.js` e `views.js` ultrapassaram 2.5k linhas, exigindo refatoração em breve.
 
 ---
 
 ### 3. HISTÓRICO DE AÇÕES
 
+* **2026-04-30:**
+    * **Ação:** Implementação de Segurança RLS e Exclusão Profunda.
+    * **Por que:** Tabelas de produtos e categorias estavam expostas. Barbeiros com muitos registros travavam a exclusão devido a dependências.
+    * **Resultado:** Ativado RLS em `products`, `categories` e `barber_services`. Criada função RPC `admin_delete_user` (V9) que limpa 12+ tabelas em cascata (incluindo `push_subscriptions`).
+* **2026-04-30:**
+    * **Ação:** Otimização da Comanda Digital e Preços Dinâmicos.
+    * **Por que:** Usuários precisavam adicionar múltiplos itens (ex: 3 Heineken) e ver o valor total antes de confirmar.
+    * **Resultado:** Adicionado suporte a `qty` no backend e lógica de multiplicação automática `valor * qty` no frontend.
+* **2026-04-30:**
+    * **Ação:** Correção Crítica no Fluxo de Recuperação de Senha.
+    * **Por que:** Dados salvos com máscara no banco (pontos/traços) impediam o login de quem digitava apenas números.
+    * **Resultado:** Implementada busca inteligente via `.in()` que testa formatos limpos e mascarados simultaneamente.
 * **2026-04-20:**
     * **Ação:** Refatoração Completa do Sistema de Agendamento (Rule-based).
     * **Por que:** O sistema anterior era manual e difícil de gerenciar. Agora o barbeiro define sua escala semanal uma única vez e o sistema gera os horários.
     * **Resultado:** Implementadas tabelas `barber_config`, `barber_slots` e `barber_exceptions`. UI de gestão redesenhada com seletor de slots e suporte a almoço/exceções.
-* **2026-04-19:**
-    * **Ação:** Renderização Condicional de Contatos e Redes Sociais.
-    * **Por que:** Evitar que botões vazios (sem link/número) apareçam na UI da página "A Barbearia".
-    * **Resultado:** Botões de WhatsApp, Telefone, Instagram, Facebook e Google Review agora só aparecem se o campo correspondente estiver preenchido no banco de dados.
-* **2026-04-19:**
-    * **Ação:** Refinamento do Fundo do Modal (Transparência Seletiva).
-    * **Por que:** O usuário desejava manter uma leve transparência no fundo (overlay) para contexto, mas queria o modal em si 100% sólido para clareza.
-    * **Resultado:** Aplicado `bg-zinc-950/60` com um leve `backdrop-blur`, garantindo foco no modal sem isolar completamente o fundo.
-* **2026-04-19:**
-    * **Ação:** Remoção de Transparência do Modal "Novo Agendamento".
-    * **Por que:** A transparência permitia ver o conteúdo de fundo (calendário/lista), o que causava ruído visual e dificultava o foco nas opções.
-    * **Resultado:** Fundo do modal tornou-se sólido, melhorando significativamente a legibilidade e o UX.
-* **2026-04-19:**
-    * **Ação:** Correção de Responsividade no Header (Logo).
-    * **Por que:** O nome da barbearia estava quebrando/encavalando em telas de celular devido ao tamanho fixo das fontes.
-    * **Resultado:** Implementado fontes responsivas (menores no mobile) e `whitespace-nowrap` para garantir alinhamento perfeito.
-* **2026-04-19:**
-    * **Ação:** Alinhamento de Branding (Splash e Login).
-    * **Por que:** Garantir que o destaque Âmbar na palavra "Barbearia" seja consistente em todo o app.
-    * **Resultado:** Telas iniciais agora usam o mesmo padrão de cores do restante do sistema.
-* **2026-04-19:**
-    * **Ação:** Implementação de Edição de Serviços pelo Barbeiro.
-    * **Por que:** Permitir adicionar serviços extras sem precisar cancelar o agendamento original.
-    * **Resultado:** Barbeiro pode alterar serviços, preços e durações instantaneamente.
-* **2026-04-19:**
-    * **Ação:** Refatoração do Branding (Pristina + Amber).
-    * **Por que:** Desejo de identidade visual premium com fontes manuscritas.
-    * **Resultado:** Logo e Sidebar dinâmicos com fonte Pristina e cores Amber.
-* **2026-04-18:**
-    * **Ação:** Flexibilização de Horários de Agendamento.
-    * **Por que:** Barbeiros queriam autonomia para marcar serviços mesmo que o sistema estimasse falta de tempo.
-    * **Resultado:** Retirado o bloqueio de agendamento por duração ("Tempo Insuficiente").
 
 ---
 
-### 4. PLANEJAMENTO (PRÓXIMOS PASSOS)
+### 4. ESQUEMA DE DADOS (REFERÊNCIA RÁPIDA)
+
+**Tabelas Principais (Supabase):**
+* `profiles`: Usuários (id, name, phone, role, cpf, birth_date).
+* `appointments`: Agendamentos (id, date, time, barber_id, client_id, status, services).
+* `transactions`: Financeiro (id, barber_id, amount, payment_method, completed_at).
+* `barbers`: Mapeamento de staff (id, user_id, name, status).
+* `barber_config`: Escala base (barber_id, work_start, work_end, working_days).
+* `barber_slots`: Slots específicos ativos/inativos.
+* `push_subscriptions`: Tokens de notificação (user_id, subscription_json).
+* `products` / `categories` / `services`: Cadastros base do sistema.
+
+---
+
+### 5. PLANEJAMENTO (PRÓXIMOS PASSOS)
 
 * **Tarefa:** Migração de Polling para Supabase Realtime Channels.
-* **Prioridade:** Média/Alta.
+* **Prioridade:** Alta.
 * **Justificativa:** Redução de latência e consumo de servidor.
-* **Dependências:** Refatoração do `setupRealtime` no `api.js`.
 
 * **Tarefa:** Modularização do Código (Split `api.js` e `views.js`).
 * **Prioridade:** Média.
-* **Justificativa:** Melhoria na manutenibilidade e velocidade de carregamento se usado com ES Modules.
-
----
-
-### 5. TAREFAS NÃO CONCLUÍDAS
-
-* **Notificações Push nativas:** Não iniciado devido à complexidade de Service Workers em sistemas iOS sem suporte total, priorizou-se notificações in-app.
+* **Justificativa:** Melhoria na manutenibilidade e velocidade de carregamento.
 
 ---
 
 ### 6. VULNERABILIDADES E SEGURANÇA
 
-* **Vulnerabilidade:** Lógica de negócio (Cálculos de comissão/preço) majoritariamente no Client-side.
-* **Risco:** Usuários avançados podem tentar manipular o estado via console.
-* **Impacto:** Médio (Supabase RLS protege o banco, mas a UI pode mostrar dados inconsistentes).
-* **Plano:** Mover cálculos críticos para Database Functions (PostgreSQL Functions).
+* **Vulnerabilidade:** Lógica de negócio (Cálculos de comissão/preço) no Client-side.
+* **Risco:** Médio (RLS protege o banco, mas a UI pode mostrar dados inconsistentes se manipulada).
+* **Estado:** Proteção de escrita em tabelas base concluída via RLS.
 
 ---
 
@@ -164,10 +151,10 @@ Este documento serve como:
 
 ### 10. ANÁLISE CRÍTICA DO SISTEMA
 
-O sistema é funcional e visualmente premium, mas sofre do "Monolito de Script". A separação de preocupações entre `api.js` e `views.js` está começando a se perder, com lógica de banco de dados misturada com manipulação de DOM.
+O sistema é funcional e visualmente premium, mas sofre do "Monolito de Script". A separação de preocupações entre `api.js` e `views.js` está começando a se perder.
 
 **Gargalo futuro:** Consultas `SELECT *` sem paginação (limitar apenas agendamentos do mês/semana).
-Confira 
+
 ---
 
 ## COMPORTAMENTO DO AGENTE
@@ -185,8 +172,7 @@ Você deve agir como um:
 
 Seu objetivo é tornar este aplicativo:
 
-* MAIS 
-SEGURO
+* MAIS SEGURO
 * MAIS RÁPIDO
 * MAIS ESCALÁVEL
 * MAIS PROFISSIONAL
