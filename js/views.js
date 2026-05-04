@@ -2999,7 +2999,7 @@ Object.assign(App, {
                                 <h3 class="text-xl font-black text-theme">Comanda Digital</h3>
                                 <p class="text-[10px] text-muted-theme font-bold uppercase tracking-widest mt-0.5">Adicionar itens ao serviço</p>
                             </div>
-                            <button onclick="document.getElementById('modal-container').innerHTML = '';" class="w-10 h-10 rounded-full card-bg flex items-center justify-center text-muted-theme hover:text-theme transition-colors border border-theme">
+                            <button onclick="App.closeComandaModal()" class="w-10 h-10 rounded-full card-bg flex items-center justify-center text-muted-theme hover:text-theme transition-colors border border-theme">
                                 <i data-lucide="x" class="w-5 h-5"></i>
                             </button>
                         </div>
