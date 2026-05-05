@@ -2760,7 +2760,7 @@ Object.assign(App, {
                     </div>
                     <div>
                         <p class="text-theme font-bold">Conexão Segura</p>
-                        <p class="text-xs text-muted-theme">Dados protegidos via Supabase Cloud.</p>
+                        <p class="text-xs text-muted-theme">Dados protegidos</p>
                     </div>
                 </div>
 
