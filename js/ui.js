@@ -573,6 +573,10 @@ Object.assign(App, {
 
     // --- Renderização Principal ---
     render() {
+        // Sempre que render() for chamado explicitamente, qualquer render pendente
+        // de atualização silenciosa já está sendo atendido — limpar a flag.
+        this._pendingRender = false;
+
         const main = document.getElementById('main-content');
         const header = document.getElementById('app-header');
         const nav = document.getElementById('bottom-nav');

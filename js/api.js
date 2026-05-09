@@ -367,6 +367,40 @@ Object.assign(App, {
         }
     },
 
+    // ─────────────────────────────────────────────────────────────────
+    // 🛡️ PROTEÇÃO DE ESTADO — Detecta interação ativa do usuário
+    // ─────────────────────────────────────────────────────────────────
+
+    _hasActiveInteraction() {
+        // Retorna true se QUALQUER usuário estiver em modo de edição ou interação ativa.
+        // Nesse caso, o render automático (polling/realtime) é suprimido para não
+        // destruir trabalho em andamento. Os dados são atualizados no state silenciosamente
+        // e o render ocorrerá na próxima ação do usuário.
+        return !!(
+            // --- Edições inline no dashboard do barbeiro ---
+            this.state.editingPriceId ||
+            this.state.editingServicesId ||
+            this.state.editingDurationId ||
+            this.state.editingTimeId ||
+
+            // --- Modais de pagamento ---
+            this.state.showingSplitPaymentId ||
+            this.state.confirmingPaymentId ||
+
+            // --- Modal da comanda ---
+            this.state.comandaModalOpen ||
+
+            // --- Fluxo de agendamento (cliente e staff) ---
+            this.state.isBooking ||
+            this.state.editingAppointmentId ||
+
+            // --- Formulários de edição de perfil e configurações ---
+            this.state.isEditingProfile ||
+            this.state.isEditingShop ||
+            this.state.editingServiceId
+        );
+    },
+
     setupRealtime() {
         // Limpar conexões e polling anteriores
         supabaseClient.removeAllChannels();
@@ -377,14 +411,14 @@ Object.assign(App, {
         let realtimeWorking = false;
 
         const monitors = [
-            { table: 'appointments', label: 'Agenda', callback: async () => await this.fetchFullUpdate() },
+            { table: 'appointments', label: 'Agenda', callback: async () => await this.fetchFullUpdate(true) },
             { table: 'transactions', label: 'Financeiro', callback: async () => {
-                if (this.state.isAuthenticated) { await Promise.all([this.loadTransactions(), this.loadAppointments()]); this.render(); }
+                if (this.state.isAuthenticated) { await Promise.all([this.loadTransactions(), this.loadAppointments()]); if (!this._hasActiveInteraction()) this.render(); }
             }},
-            { table: 'blocked_times', label: 'Bloqueios', callback: async () => { await this.loadInitialData(); this.render(); } },
-            { table: 'shop_settings', label: 'Configurações', callback: async () => { await this.loadInitialData(); this.render(); } },
-            { table: 'barbers', label: 'Equipe', callback: async () => { await this.loadInitialData(); this.render(); } },
-            { table: 'services', label: 'Serviços', callback: async () => { await this.loadInitialData(); this.render(); } }
+            { table: 'blocked_times', label: 'Bloqueios', callback: async () => { await this.loadInitialData(); if (!this._hasActiveInteraction()) this.render(); } },
+            { table: 'shop_settings', label: 'Configurações', callback: async () => { await this.loadInitialData(); if (!this._hasActiveInteraction()) this.render(); } },
+            { table: 'barbers', label: 'Equipe', callback: async () => { await this.loadInitialData(); if (!this._hasActiveInteraction()) this.render(); } },
+            { table: 'services', label: 'Serviços', callback: async () => { await this.loadInitialData(); if (!this._hasActiveInteraction()) this.render(); } }
         ];
 
         monitors.forEach(mon => {
@@ -489,7 +523,7 @@ Object.assign(App, {
                     await this.alertNewAppointment();
                 }
                 
-                await this.fetchFullUpdate();
+                await this.fetchFullUpdate(true);
             }
         };
 
@@ -626,7 +660,7 @@ Object.assign(App, {
         console.log('🔔 Alerta de novo agendamento disparado!');
     },
 
-    async fetchFullUpdate() {
+    async fetchFullUpdate(fromBackground = false) {
         this.state.isLoading = true;
         // Se estivermos logados, recarregamos tudo em paralelo para máxima performance
         const tasks = [this.loadInitialData()];
@@ -639,6 +673,17 @@ Object.assign(App, {
         
         await Promise.all(tasks);
         this.state.isLoading = false;
+
+        // Se a atualização veio do background (polling/realtime) E o usuário está
+        // em interação ativa (editando, modal aberto), NÃO reescrevemos a tela.
+        // Os dados foram atualizados no state e serão usados na próxima renderização.
+        if (fromBackground && this._hasActiveInteraction()) {
+            console.log('🛡️ [Background] Dados atualizados silenciosamente — render pendente registrado.');
+            this._pendingRender = true; // Sinaliza que há dados frescos esperando exibição
+            return;
+        }
+
+        this._pendingRender = false;
         this.render();
     },
 
@@ -2322,7 +2367,28 @@ Object.assign(App, {
     // ─────────────────────────────────────────────────────────────────
     
     openComandaModal(appointmentId) {
+        // Sinaliza que há um modal de comanda aberto para proteger o render automático
+        this.state.comandaModalOpen = true;
         this.renderComandaModal(appointmentId);
+    },
+
+    closeComandaModal() {
+        this.state.comandaModalOpen = false;
+        const mc = document.getElementById('modal-container');
+        if (mc) mc.innerHTML = '';
+        // Se houve atualizações silenciosas enquanto o modal estava aberto,
+        // renderiza agora para que o admin veja os dados frescos
+        this._flushRenderIfNeeded();
+    },
+
+    // Renderiza imediatamente se houver um render pendente de uma atualização silenciosa.
+    // Deve ser chamado no fim de qualquer ação que encerra uma interação ativa.
+    _flushRenderIfNeeded() {
+        if (this._pendingRender) {
+            console.log('🔄 [Flush] Interação encerrada — executando render pendente.');
+            this._pendingRender = false;
+            this.render();
+        }
     },
 
     async addComandaItem(appointmentId, productId, qty = 1) {
@@ -2366,7 +2432,7 @@ Object.assign(App, {
                     if (error) throw error;
 
                     this.showNotification("Sucesso", `${qty}x ${product.name} adicionado à comanda!`);
-                    document.getElementById('modal-container').innerHTML = ''; // Fecha modal
+                    this.closeComandaModal(); // Fecha modal e limpa flag de interação
                     await this.loadAppointments();
                     this.render();
                     
