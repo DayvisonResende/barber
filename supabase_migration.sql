@@ -16,8 +16,27 @@ ALTER TABLE barber_config
 ALTER TABLE shop_settings
   ADD COLUMN IF NOT EXISTS booking_window_days INT DEFAULT 30;
 
+-- [NOVO] Bloqueio de janela de horário: garantir coluna date e unique constraint
+ALTER TABLE blocked_times
+  ADD COLUMN IF NOT EXISTS date DATE DEFAULT NULL;
+
+-- Criar unique constraint composta para upsert funcionar corretamente
+-- (Ignorar erro se já existir)
+DO $$
+BEGIN
+  BEGIN
+    ALTER TABLE blocked_times
+      ADD CONSTRAINT blocked_times_barber_date_time_unique
+      UNIQUE (barber_id, date, blocked_time);
+  EXCEPTION WHEN duplicate_table OR duplicate_object THEN
+    RAISE NOTICE 'Constraint já existe, ignorando.';
+  END;
+END $$;
+
 -- Verificar resultado
 SELECT barber_id, work_start, work_end, working_days, lunch_start, lunch_end, day_schedules
 FROM barber_config;
 
 SELECT id, name, booking_window_days FROM shop_settings;
+
+SELECT barber_id, date, blocked_time FROM blocked_times LIMIT 10;

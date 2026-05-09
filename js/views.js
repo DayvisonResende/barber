@@ -2198,6 +2198,7 @@ Object.assign(App, {
                         ` : `
                             <!-- MODO EXCEÇÕES -->
                             <div class="space-y-6 slide-in-right">
+                                <!-- Card: Fechar o dia inteiro -->
                                 <div class="card-bg rounded-2xl border border-theme p-5 space-y-4">
                                      <div class="space-y-2">
                                         <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest pl-1">Escolher Data</label>
@@ -2241,6 +2242,90 @@ Object.assign(App, {
                                             </div>
                                         </div>
                                     ` : ''}
+                                </div>
+
+                                <!-- Card: Bloqueio de Janela de Horário -->
+                                <div class="card-bg rounded-2xl border border-orange-500/30 p-5 space-y-4 bg-orange-500/5">
+                                    <div class="flex items-center gap-2">
+                                        <div class="p-2 bg-orange-500/20 rounded-xl">
+                                            <i data-lucide="clock-x" class="w-4 h-4 text-orange-400"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-bold text-theme">Bloqueio de Janela de Horário</h3>
+                                            <p class="text-[10px] text-orange-400/70">Bloqueia uma faixa de horários em um dia específico</p>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-[10px] text-muted-theme italic leading-relaxed">
+                                        Use para imprevistos: bloqueie um período (ex: 14:00 às 16:00) sem fechar o dia inteiro. Os clientes não verão esses horários disponíveis.
+                                    </p>
+
+                                    <div class="space-y-3">
+                                        <div class="space-y-1">
+                                            <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Data do Bloqueio</label>
+                                            <input type="date" id="block-window-date-${selectedBarberId}" value="${selectedDate || ''}"
+                                                class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-orange-400 text-sm" />
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div class="space-y-1">
+                                                <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Início</label>
+                                                <input type="time" id="block-window-start-${selectedBarberId}" value="14:00"
+                                                    class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-orange-400 text-sm font-bold" />
+                                            </div>
+                                            <div class="space-y-1">
+                                                <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Fim</label>
+                                                <input type="time" id="block-window-end-${selectedBarberId}" value="16:00"
+                                                    class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-orange-400 text-sm font-bold" />
+                                            </div>
+                                        </div>
+                                        <button onclick="App.addTimeBlockWindow('${selectedBarberId}')"
+                                            class="w-full py-3 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30 font-black text-xs uppercase tracking-widest hover:bg-orange-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                                            <i data-lucide="plus-circle" class="w-4 h-4"></i> Criar Bloqueio
+                                        </button>
+                                    </div>
+
+                                    <!-- Lista de bloqueios de janela existentes para o barbeiro selecionado -->
+                                    ${(() => {
+                                        const barberBlocks = (this.state.blockedTimesFull || [])
+                                            .filter(b => b.barber_id === selectedBarberId && b.date)
+                                            .reduce((acc, b) => {
+                                                const key = b.date;
+                                                if (!acc[key]) acc[key] = [];
+                                                acc[key].push(b.blocked_time);
+                                                return acc;
+                                            }, {});
+
+                                        const keys = Object.keys(barberBlocks).sort();
+                                        if (keys.length === 0) return '<p class="text-[10px] text-muted-theme italic opacity-50 text-center pt-2">Nenhum bloqueio de horário cadastrado.</p>';
+
+                                        return `
+                                            <div class="space-y-2 pt-2 border-t border-orange-500/20">
+                                                <p class="text-[10px] text-orange-400/70 font-black uppercase tracking-widest">Bloqueios Ativos</p>
+                                                ${keys.map(date => {
+                                                    const times = barberBlocks[date].sort();
+                                                    const first = times[0];
+                                                    const last = times[times.length - 1];
+                                                    const [fh, fm] = last.split(':').map(Number);
+                                                    const endMin = fh * 60 + fm + 5;
+                                                    const endTime = String(Math.floor(endMin/60)).padStart(2,'0') + ':' + String(endMin%60).padStart(2,'0');
+                                                    return `
+                                                        <div class="flex items-center justify-between p-3 bg-orange-500/5 border border-orange-500/20 rounded-xl">
+                                                            <div class="flex items-center gap-2.5">
+                                                                <i data-lucide="clock-x" class="w-4 h-4 text-orange-400 flex-shrink-0"></i>
+                                                                <div>
+                                                                    <p class="text-xs font-bold text-theme">${App.inputToDbDate(date)}</p>
+                                                                    <p class="text-[10px] text-orange-400/80">${first} – ${endTime} <span class="text-muted-theme">(${times.length} slots)</span></p>
+                                                                </div>
+                                                            </div>
+                                                            <button onclick="App.removeTimeBlockWindow('${selectedBarberId}', '${date}')" class="p-2 text-muted-theme hover:text-red-500 transition-colors" title="Remover bloqueio">
+                                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                                            </button>
+                                                        </div>
+                                                    `;
+                                                }).join('')}
+                                            </div>
+                                        `;
+                                    })()}
                                 </div>
                             </div>
                         `}

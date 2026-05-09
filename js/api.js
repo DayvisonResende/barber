@@ -2044,6 +2044,104 @@ Object.assign(App, {
     },
 
     // ─────────────────────────────────────────────────────────────────
+    // BLOQUEIO DE JANELA DE HORÁRIO (blocked_times)
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Cria bloqueios de 5 em 5 minutos cobrindo a faixa início→fim
+     * para um barbeiro em uma data específica.
+     */
+    async addTimeBlockWindow(barberId) {
+        const dateEl  = document.getElementById(`block-window-date-${barberId}`);
+        const startEl = document.getElementById(`block-window-start-${barberId}`);
+        const endEl   = document.getElementById(`block-window-end-${barberId}`);
+
+        const date  = dateEl?.value;
+        const start = startEl?.value;
+        const end   = endEl?.value;
+
+        if (!date || !start || !end) {
+            this.showNotification('Campos incompletos', 'Preencha a data, início e fim do bloqueio.');
+            return;
+        }
+
+        const startMin = this.timeToMinutes(start);
+        const endMin   = this.timeToMinutes(end);
+
+        if (endMin <= startMin) {
+            this.showNotification('Horário inválido', 'O horário de fim deve ser maior que o de início.');
+            return;
+        }
+
+        // Gerar slots de 5 em 5 minutos dentro da janela
+        const slots = [];
+        for (let t = startMin; t < endMin; t += 5) {
+            slots.push({
+                barber_id: barberId,
+                date: date,
+                blocked_time: this.minutesToTime(t)
+            });
+        }
+
+        if (slots.length === 0) {
+            this.showNotification('Janela muito pequena', 'A janela deve ter pelo menos 5 minutos.');
+            return;
+        }
+
+        const { error } = await supabaseClient
+            .from('blocked_times')
+            .upsert(slots, { onConflict: 'barber_id,date,blocked_time', ignoreDuplicates: true });
+
+        if (error) {
+            this.showNotification('Erro ao bloquear', error.message);
+            return;
+        }
+
+        // Atualizar estado local imediatamente
+        const existing = (this.state.blockedTimesFull || []).filter(b =>
+            !(b.barber_id === barberId && b.date === date)
+        );
+        this.state.blockedTimesFull = [...existing, ...slots];
+
+        this.showNotification('Bloqueio criado ✓', `${start} – ${end} bloqueado em ${this.inputToDbDate(date)}.`);
+        this.render();
+    },
+
+    /**
+     * Remove todos os bloqueios de um barbeiro em uma data específica.
+     */
+    async removeTimeBlockWindow(barberId, date) {
+        this.showConfirmModal({
+            title: 'Remover Bloqueio?',
+            message: `Deseja liberar todos os horários bloqueados em ${this.inputToDbDate(date)} para este barbeiro?`,
+            icon: 'clock-x',
+            isDestructive: false,
+            onConfirm: async () => {
+                const { error } = await supabaseClient
+                    .from('blocked_times')
+                    .delete()
+                    .eq('barber_id', barberId)
+                    .eq('date', date);
+
+                if (error) {
+                    this.showNotification('Erro', error.message);
+                    return;
+                }
+
+                // Remover do estado local
+                this.state.blockedTimesFull = (this.state.blockedTimesFull || []).filter(b =>
+                    !(b.barber_id === barberId && b.date === date)
+                );
+
+                this.showNotification('Bloqueio removido ✓', `Horários de ${this.inputToDbDate(date)} liberados.`);
+                this.render();
+            }
+        });
+    },
+
+
+
+    // ─────────────────────────────────────────────────────────────────
     // ADMIN: Legado — barber_slots (mantido para retrocompatibilidade)
     // ─────────────────────────────────────────────────────────────────
 
