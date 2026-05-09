@@ -2361,10 +2361,10 @@ Object.assign(App, {
                                 </div>
                                 
                                 <div class="flex gap-2 pt-3 border-t border-theme">
-                                    <a href="https://wa.me/${App.formatWA(client.phone)}" target="_blank" class="flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-bold border border-[#25D366]/10">
+                                    <a href="https://wa.me/${App.formatWA(client.phone || client.email)}" target="_blank" class="flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-bold border border-[#25D366]/10">
                                         <i data-lucide="message-square" class="w-4 h-4"></i> Whats
                                     </a>
-                                    <a href="tel:+55${client.phone}" class="flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme transition-colors text-xs font-bold">
+                                    <a href="tel:+${App.formatWA(client.phone || client.email)}" class="flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme transition-colors text-xs font-bold">
                                         <i data-lucide="phone" class="w-4 h-4"></i> Ligar
                                     </a>
                                     ${this.state.role === 'admin' ? `
