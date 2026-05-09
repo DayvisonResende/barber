@@ -752,12 +752,38 @@ Object.assign(App, {
             const isShopClosed = !workingDays.includes(dayOfWeek);
             const isStaff = ['admin', 'manager', 'barber'].includes(this.state.role);
             const isPast = dateObj < today;
+
+            // Janela de disponibilidade: bloquear datas além do limite configurado (apenas para clientes)
+            const bookingWindowDays = this.state.shopSettings?.booking_window_days ?? 30;
+            const maxDate = new Date(today);
+            maxDate.setDate(maxDate.getDate() + bookingWindowDays);
+            const isBeyondWindow = !isStaff && dateObj > maxDate;
+
+            // Verificar se todos os barbeiros ativos estão fechados neste dia da semana (day_schedules)
+            const activeBarbers = (typeof BARBERS !== 'undefined' ? BARBERS : []).filter(b => b.is_active !== false && b.active !== false);
+            const allBarbersClosed = !isStaff && activeBarbers.length > 0 && activeBarbers.every(barber => {
+                const bId = String(barber.user_id).toLowerCase();
+                const cfg = (this.state.barberConfigs || []).find(c => String(c.barber_id).toLowerCase() === bId);
+                const daySched = cfg?.day_schedules?.[dayOfWeek];
+                // Se tem day_schedules configurado para este dia, respeitar. Senão, checar working_days array.
+                if (daySched !== undefined && daySched !== null) {
+                    return daySched.closed === true;
+                }
+                if (cfg?.working_days && Array.isArray(cfg.working_days)) {
+                    return !cfg.working_days.includes(dayOfWeek);
+                }
+                return false; // sem config = considera disponível
+            });
+
             const isSelected = this.state.selectedDate === dateStr;
             const hasSlots = availability[dateStr];
             const availChecked = dateStr in availability;
 
+            // Considerar fechado se: loja fechada, todos barbeiros fechados, ou além da janela
+            const isEffectivelyClosed = (isShopClosed || allBarbersClosed) && !isStaff;
+
             // Dot de disponibilidade (só exibe no fluxo de agendamento)
-            const dotHtml = isInBookingFlow && !isPast && !isShopClosed
+            const dotHtml = isInBookingFlow && !isPast && !isEffectivelyClosed && !isBeyondWindow
                 ? availChecked
                     ? `<div class="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${hasSlots ? 'bg-amber-500' : 'bg-zinc-600'}"></div>`
                     : ''
@@ -769,9 +795,15 @@ Object.assign(App, {
                         ${i}
                     </div>
                 `;
-            } else if (isShopClosed && !isStaff) {
+            } else if (isBeyondWindow) {
                 calendarHtml += `
-                    <div class="flex justify-center items-center h-10 w-full cursor-pointer hover:bg-red-500/5 rounded-full group transition-colors relative" onclick="App.showInfoModal({title: 'Barbearia Fechada', message: 'Não há expediente neste dia. Por favor, escolha outra data para o seu agendamento.', icon: 'calendar-x', iconColor: 'text-red-500', iconBg: 'bg-red-500/10'})">
+                    <div class="flex justify-center items-center h-10 w-full cursor-not-allowed relative" title="Fora da janela de agendamento">
+                        <span class="text-zinc-600 font-medium line-through opacity-40">${i}</span>
+                    </div>
+                `;
+            } else if (isEffectivelyClosed) {
+                calendarHtml += `
+                    <div class="flex justify-center items-center h-10 w-full cursor-pointer hover:bg-red-500/5 rounded-full group transition-colors relative" onclick="App.showInfoModal({title: 'Sem Atendimento', message: 'Não há expediente neste dia. Por favor, escolha outra data para o seu agendamento.', icon: 'calendar-x', iconColor: 'text-red-500', iconBg: 'bg-red-500/10'})">
                         <span class="text-red-500/40 font-medium group-hover:text-red-500/60">${i}</span>
                         <div class="absolute bottom-1.5 w-1 h-1 bg-red-500/20 rounded-full"></div>
                     </div>
@@ -791,6 +823,7 @@ Object.assign(App, {
                     </div>
                 `;
             }
+
         }
 
         calendarHtml += `

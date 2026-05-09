@@ -1257,6 +1257,106 @@ Object.assign(App, {
         }
     },
 
+    // ─────────────────────────────────────────────────────────────────
+    // JANELA DE DISPONIBILIDADE
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Salva quantos dias no futuro os clientes podem agendar.
+     * Ex: 20 = somente de hoje até hoje+20 dias.
+     */
+    async saveBookingWindow(value) {
+        const days = parseInt(value);
+        if (isNaN(days) || days < 1 || days > 365) {
+            this.showNotification('Valor inválido', 'Informe um número entre 1 e 365 dias.');
+            return;
+        }
+        const { error } = await supabaseClient
+            .from('shop_settings')
+            .update({ booking_window_days: days })
+            .eq('id', this.state.shopSettings.id);
+
+        if (!error) {
+            this.state.shopSettings.booking_window_days = days;
+            this.showNotification('Janela salva ✓', `Clientes podem agendar até ${days} dias no futuro.`);
+            this.render();
+        } else {
+            this.showNotification('Erro', 'Não foi possível salvar a janela de disponibilidade.');
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // HORÁRIOS POR DIA DA SEMANA
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Lê os inputs de horário por dia da UI e salva no barber_config
+     * como day_schedules: { 0: {closed,start,end}, 1: {...}, ... }
+     */
+    async saveBarberDaySchedules(barberId) {
+        const daysLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const daySchedules = {};
+        const workingDays = [];
+
+        daysLabels.forEach((_, idx) => {
+            const startEl = document.getElementById(`day-start-${barberId}-${idx}`);
+            const endEl   = document.getElementById(`day-end-${barberId}-${idx}`);
+            // O checkbox "Fechado" determina se o dia está fechado
+            const rowEl   = document.getElementById(`day-row-${barberId}-${idx}`);
+            const checkEl = rowEl?.querySelector('input[type="checkbox"]');
+            const isClosed = checkEl ? checkEl.checked : false;
+
+            daySchedules[idx] = {
+                closed: isClosed,
+                start: startEl?.value || '09:00',
+                end:   endEl?.value   || '18:00'
+            };
+
+            if (!isClosed) workingDays.push(idx);
+        });
+
+        // Almoço global
+        const lunchStart = document.getElementById(`admin-lunch-start-${barberId}`)?.value || '12:00';
+        const lunchEnd   = document.getElementById(`admin-lunch-end-${barberId}`)?.value   || '13:00';
+
+        // Deriva work_start/work_end do primeiro/último dia aberto para retrocompatibilidade com o motor
+        const openDays = Object.entries(daySchedules).filter(([, v]) => !v.closed);
+        const allStarts = openDays.map(([, v]) => v.start).sort();
+        const allEnds   = openDays.map(([, v]) => v.end).sort();
+        const workStart = allStarts[0] || '09:00';
+        const workEnd   = allEnds[allEnds.length - 1] || '18:00';
+
+        await this.saveBarberConfig(barberId, {
+            day_schedules: daySchedules,
+            working_days: workingDays,
+            work_start: workStart,
+            work_end: workEnd,
+            lunch_start: lunchStart,
+            lunch_end: lunchEnd
+        });
+    },
+
+    /**
+     * Atualiza o estado "closed" de um dia específico imediatamente
+     * no estado local e re-renderiza para feedback visual instantâneo.
+     */
+    toggleDayClosed(barberId, dayIdx, isClosed) {
+        const bIdStr = String(barberId).toLowerCase();
+        let config = this.state.barberConfigs.find(c =>
+            String(c.barber_id).toLowerCase() === bIdStr
+        );
+        if (!config) {
+            config = { barber_id: barberId, day_schedules: {} };
+            this.state.barberConfigs.push(config);
+        }
+        if (!config.day_schedules) config.day_schedules = {};
+        if (!config.day_schedules[dayIdx]) config.day_schedules[dayIdx] = {};
+        config.day_schedules[dayIdx].closed = isClosed;
+        this.render();
+    },
+
+
+
     async updateBarberCommission(barberId, newRate) {
         // Se estiver vazio, salva como null para usar o padrão da loja
         const rateValue = newRate.trim() === "" ? null : parseInt(newRate);
@@ -2107,19 +2207,28 @@ Object.assign(App, {
         );
 
         // 3. Verificar se o barbeiro trabalha nesse dia da semana
-        //    barber_config.working_days é array de ints [0..6] ou null (trabalha todos os dias habilitados)
-        if (config?.working_days && Array.isArray(config.working_days)) {
+        //    Prioridade: day_schedules[dayOfWeek].closed → working_days array
+        const daySchedules = config?.day_schedules || {};
+        const dayCfg = daySchedules[dayOfWeek];
+
+        if (dayCfg?.closed === true) return null;
+
+        if (!dayCfg && config?.working_days && Array.isArray(config.working_days)) {
             if (!config.working_days.includes(dayOfWeek)) return null;
         }
 
         // 4. Obter horário de início e fim do expediente
-        //    Prioridade: barber_config.work_start/work_end → barber_slots derivação → padrão da loja
+        //    Prioridade: day_schedules[dow].start/end → barber_config.work_start/work_end → barber_slots → padrão
         let inicioMin, fimMin;
 
-        if (config?.work_start && config?.work_end) {
-            // ✅ Config direta (novo sistema)
+        if (dayCfg?.start && dayCfg?.end) {
+            // ✅ Horário específico para este dia (novo sistema por dia)
+            inicioMin = this.timeToMinutes(dayCfg.start);
+            fimMin    = this.timeToMinutes(dayCfg.end);
+        } else if (config?.work_start && config?.work_end) {
+            // ✅ Config global do barbeiro (sistema anterior)
             inicioMin = this.timeToMinutes(config.work_start);
-            fimMin = this.timeToMinutes(config.work_end);
+            fimMin    = this.timeToMinutes(config.work_end);
         } else {
             // Fallback: derivar dos barber_slots existentes
             const daySlots = (this.state.barberSlots || [])
@@ -2141,6 +2250,7 @@ Object.assign(App, {
                 fimMin = this.timeToMinutes(shopEnd);
             }
         }
+
 
         if (inicioMin >= fimMin) return null;
         return { inicioMin, fimMin };

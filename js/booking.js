@@ -65,6 +65,19 @@ Object.assign(App, {
     // ─────────────────────────────────────────────────────────────────
 
     selectDate(date) {
+        // Guard: rejeitar datas além da janela de disponibilidade (para clientes)
+        const isStaff = ['admin', 'manager', 'barber'].includes(this.state.role);
+        if (!isStaff) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const bookingWindowDays = this.state.shopSettings?.booking_window_days ?? 30;
+            const maxDate = new Date(today);
+            maxDate.setDate(maxDate.getDate() + bookingWindowDays);
+            const [y, m, d] = date.split('-').map(Number);
+            const dateObj = new Date(y, m - 1, d);
+            if (dateObj > maxDate) return; // silenciosamente ignora
+        }
+
         this.state.selectedDate = date;
         this.state.selectedTime = '';
         this.state.selectedBarber = null;
@@ -73,6 +86,7 @@ Object.assign(App, {
         this.state.bookingStep = 'service';
         this.render();
     },
+
 
     // ─────────────────────────────────────────────────────────────────
     // PASSO 2: SELEÇÃO DE SERVIÇO(S) — multi-select

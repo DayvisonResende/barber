@@ -2087,6 +2087,30 @@ Object.assign(App, {
                         <p class="text-[9px] text-amber-500/60 font-medium pl-1 italic">Estes são os dias que a barbearia aparece disponível para os clientes.</p>
                     </div>
 
+                    <!-- Janela de Disponibilidade -->
+                    <div class="card-bg rounded-2xl border border-theme p-5 space-y-4 shadow-xl">
+                        <div class="flex items-center gap-3 mb-1">
+                            <div class="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                            <h3 class="text-[10px] font-black uppercase text-theme tracking-[0.2em]">Janela de Disponibilidade</h3>
+                        </div>
+                        <p class="text-[9px] text-amber-500/60 font-medium pl-1 italic leading-relaxed">Quantos dias no futuro os clientes podem agendar a partir de hoje. Ex: 20 dias = somente do dia de hoje até 20 dias à frente.</p>
+                        <div class="flex items-center gap-3">
+                            <div class="relative flex-1">
+                                <input
+                                    type="number"
+                                    id="shop-booking-window"
+                                    min="1" max="365"
+                                    value="${this.state.shopSettings?.booking_window_days || 30}"
+                                    class="w-full input-bg border border-theme rounded-xl p-3 text-theme font-bold text-center focus:border-amber-500 outline-none"
+                                />
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-theme text-[10px] font-black uppercase tracking-widest">dias</span>
+                            </div>
+                            <button onclick="App.saveBookingWindow(document.getElementById('shop-booking-window').value)" class="py-3 px-5 rounded-xl bg-amber-500 text-zinc-950 font-black text-xs uppercase tracking-widest hover:bg-amber-400 active:scale-95 transition-all shadow-lg shadow-amber-500/20">
+                                Salvar
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Seleção de Barbeiro (Apenas Admin) -->
                     ${this.state.role === 'admin' ? `
                         <div class="space-y-2">
@@ -2115,108 +2139,60 @@ Object.assign(App, {
                             <!-- MODO ESCALA FIXA (novo sistema: horário início/fim + dias) -->
                             <div class="space-y-5 slide-in-right">
 
-                                <!-- Dias de Trabalho -->
+                                <!-- Horário por Dia da Semana -->
                                 <div class="card-bg rounded-2xl border border-theme p-5 space-y-4">
-                                    <h3 class="text-sm font-bold text-theme flex items-center gap-2">
-                                        <i data-lucide="calendar-days" class="w-4 h-4 text-amber-500"></i>
-                                        Dias de Trabalho
-                                    </h3>
-                                    <div class="flex justify-between gap-1.5">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-sm font-bold text-theme flex items-center gap-2">
+                                            <i data-lucide="calendar-days" class="w-4 h-4 text-amber-500"></i>
+                                            Horário por Dia da Semana
+                                        </h3>
+                                        <span class="text-[9px] text-amber-500/60 font-black uppercase tracking-widest">Almoço global</span>
+                                    </div>
+                                    <p class="text-[10px] text-muted-theme italic">Configure o horário de início, fim e fechado individualmente para cada dia. O intervalo de almoço é único para todos os dias.</p>
+
+                                    <!-- Intervalo de Almoço Global -->
+                                    <div class="grid grid-cols-2 gap-3 p-3 bg-amber-500/5 rounded-xl border border-amber-500/20">
+                                        <div class="space-y-1">
+                                            <label class="text-[10px] text-amber-500/70 uppercase font-black tracking-widest flex items-center gap-1"><i data-lucide="coffee" class="w-3 h-3"></i> Almoço Início</label>
+                                            <input type="time" id="admin-lunch-start-${selectedBarberId}" value="${barberConfig.lunch_start || '12:00'}" class="w-full input-bg border border-theme rounded-xl p-2.5 text-theme outline-none focus:border-amber-500 text-sm font-bold" />
+                                        </div>
+                                        <div class="space-y-1">
+                                            <label class="text-[10px] text-amber-500/70 uppercase font-black tracking-widest">Almoço Fim</label>
+                                            <input type="time" id="admin-lunch-end-${selectedBarberId}" value="${barberConfig.lunch_end || '13:00'}" class="w-full input-bg border border-theme rounded-xl p-2.5 text-theme outline-none focus:border-amber-500 text-sm font-bold" />
+                                        </div>
+                                    </div>
+
+                                    <!-- Linha por dia da semana -->
+                                    <div class="space-y-2">
                                         ${daysLabels.map((label, idx) => {
-                const workingDays = barberConfig.working_days ?? [1, 2, 3, 4, 5, 6];
-                const isWorking = workingDays.includes(idx);
-                return `
-                                                <button onclick="App.toggleBarberWorkingDay('${selectedBarberId}', ${idx})"
-                                                    class="flex-1 min-w-[40px] py-3 rounded-xl border text-[10px] font-black uppercase transition-all
-                                                        ${isWorking ? 'bg-amber-500 border-amber-500 text-zinc-950 shadow-md shadow-amber-500/20' : 'card-bg border-theme text-muted-theme opacity-40 hover:opacity-70'}">
-                                                    ${label}
-                                                </button>`;
-            }).join('')}
-                                    </div>
-                                    <p class="text-[10px] text-muted-theme italic pl-1">Clique para ativar/desativar o dia de trabalho deste barbeiro.</p>
-                                </div>
-
-                                <!-- Horário de Expediente -->
-                                <div class="card-bg rounded-2xl border border-theme p-5 space-y-4">
-                                    <h3 class="text-sm font-bold text-theme flex items-center gap-2">
-                                        <i data-lucide="clock" class="w-4 h-4 text-amber-500"></i>
-                                        Horário de Expediente
-                                    </h3>
-                                    <div class="grid grid-cols-2 gap-4">
-                                        <div class="space-y-2">
-                                            <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Início</label>
-                                            <input type="time"
-                                                id="admin-work-start-${selectedBarberId}"
-                                                value="${barberConfig.work_start || '09:00'}"
-                                                class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500 text-sm font-bold" />
-                                        </div>
-                                        <div class="space-y-2">
-                                            <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Fim</label>
-                                            <input type="time"
-                                                id="admin-work-end-${selectedBarberId}"
-                                                value="${barberConfig.work_end || '19:00'}"
-                                                class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500 text-sm font-bold" />
-                                        </div>
+                                            const daySchedules = barberConfig.day_schedules || {};
+                                            const dayCfg = daySchedules[idx] || {};
+                                            const isClosed = dayCfg.closed === true;
+                                            const dayStart = dayCfg.start || barberConfig.work_start || '09:00';
+                                            const dayEnd = dayCfg.end || barberConfig.work_end || '18:00';
+                                            return `
+                                            <div class="flex items-center gap-2 p-3 rounded-xl border ${isClosed ? 'border-theme/30 opacity-50' : 'border-theme'} bg-zinc-900/40 transition-all" id="day-row-${selectedBarberId}-${idx}">
+                                                <div class="w-9 text-center">
+                                                    <span class="text-[10px] font-black uppercase ${isClosed ? 'text-muted-theme' : 'text-amber-500'}">${label}</span>
+                                                </div>
+                                                <div class="flex-1 grid grid-cols-2 gap-2 ${isClosed ? 'pointer-events-none opacity-40' : ''}">
+                                                    <input type="time" id="day-start-${selectedBarberId}-${idx}" value="${dayStart}" class="w-full input-bg border border-theme rounded-lg p-2 text-theme outline-none focus:border-amber-500 text-xs font-bold" />
+                                                    <input type="time" id="day-end-${selectedBarberId}-${idx}" value="${dayEnd}" class="w-full input-bg border border-theme rounded-lg p-2 text-theme outline-none focus:border-amber-500 text-xs font-bold" />
+                                                </div>
+                                                <label class="flex items-center gap-1.5 cursor-pointer flex-shrink-0">
+                                                    <input type="checkbox" ${isClosed ? 'checked' : ''} onchange="App.toggleDayClosed('${selectedBarberId}', ${idx}, this.checked)" class="sr-only peer" />
+                                                    <div class="relative w-9 h-5 bg-zinc-700 rounded-full transition-all peer-checked:bg-red-500/70">
+                                                        <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-4 ${isClosed ? 'translate-x-4' : ''}"></div>
+                                                    </div>
+                                                    <span class="text-[9px] font-black uppercase ${isClosed ? 'text-red-400' : 'text-muted-theme'}">Fechado</span>
+                                                </label>
+                                            </div>`;
+                                        }).join('')}
                                     </div>
 
-                                    <div class="pt-3 border-t border-theme/50 space-y-2">
-                                        <h4 class="text-[10px] text-amber-500/80 uppercase font-black tracking-widest flex items-center gap-1.5">
-                                            <i data-lucide="coffee" class="w-3 h-3"></i> Intervalo de Almoço
-                                        </h4>
-                                        <div class="grid grid-cols-2 gap-4">
-                                            <div class="space-y-2">
-                                                <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Início</label>
-                                                <input type="time"
-                                                    id="admin-lunch-start-${selectedBarberId}"
-                                                    value="${barberConfig.lunch_start || '12:00'}"
-                                                    class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500 text-sm" />
-                                            </div>
-                                            <div class="space-y-2">
-                                                <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Fim</label>
-                                                <input type="time"
-                                                    id="admin-lunch-end-${selectedBarberId}"
-                                                    value="${barberConfig.lunch_end || '13:00'}"
-                                                    class="w-full input-bg border border-theme rounded-xl p-3 text-theme outline-none focus:border-amber-500 text-sm" />
-                                            </div>
-                                        </div>
-                                        <p class="text-[10px] text-muted-theme italic pl-1">Horários de almoço são bloqueados automaticamente para agendamentos.</p>
-                                    </div>
-
-                                    <button onclick="App.saveBarberConfig('${selectedBarberId}', {
-                                        work_start: document.getElementById('admin-work-start-${selectedBarberId}').value,
-                                        work_end: document.getElementById('admin-work-end-${selectedBarberId}').value,
-                                        lunch_start: document.getElementById('admin-lunch-start-${selectedBarberId}').value,
-                                        lunch_end: document.getElementById('admin-lunch-end-${selectedBarberId}').value
-                                    })"
-                                        class="w-full py-3.5 rounded-xl bg-amber-500 text-zinc-950 font-black text-sm flex items-center justify-center gap-2 hover:bg-amber-400 transition-all active:scale-[0.98] shadow-lg shadow-amber-500/20 mt-2">
-                                        <i data-lucide="save" class="w-4 h-4"></i> Salvar Configuração
+                                    <button onclick="App.saveBarberDaySchedules('${selectedBarberId}')" class="w-full py-3.5 rounded-xl bg-amber-500 text-zinc-950 font-black text-sm flex items-center justify-center gap-2 hover:bg-amber-400 transition-all active:scale-[0.98] shadow-lg shadow-amber-500/20">
+                                        <i data-lucide="save" class="w-4 h-4"></i> Salvar Horários
                                     </button>
-                                </div>
-
-                                <!-- Preview dos slots que serão gerados -->
-                                <div class="card-bg rounded-2xl border border-dashed border-amber-500/20 p-4 space-y-2">
-                                    <p class="text-[10px] text-amber-500/60 uppercase font-black tracking-widest flex items-center gap-1.5">
-                                        <i data-lucide="eye" class="w-3 h-3"></i> Preview dos Horários Gerados
-                                    </p>
-                                    <p class="text-[11px] text-muted-theme leading-relaxed">
-                                        ${(() => {
-                        const start = barberConfig.work_start || '09:00';
-                        const end = barberConfig.work_end || '19:00';
-                        const lStart = barberConfig.lunch_start || '12:00';
-                        const lEnd = barberConfig.lunch_end || '13:00';
-                        const startMin = this.timeToMinutes(start);
-                        const endMin = this.timeToMinutes(end);
-                        const lStartMin = this.timeToMinutes(lStart);
-                        const lEndMin = this.timeToMinutes(lEnd);
-                        const slots = [];
-                        for (let t = startMin; t < endMin; t += 5) {
-                            if (t >= lStartMin && t < lEndMin) continue;
-                            slots.push(this.minutesToTime(t));
-                        }
-                        if (slots.length === 0) return '<span class="text-red-400">Nenhum slot — revise o horário.</span>';
-                        return `<span class="text-amber-500 font-bold">${slots.length} slots</span> de 5 em 5 min: <span class="font-mono text-theme">${slots.slice(0, 3).join(', ')}${slots.length > 3 ? ` ... ${slots[slots.length - 1]}` : ''}</span>`;
-                    })()}
-                                    </p>
                                 </div>
                             </div>
                         ` : `
