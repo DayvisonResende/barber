@@ -53,6 +53,7 @@ const App = {
         paymentStatusFilter: 'pending', // 'pending' ou 'all'
         payouts: [],
         editingPriceId: null,
+        editingProductId: null,
         showingSplitPaymentId: null,
         splitPaymentAmounts: { Pix: 0, Dinheiro: 0, Débito: 0, Crédito: 0 },
         editingServiceId: null,

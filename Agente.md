@@ -65,13 +65,20 @@ Este documento serve como:
 
 **O que está com problemas:**
 * **Sincronização:** O sistema usa *Polling* de 15 segundos em vez de *Supabase Realtime* nativo em algumas telas.
+* **Débito Técnico Crítico:** `views.js` (3.1k linhas) e `api.js` (2.7k linhas) tornaram-se monolitos incontroláveis.
+* **Estado Global Mutável:** Uso de variáveis globais como `SERVICES` e `BARBERS` dificulta a manutenção.
+* **Renderização Destrutiva:** Updates de UI usam reposição completa via `innerHTML`, afetando interações (como perder foco de inputs).
 
-**Performance atual:** Estável, mas `api.js` e `views.js` ultrapassaram 2.5k linhas, exigindo refatoração em breve.
+**Performance atual:** Inicialização rápida devido ao Vanilla JS, porém corre risco de lentidão progressiva na tela de histórico, que não possui paginação.
 
 ---
 
 ### 3. HISTÓRICO DE AÇÕES
 
+* **2026-05-10:**
+    * **Ação:** Análise Arquitetural Profunda.
+    * **Por que:** Avaliar o limite do modelo Vanilla JS atual e mapear débitos técnicos.
+    * **Resultado:** Mapeamento de problemas críticos (monolitos JS) e planejamento de separação do `views.js` em módulos isolados.
 * **2026-04-30:**
     * **Ação:** Implementação de Segurança RLS e Exclusão Profunda.
     * **Por que:** Tabelas de produtos e categorias estavam expostas. Barbeiros com muitos registros travavam a exclusão devido a dependências.
@@ -127,9 +134,12 @@ Este documento serve como:
 
 ### 7. MELHORIAS IDENTIFICADAS
 
+* **Arquitetura (Urgente):** Quebrar o `views.js` em múltiplos arquivos baseados em contexto (Agendamentos, Perfil, Admin, etc).
+* **Performance:** Adicionar limites (paginação/LIMIT) nas queries grandes (`loadTransactions`).
+* **UX:** Implementar estados de *loading* nos botões de ação para evitar envios duplicados.
 * **Performance:** Implementar Lazy Loading dos componentes de UI.
-* **UX:** Adicionar Skeleton Screens melhores durante o login inicial.
 * **Arquitetura:** Centralizar as strings de texto para facilitar tradução futura (i18n).
+* **Código Base:** Remover funções de renderização obsoletas, como `renderBookingFlowLegacy()`.
 
 ---
 
@@ -151,9 +161,11 @@ Este documento serve como:
 
 ### 10. ANÁLISE CRÍTICA DO SISTEMA
 
-O sistema é funcional e visualmente premium, mas sofre do "Monolito de Script". A separação de preocupações entre `api.js` e `views.js` está começando a se perder.
+O aplicativo alcançou um nível de maturidade e features excepcional para ser Vanilla JS, incluindo motor de agendamentos complexo, sync duplo (WebSocket + Polling) e UI PWA nativa. 
 
-**Gargalo futuro:** Consultas `SELECT *` sem paginação (limitar apenas agendamentos do mês/semana).
+Porém, o **limite arquitetônico do Vanilla JS puro foi atingido**. O crescimento orgânico gerou arquivos monstruosos (mais de 8.600 linhas de código totais). A injeção pesada de templates HTML via `innerHTML` sem um Virtual DOM real está gerando gargalos e problemas de UX na re-renderização. A ausência de tipagem (TypeScript) e a dependência em arrays mutáveis globais mascaram pequenos bugs.
+
+**Gargalo de Curto Prazo:** O arquivo `views.js` de 3.143 linhas e a falta de *LIMIT* na consulta de transações passadas. É essencial realizar o *split* deste arquivo em vários fragmentos menores imediatamente. A migração para um framework reativo (React/Next.js) deve ser seriamente avaliada para a Versão 2.0.
 
 ---
 

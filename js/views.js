@@ -2613,15 +2613,42 @@ Object.assign(App, {
                                         <h4 class="text-[11px] text-muted-theme uppercase font-black tracking-widest mb-2 px-1 border-b border-theme/50 pb-1">${cat.name}</h4>
                                         <div class="space-y-2">
                                             ${catProducts.map(p => `
-                                                <div class="flex justify-between items-center bg-zinc-900/50 p-3 rounded-xl border border-theme/50 hover:border-amber-500/30 transition-colors">
+                                                ${this.state.editingProductId === p.id ? `
+                                                    <div class="flex flex-col gap-2 bg-zinc-900/50 p-3 rounded-xl border border-amber-500/50 w-full fade-in">
+                                                        <div class="flex gap-2">
+                                                            <input type="text" id="edit-prod-name-${p.id}" value="${App.escapeHTML(p.name)}" placeholder="Nome" class="flex-1 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
+                                                            <input type="number" id="edit-prod-price-${p.id}" value="${p.price.toFixed(2)}" step="0.01" class="w-20 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
+                                                        </div>
+                                                        <div class="flex justify-between items-center mt-1">
+                                                            <select id="edit-prod-cat-${p.id}" class="input-bg border border-theme rounded p-1.5 text-xs text-theme max-w-[150px] focus:border-amber-500 outline-none">
+                                                                ${CATEGORIES.map(c => `<option value="${c.id}" ${c.id === p.category_id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                                                            </select>
+                                                            <div class="flex gap-1">
+                                                                <button onclick="App.updateProduct('${p.id}', document.getElementById('edit-prod-name-${p.id}').value, document.getElementById('edit-prod-price-${p.id}').value, document.getElementById('edit-prod-cat-${p.id}').value)" class="p-1.5 bg-emerald-500 text-zinc-950 rounded hover:bg-emerald-400">
+                                                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                                                </button>
+                                                                <button onclick="App.cancelEditProduct()" class="p-1.5 bg-zinc-700 text-muted-theme rounded hover:bg-zinc-600">
+                                                                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ` : `
+                                                <div class="flex justify-between items-center bg-zinc-900/50 p-3 rounded-xl border border-theme/50 hover:border-amber-500/30 transition-colors w-full">
                                                     <div class="flex flex-col">
-                                                        <span class="font-bold text-theme text-sm">${p.name}</span>
+                                                        <span class="font-bold text-theme text-sm">${App.escapeHTML(p.name)}</span>
                                                         <span class="text-xs text-emerald-500 font-bold">R$ ${p.price.toFixed(2).replace('.', ',')}</span>
                                                     </div>
-                                                    <button onclick="App.deleteProduct('${p.id}')" class="text-rose-500 hover:bg-rose-500/10 p-2 rounded-lg transition-colors">
-                                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                                    </button>
+                                                    <div class="flex gap-1">
+                                                        <button onclick="App.initEditProduct('${p.id}')" class="text-amber-500 hover:bg-amber-500/10 p-2 rounded-lg transition-colors">
+                                                            <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                                        </button>
+                                                        <button onclick="App.deleteProduct('${p.id}')" class="text-rose-500 hover:bg-rose-500/10 p-2 rounded-lg transition-colors">
+                                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                                        </button>
+                                                    </div>
                                                 </div>
+                                                `}
                                             `).join('')}
                                         </div>
                                     </div>

@@ -2751,6 +2751,45 @@ Object.assign(App, {
         }
     },
 
+    initEditProduct(id) {
+        this.state.editingProductId = id;
+        this.render();
+    },
+
+    cancelEditProduct() {
+        this.state.editingProductId = null;
+        this.render();
+    },
+
+    async updateProduct(id, newName, newPriceStr, newCategoryId) {
+        if (!newName || !newPriceStr || !newCategoryId) {
+            this.showNotification("Erro", "Preencha todos os campos do produto.");
+            return;
+        }
+        const numericValue = parseFloat(newPriceStr.replace(',', '.'));
+        if (isNaN(numericValue)) {
+            this.showNotification("Erro", "Valor inválido.");
+            return;
+        }
+        try {
+            const { error } = await supabaseClient.from('products').update({
+                name: newName,
+                price: numericValue,
+                category_id: newCategoryId
+            }).eq('id', id);
+            
+            if (error) throw error;
+            
+            this.state.editingProductId = null;
+            this.showNotification("Sucesso", "Produto atualizado.");
+            await this.loadInitialData();
+            this.render();
+        } catch(e) {
+            console.error("Erro ao atualizar produto:", e);
+            this.showNotification("Erro", "Falha ao atualizar produto.");
+        }
+    },
+
     async deleteProduct(id) {
         if(!confirm("Tem certeza que deseja excluir este produto?")) return;
         try {
