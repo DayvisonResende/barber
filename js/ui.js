@@ -887,6 +887,11 @@ Object.assign(App, {
         this.render();
     },
 
+    toggleDateRangeModal() {
+        this.state.isDateRangeModalOpen = !this.state.isDateRangeModalOpen;
+        this.render();
+    },
+
     setAdminShopTab(tabName) {
         this.state.adminShopTab = tabName;
         this.render();

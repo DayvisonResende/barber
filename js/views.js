@@ -962,17 +962,48 @@ Object.assign(App, {
 
             if (this.state.appointmentsFilter === 'day') {
                 filteredApts = filteredApts.filter(a => a.date === todayFormatted);
-            } else if (this.state.appointmentsFilter === 'week') {
-                const endOfWeek = new Date(startOfWeek);
-                endOfWeek.setDate(startOfWeek.getDate() + 6);
-
-                filteredApts = filteredApts.filter(a => {
-                    const aptDate = new Date(a.date + 'T00:00:00'); // parse safely
-                    return aptDate >= startOfWeek && aptDate <= endOfWeek;
-                });
-            } else if (this.state.appointmentsFilter === 'month') {
-                filteredApts = filteredApts.filter(a => a.date.startsWith(thisMonthFormatted));
+            } else if (this.state.appointmentsFilter === 'custom' && this.state.appointmentsFilterStart && this.state.appointmentsFilterEnd) {
+                const sDate = this.state.appointmentsFilterStart;
+                const eDate = this.state.appointmentsFilterEnd;
+                filteredApts = filteredApts.filter(a => a.date >= sDate && a.date <= eDate);
             }
+            setTimeout(() => {
+                const mc = document.getElementById('modal-container');
+                if (mc) {
+                    mc.innerHTML = this.state.isDateRangeModalOpen ? `
+                        <div class="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 fade-in">
+                            <div class="card-bg w-full max-w-sm rounded-3xl border border-theme shadow-2xl overflow-hidden scale-in">
+                                <div class="bg-zinc-900/50 p-6 border-b border-theme relative">
+                                    <button onclick="App.toggleDateRangeModal()" class="absolute top-4 right-4 p-2 input-bg rounded-full text-muted-theme hover:text-red-500 transition-colors">
+                                        <i data-lucide="x" class="w-4 h-4"></i>
+                                    </button>
+                                    <div class="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center mb-4">
+                                        <i data-lucide="calendar" class="w-6 h-6 text-amber-500"></i>
+                                    </div>
+                                    <h2 class="text-xl font-bold text-theme">Filtrar por Data</h2>
+                                    <p class="text-sm text-muted-theme mt-1">Selecione o período desejado</p>
+                                </div>
+                                <div class="p-6 space-y-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-muted-theme uppercase tracking-wider mb-2">Data Inicial</label>
+                                        <input type="date" id="apt-start-date" value="${this.state.appointmentsFilterStart || todayFormatted}" class="w-full input-bg border border-theme rounded-xl px-4 py-3 text-theme focus:border-amber-500 outline-none color-scheme-dark transition-colors" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-muted-theme uppercase tracking-wider mb-2">Data Final</label>
+                                        <input type="date" id="apt-end-date" value="${this.state.appointmentsFilterEnd || todayFormatted}" class="w-full input-bg border border-theme rounded-xl px-4 py-3 text-theme focus:border-amber-500 outline-none color-scheme-dark transition-colors" />
+                                    </div>
+                                    <button onclick="App.setCustomAppointmentsRange()" class="w-full mt-4 bg-amber-500 text-zinc-950 font-black py-4 rounded-xl uppercase tracking-widest hover:bg-amber-400 active:scale-[0.98] transition-all shadow-lg shadow-amber-500/20">
+                                        Buscar Agendamentos
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ` : '';
+                    if (this.state.isDateRangeModalOpen && window.lucide) {
+                        lucide.createIcons({ root: mc });
+                    }
+                }
+            }, 0);
 
             return `
                 <div class="space-y-6 fade-in slide-in-up">
@@ -988,8 +1019,14 @@ Object.assign(App, {
 
                     <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide" style="-ms-overflow-style: none; scrollbar-width: none;">
                             <button onclick="App.setAppointmentsFilter('day')" class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${this.state.appointmentsFilter === 'day' ? 'bg-amber-500 text-zinc-950 shadow-md' : 'input-bg text-muted-theme hover:text-theme'}">Hoje</button>
-                            <button onclick="App.setAppointmentsFilter('week')" class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${this.state.appointmentsFilter === 'week' ? 'bg-amber-500 text-zinc-950 shadow-md' : 'input-bg text-muted-theme hover:text-theme'}">Semana</button>
-                            <button onclick="App.setAppointmentsFilter('month')" class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${this.state.appointmentsFilter === 'month' ? 'bg-amber-500 text-zinc-950 shadow-md' : 'input-bg text-muted-theme hover:text-theme'}">Mês</button>
+                            <button onclick="App.toggleDateRangeModal()" class="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-full transition-colors ${this.state.appointmentsFilter === 'custom' ? 'bg-amber-500 text-zinc-950 shadow-md' : 'input-bg text-muted-theme hover:text-theme border border-theme'}">
+                                <i data-lucide="calendar" class="w-4 h-4"></i>
+                            </button>
+                            ${this.state.appointmentsFilter === 'custom' && this.state.appointmentsFilterStart && this.state.appointmentsFilterEnd ? `
+                                <span class="text-xs font-bold text-amber-500 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20 whitespace-nowrap">
+                                    ${this.state.appointmentsFilterStart.split('-').reverse().join('/')} até ${this.state.appointmentsFilterEnd.split('-').reverse().join('/')}
+                                </span>
+                            ` : ''}
                         </div>
                     </div>
 

@@ -69,6 +69,9 @@ const App = {
         bookingSelectedService: null,      // objeto { id, name, priceValue, durationMinutes, ... }
         bookingAvailableSlots: {},         // { "09:00": [barber1, barber2], "09:30": [barber1] }
         bookingIsLoadingSlots: false,      // spinner enquanto calcula
-        bookingCalendarAvailability: {}    // { "2026-04-28": true/false } pré-computado por mês
+        bookingCalendarAvailability: {},   // { "2026-04-28": true/false } pré-computado por mês
+        appointmentsFilterStart: null,
+        appointmentsFilterEnd: null,
+        isDateRangeModalOpen: false
     }
 };

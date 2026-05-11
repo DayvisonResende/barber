@@ -9,6 +9,18 @@ Object.assign(App, {
         this.render();
     },
 
+    setCustomAppointmentsRange() {
+        const start = document.getElementById('apt-start-date').value;
+        const end = document.getElementById('apt-end-date').value;
+        if (start && end) {
+            this.state.appointmentsFilter = 'custom';
+            this.state.appointmentsFilterStart = start;
+            this.state.appointmentsFilterEnd = end;
+            this.state.isDateRangeModalOpen = false;
+            this.render();
+        }
+    },
+
     setCustomReportRange() {
         const start = document.getElementById('report-start-date').value;
         const end = document.getElementById('report-end-date').value;
