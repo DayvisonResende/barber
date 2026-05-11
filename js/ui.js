@@ -882,6 +882,11 @@ Object.assign(App, {
         this.render();
     },
 
+    toggleAppointmentAccordion(id) {
+        this.state.expandedAppointmentId = (this.state.expandedAppointmentId === id) ? null : id;
+        this.render();
+    },
+
     setAdminShopTab(tabName) {
         this.state.adminShopTab = tabName;
         this.render();

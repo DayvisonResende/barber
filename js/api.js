@@ -215,6 +215,7 @@ Object.assign(App, {
                     status: a.status,
                     barber_id: a.barber_id,
                     clientAvatar: a.client_avatar,
+                    total_duration: a.total_duration,
                     comanda_items: a.comanda_items || []
                 };
             });

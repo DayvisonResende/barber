@@ -1004,7 +1004,7 @@ Object.assign(App, {
                 const clientInitial = (apt.clientName[0] || 'C').toUpperCase();
                 return `
                                 <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm border-l-4 border-l-amber-500">
-                                    <div class="flex justify-between items-start gap-3">
+                                    <div class="flex justify-between items-start gap-3 cursor-pointer" onclick="if(event.target.closest('button') || event.target.closest('input') || event.target.closest('select')) return; App.toggleAppointmentAccordion('${apt.id}')">
                                         <!-- Avatar do Cliente -->
                                         <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-zinc-900 flex items-center justify-center bg-zinc-800 shadow-inner">
                                             ${apt.clientAvatar ? `
@@ -1062,24 +1062,10 @@ Object.assign(App, {
                                                     </button>
                                                 `}
                                                 
-                                                <!-- Badge de Duração Editável -->
-                                                ${this.state.editingDurationId === apt.id ? `
-                                                    <div class="flex items-center gap-1 fade-in">
-                                                        <select id="adj-dur-${apt.id}" class="bg-zinc-800 border border-amber-500 rounded px-1 text-[10px] text-amber-500 font-bold outline-none">
-                                                            ${[5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120].map(m => `<option value="${m}" ${apt.total_duration === m ? 'selected' : ''}>${m} min</option>`).join('')}
-                                                        </select>
-                                                        <button onclick="App.updateAppointmentDuration('${apt.id}', document.getElementById('adj-dur-${apt.id}').value)" class="p-1 bg-amber-500 text-zinc-950 rounded hover:bg-amber-400">
-                                                            <i data-lucide="check" class="w-3 h-3"></i>
-                                                        </button>
-                                                        <button onclick="App.cancelEditDuration()" class="p-1 bg-zinc-700 text-muted-theme rounded hover:bg-zinc-600">
-                                                            <i data-lucide="x" class="w-3 h-3"></i>
-                                                        </button>
-                                                    </div>
-                                                ` : `
-                                                    <button onclick="App.initEditDuration('${apt.id}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-zinc-800 text-muted-theme text-[10px] font-bold uppercase tracking-wider border border-zinc-700/50 hover:border-amber-500/50 transition-colors">
-                                                        <i data-lucide="clock" class="w-3 h-3 text-amber-500"></i > ${apt.total_duration || 30} min
-                                                    </button>
-                                                `}
+                                                <!-- Badge de Duração (Estático) -->
+                                                <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-zinc-800 text-muted-theme text-[10px] font-bold uppercase tracking-wider border border-zinc-700/50 cursor-default">
+                                                    <i data-lucide="clock" class="w-3 h-3 text-amber-500"></i > ${apt.total_duration || 30} MIN
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="text-right flex-shrink-0">
@@ -1102,11 +1088,12 @@ Object.assign(App, {
                                                     ${apt.time}
                                                 </button>
                                             `}
-                                            <span class="text-[9px] text-muted-theme font-bold uppercase tracking-tighter mt-1 block">${apt.date}</span>
+                                            <span class="text-[9px] text-muted-theme font-bold uppercase tracking-tighter mt-1 block">${apt.date.split('-').reverse().join('/')}</span>
                                         </div>
                                     </div>
-                                    <!-- Ações Rápidas -->
-                                    <div class="flex gap-2 mt-4 pt-4 border-t border-theme overflow-x-auto scrollbar-hide">
+                                    <div class="accordion-content ${this.state.expandedAppointmentId === apt.id ? 'open' : ''}">
+                                        <!-- Ações Rápidas -->
+                                        <div class="flex gap-2 mt-4 pt-4 border-t border-theme overflow-x-auto scrollbar-hide">
                                         <a href="https://wa.me/${App.formatWA(apt.clientPhone)}?text=Olá%20${encodeURIComponent(apt.clientName)},%20seu%20horário%20de%20${encodeURIComponent(apt.time)}%20está%20chegando!%20Te%20aguardo." target="_blank" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-semibold">
                                             <i data-lucide="bell-ring" class="w-3.5 h-3.5"></i> Lembrete
                                         </a>
@@ -1186,6 +1173,7 @@ Object.assign(App, {
                                             <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i> Pagamento Dividido
                                         </button>
                                         `}
+                                        </div>
                                     </div>
                                 </div>
                                 `;

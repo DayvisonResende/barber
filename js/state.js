@@ -49,6 +49,7 @@ const App = {
         staffSelectedClient: null, // objeto { id, name, phone, avatar } do cliente cadastrado selecionado
         isUploadingAvatar: false,
         expandedTransactionId: null,
+        expandedAppointmentId: null,
         showRegistrationSuccess: false,
         paymentStatusFilter: 'pending', // 'pending' ou 'all'
         payouts: [],
