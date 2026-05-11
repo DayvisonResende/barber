@@ -72,6 +72,9 @@ const App = {
         bookingCalendarAvailability: {},   // { "2026-04-28": true/false } pré-computado por mês
         appointmentsFilterStart: null,
         appointmentsFilterEnd: null,
-        isDateRangeModalOpen: false
+        isDateRangeModalOpen: false,
+        agendaSelectedDate: new Date().toISOString().split('T')[0],
+        openAppointmentModalId: null,
+        agendaViewMode: 'table' // 'list' ou 'table'
     }
 };

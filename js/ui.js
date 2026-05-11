@@ -201,6 +201,45 @@ Object.assign(App, {
         this.updateHeaderUI();
     },
 
+    prevAgendaDay() {
+        this.haptic('light');
+        const date = new Date(this.state.agendaSelectedDate + 'T12:00:00');
+        date.setDate(date.getDate() - 1);
+        this.state.agendaSelectedDate = date.toISOString().split('T')[0];
+        this.render();
+    },
+
+    nextAgendaDay() {
+        this.haptic('light');
+        const date = new Date(this.state.agendaSelectedDate + 'T12:00:00');
+        date.setDate(date.getDate() + 1);
+        this.state.agendaSelectedDate = date.toISOString().split('T')[0];
+        this.render();
+    },
+
+    setAgendaDay(dateStr) {
+        this.state.agendaSelectedDate = dateStr;
+        this.render();
+    },
+
+    setAgendaViewMode(mode) {
+        this.haptic('light');
+        this.state.agendaViewMode = mode;
+        this.render();
+    },
+
+    openAppointmentModal(id) {
+        this.haptic('light');
+        this.state.openAppointmentModalId = id;
+        this.render();
+    },
+
+    closeAppointmentModal() {
+        this.haptic('light');
+        this.state.openAppointmentModalId = null;
+        this.render();
+    },
+
     showConfirmModal({ title, message, onConfirm, icon = 'help-circle', isDestructive = false }) {
         const modal = document.getElementById('confirm-modal');
         const titleEl = document.getElementById('confirm-title');

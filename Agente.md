@@ -76,6 +76,10 @@ Este documento serve como:
 ### 3. HISTÓRICO DE AÇÕES
 
 * **2026-05-10:**
+    * **Ação:** Reestruturação da UI de Agendamentos (Acordeão e Filtros Dinâmicos).
+    * **Por que:** Melhorar a legibilidade dos cards que estavam poluídos com muitos botões de ação e otimizar a filtragem por datas específicas.
+    * **Resultado:** Transformação dos cards de agendamento em acordeões recolhíveis (accordion), encapsulando comanda e pagamentos. Substituição dos filtros fixos ("Semana"/"Mês") por um seletor modal de intervalo de datas dinâmico renderizado via `#modal-container` (corrigindo problemas de Stacking Context CSS).
+* **2026-05-10:**
     * **Ação:** Análise Arquitetural Profunda.
     * **Por que:** Avaliar o limite do modelo Vanilla JS atual e mapear débitos técnicos.
     * **Resultado:** Mapeamento de problemas críticos (monolitos JS) e planejamento de separação do `views.js` em módulos isolados.
