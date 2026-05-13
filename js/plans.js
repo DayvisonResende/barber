@@ -112,14 +112,22 @@ Object.assign(App, {
     calculatePlanDiscount(services, plan) {
         let discountAmount = 0;
         services.forEach(sv => {
-            let pct = 0;
-            if (plan.discount_type === 'global') {
-                pct = plan.global_discount_percent || 0;
-            } else {
+            if (plan.discount_type === 'fixed') {
                 const sd = (plan.serviceDiscounts || []).find(d => String(d.service_id) === String(sv.id));
-                pct = sd ? sd.discount_percent : 0;
+                if (sd && sd.fixed_price != null) {
+                    const fixedDiscount = sv.priceValue - parseFloat(sd.fixed_price);
+                    if (fixedDiscount > 0) discountAmount += fixedDiscount;
+                }
+            } else {
+                let pct = 0;
+                if (plan.discount_type === 'global') {
+                    pct = plan.global_discount_percent || 0;
+                } else {
+                    const sd = (plan.serviceDiscounts || []).find(d => String(d.service_id) === String(sv.id));
+                    pct = sd ? sd.discount_percent : 0;
+                }
+                discountAmount += sv.priceValue * (pct / 100);
             }
-            discountAmount += sv.priceValue * (pct / 100);
         });
         const originalTotal = services.reduce((s, sv) => s + sv.priceValue, 0);
         return {
@@ -207,6 +215,17 @@ Object.assign(App, {
             return;
         }
 
+        if (discountType === 'fixed') {
+            const hasAnyFixed = SERVICES.some(svc => {
+                const val = parseFloat(document.getElementById(`plan-svc-fixed-${svc.id}`)?.value);
+                return !isNaN(val) && val >= 0;
+            });
+            if (!hasAnyFixed) {
+                this.showNotification('Erro', 'Informe o valor fixo de ao menos um serviço.');
+                return;
+            }
+        }
+
         const { data: { user } } = await supabaseClient.auth.getUser();
 
         const planData = {
@@ -232,14 +251,25 @@ Object.assign(App, {
             planId = newPlan.id;
         }
 
-        if (discountType === 'individual') {
+        if (discountType === 'individual' || discountType === 'fixed') {
             await supabaseClient.from('plan_service_discounts').delete().eq('plan_id', planId);
-            const discountRows = SERVICES
-                .map(svc => {
-                    const pct = parseFloat(document.getElementById(`plan-svc-${svc.id}`)?.value) || 0;
-                    return pct > 0 ? { plan_id: planId, service_id: String(svc.id), discount_percent: pct } : null;
-                })
-                .filter(Boolean);
+            let discountRows = [];
+            if (discountType === 'individual') {
+                discountRows = SERVICES
+                    .map(svc => {
+                        const pct = parseFloat(document.getElementById(`plan-svc-${svc.id}`)?.value) || 0;
+                        return pct > 0 ? { plan_id: planId, service_id: String(svc.id), discount_percent: pct, fixed_price: null } : null;
+                    })
+                    .filter(Boolean);
+            } else if (discountType === 'fixed') {
+                discountRows = SERVICES
+                    .map(svc => {
+                        const val = document.getElementById(`plan-svc-fixed-${svc.id}`)?.value;
+                        const fixedPrice = val !== '' && val != null ? parseFloat(val) : null;
+                        return fixedPrice != null ? { plan_id: planId, service_id: String(svc.id), discount_percent: null, fixed_price: fixedPrice } : null;
+                    })
+                    .filter(Boolean);
+            }
             if (discountRows.length > 0) {
                 await supabaseClient.from('plan_service_discounts').insert(discountRows);
             }
@@ -468,8 +498,24 @@ Object.assign(App, {
     togglePlanDiscountType(type) {
         const globalSection = document.getElementById('plan-global-section');
         const individualSection = document.getElementById('plan-individual-section');
+        const fixedSection = document.getElementById('plan-fixed-section');
         if (globalSection) globalSection.classList.toggle('hidden', type !== 'global');
         if (individualSection) individualSection.classList.toggle('hidden', type !== 'individual');
+        if (fixedSection) fixedSection.classList.toggle('hidden', type !== 'fixed');
+
+        // Atualizar destaque visual dos cards de seleção
+        document.querySelectorAll('.plan-dtype-btn').forEach(btn => {
+            const radio = btn.previousElementSibling;
+            const isSelected = radio && radio.value === type;
+            btn.classList.toggle('border-amber-500', isSelected);
+            btn.classList.toggle('bg-amber-500/10', isSelected);
+            btn.classList.toggle('border-theme', !isSelected);
+            btn.classList.toggle('input-bg', !isSelected);
+            const icon = btn.querySelector('i');
+            const title = btn.querySelector('p:first-of-type');
+            if (icon) { icon.classList.toggle('text-amber-500', isSelected); icon.classList.toggle('text-muted-theme', !isSelected); }
+            if (title) { title.classList.toggle('text-amber-500', isSelected); title.classList.toggle('text-muted-theme', !isSelected); }
+        });
     },
 
     updateAssignEndDate() {

@@ -1662,6 +1662,9 @@ Object.assign(App, {
 
                 if (error) throw error;
 
+                // Devolver crédito do plano caso esse agendamento tenha usado desconto
+                await supabaseClient.from('plan_usage').delete().eq('appointment_id', id);
+
                 this.showNotification("Cancelado", "O agendamento foi removido da agenda.");
                 await this.loadInitialData();
                 this.render();

@@ -966,9 +966,44 @@ Object.assign(App, {
         const dayName = daysOfWeek[targetDate.getDay()].split('-')[0];
         const dateFmt = dateStr.split('-').reverse().join('/').slice(0, 5);
 
-        let minMin = 8 * 60;
-        let maxMin = 20 * 60;
-        filteredApts.forEach(apt => {
+        // Pegar horário de funcionamento a partir dos barberConfigs (horário real dos barbeiros)
+        const activeConfigs = (this.state.barberConfigs || []);
+        let gridStart = '09:00';
+        let gridEnd = '18:00';
+        if (activeConfigs.length > 0) {
+            const allStarts = activeConfigs.map(c => c.work_start).filter(Boolean).sort();
+            const allEnds = activeConfigs.map(c => c.work_end).filter(Boolean).sort();
+            if (allStarts.length > 0) gridStart = allStarts[0];
+            if (allEnds.length > 0) gridEnd = allEnds[allEnds.length - 1];
+        }
+        let minMin = parseInt(gridStart.split(':')[0]) * 60 + parseInt(gridStart.split(':')[1] || 0);
+        let maxMin = parseInt(gridEnd.split(':')[0]) * 60 + parseInt(gridEnd.split(':')[1] || 0);
+        const lunchApts = [];
+        (this.state.barberConfigs || []).forEach(cfg => {
+            const bInfo = (typeof BARBERS !== 'undefined' ? BARBERS : []).find(b => String(b.id) === String(cfg.barber_id) || String(b.user_id) === String(cfg.barber_id));
+            if (!bInfo) return;
+            const lStart = cfg.lunch_start || '12:00';
+            const lEnd = cfg.lunch_end || '13:00';
+            const [sh, sm] = lStart.split(':').map(Number);
+            const [eh, em] = lEnd.split(':').map(Number);
+            const dur = (eh * 60 + em) - (sh * 60 + sm);
+            if (dur > 0) {
+                lunchApts.push({
+                    id: 'lunch-' + cfg.barber_id,
+                    isLunch: true,
+                    time: lStart,
+                    total_duration: dur,
+                    barberName: bInfo.name.split(' ')[0],
+                    clientName: 'Almoço',
+                    clientAvatar: null,
+                    status: 'lunch',
+                    services: [{name: 'Pausa'}]
+                });
+            }
+        });
+        const allGridItems = [...filteredApts, ...lunchApts];
+
+        allGridItems.forEach(apt => {
             const [h, m] = apt.time.split(':').map(Number);
             const aptMin = h * 60 + m;
             let dur = parseInt(apt.total_duration) || 30;
@@ -985,7 +1020,7 @@ Object.assign(App, {
 
         let currentCoveredUntil = 0;
         slots.forEach(slot => {
-            const aptsHere = filteredApts.filter(a => {
+            const aptsHere = allGridItems.filter(a => {
                 const [h, m] = a.time.split(':').map(Number);
                 return (h * 60 + m) === slot.minutes;
             });
@@ -1049,8 +1084,18 @@ Object.assign(App, {
                                     const spans = Math.ceil(dur / 5);
                                     const width = 100 / slot.apts.length;
                                     const left = index * width;
-                                    const clientInitial = (apt.clientName[0] || 'C').toUpperCase();
+                                    const clientInitial = (apt.clientName && apt.clientName.length > 0 ? apt.clientName[0] : 'C').toUpperCase();
                                     
+                                    if (apt.isLunch) {
+                                        return `
+                                            <div class="absolute top-[2px] bg-zinc-800/80 border border-dashed border-zinc-600 rounded-lg p-2 shadow-inner z-0 overflow-hidden flex flex-col items-center justify-center gap-1 opacity-70 cursor-default"
+                                                 style="height: calc(${spans * 20}px - 4px); left: calc(${left}% + 4px); width: calc(${width}% - 8px);">
+                                                <i data-lucide="coffee" class="w-4 h-4 text-muted-theme"></i>
+                                                <p class="text-[9px] font-black text-muted-theme uppercase">${apt.clientName}</p>
+                                                <p class="text-[8px] font-bold text-zinc-500">${apt.barberName}</p>
+                                            </div>
+                                        `;
+                                    }
                                     return `
                                         <div onclick="App.openAppointmentModal('${apt.id}')" 
                                              class="absolute top-[2px] bg-zinc-900 border ${apt.status === 'completed' ? 'border-emerald-500/50 border-l-emerald-500' : 'border-amber-500/50 border-l-amber-500'} border-l-[3px] rounded-lg p-2 shadow-lg cursor-pointer hover:border-amber-500 transition-colors z-10 overflow-hidden flex flex-col gap-1 hover:-translate-y-0.5"
@@ -3539,6 +3584,19 @@ Object.assign(App, {
                         </div>
                     </label>
                 </div>
+                <div class="mt-2">
+                    <label class="cursor-pointer w-full">
+                        <input type="radio" name="plan-discount-type" value="fixed" class="sr-only"
+                            ${defaultDiscountType === 'fixed' ? 'checked' : ''}
+                            onchange="App.togglePlanDiscountType('fixed')" />
+                        <div class="plan-dtype-btn p-3 rounded-xl border-2 text-center transition-all
+                            ${defaultDiscountType === 'fixed' ? 'border-amber-500 bg-amber-500/10' : 'border-theme input-bg'}">
+                            <i data-lucide="tag" class="w-5 h-5 mx-auto mb-1 ${defaultDiscountType === 'fixed' ? 'text-amber-500' : 'text-muted-theme'}"></i>
+                            <p class="text-sm font-bold ${defaultDiscountType === 'fixed' ? 'text-amber-500' : 'text-muted-theme'}">Valor Fixo</p>
+                            <p class="text-[10px] text-muted-theme">Preço final por serviço</p>
+                        </div>
+                    </label>
+                </div>
 
                 <!-- Desconto Global -->
                 <div id="plan-global-section" class="${defaultDiscountType !== 'global' ? 'hidden' : ''} space-y-1.5">
@@ -3570,6 +3628,28 @@ Object.assign(App, {
                             </div>
                         </div>`;
         }).join('')}
+                </div>
+
+                <!-- Valor Fixo por Serviço -->
+                <div id="plan-fixed-section" class="${defaultDiscountType !== 'fixed' ? 'hidden' : ''} space-y-2">
+                    <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Valor Final por Serviço (R$)</label>
+                    <p class="text-[11px] text-amber-500/70">Digite o preço que o cliente vai pagar. O desconto é calculado automaticamente.</p>
+                    ${SERVICES.map(svc => {
+                        const existingFixed = (plan?.serviceDiscounts || []).find(d => String(d.service_id) === String(svc.id) && d.fixed_price != null);
+                        return `
+                        <div class="flex items-center gap-3 card-bg border border-theme rounded-xl p-3">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-bold text-theme truncate">${App.escapeHTML(svc.name)}</p>
+                                <p class="text-[11px] text-muted-theme">Preço normal: ${svc.price}</p>
+                            </div>
+                            <div class="relative w-28">
+                                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-amber-500 text-xs font-black">R$</span>
+                                <input type="number" id="plan-svc-fixed-${svc.id}" value="${existingFixed?.fixed_price || ''}"
+                                    min="0" step="0.01" placeholder="0,00"
+                                    class="w-full input-bg border border-theme rounded-lg p-2 pl-7 text-theme text-sm text-right focus:outline-none focus:border-amber-500 transition-colors" />
+                            </div>
+                        </div>`;
+                    }).join('')}
                 </div>
             </div>
 

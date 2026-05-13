@@ -351,8 +351,23 @@ Object.assign(App, {
 
         // ── Registrar uso do plano (se aplicável) ──
         if (planDiscount && !this.state.editingAppointmentId) {
-            const newAptId = result.data?.[0]?.id || null;
-            this.recordPlanUsage(planDiscount.clientPlan.id, newAptId, selectedDate).catch(() => {});
+            // Busca o ID do agendamento recém-criado (insert precisa de .select() para retornar o ID)
+            const newAptId = result.data?.[0]?.id ?? null;
+            if (!newAptId) {
+                // Fallback: buscar o último agendamento deste cliente nesta data
+                const { data: fallback } = await supabaseClient
+                    .from('appointments')
+                    .select('id')
+                    .eq('client_id', clientId)
+                    .eq('date', selectedDate)
+                    .eq('time', selectedTime)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                this.recordPlanUsage(planDiscount.clientPlan.id, fallback?.id || null, selectedDate).catch(() => {});
+            } else {
+                this.recordPlanUsage(planDiscount.clientPlan.id, newAptId, selectedDate).catch(() => {});
+            }
         }
 
         // ── Sucesso ──
