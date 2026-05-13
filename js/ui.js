@@ -404,6 +404,7 @@ Object.assign(App, {
         const btnRelatorios = document.getElementById('nav-relatorios');
         const btnClientes = document.getElementById('nav-clientes');
         const btnBarbearia = document.getElementById('nav-barbearia');
+        const btnPlanos = document.getElementById('nav-planos');
 
         const role = this.state.role;
         const isStaff = ['admin', 'manager', 'barber'].includes(role);
@@ -416,6 +417,12 @@ Object.assign(App, {
         if (btnRelatorios) {
             btnRelatorios.classList.toggle('hidden', !isStaff);
             btnRelatorios.style.display = isStaff ? '' : 'none';
+        }
+
+        // Planos visível para todos os autenticados
+        if (btnPlanos) {
+            btnPlanos.classList.remove('hidden');
+            btnPlanos.style.display = '';
         }
 
         // Remover lógica de Clientes (unificado em Barbearia)
@@ -658,6 +665,8 @@ Object.assign(App, {
                 html = this.renderBarbearia();
             } else if (this.state.activeTab === 'configuracoes') {
                 html = this.renderConfiguracoes();
+            } else if (this.state.activeTab === 'planos') {
+                html = this.renderPlanos();
             }
 
             // Se estiver em estado de carregamento inicial intenso (opcional)

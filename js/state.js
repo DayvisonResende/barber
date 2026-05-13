@@ -75,6 +75,16 @@ const App = {
         isDateRangeModalOpen: false,
         agendaSelectedDate: new Date().toISOString().split('T')[0],
         openAppointmentModalId: null,
-        agendaViewMode: 'table' // 'list' ou 'table'
+        agendaViewMode: 'table', // 'list' ou 'table'
+
+        // --- Planos ---
+        plans: [],            // barbeiro: planos que ele criou (com serviceDiscounts embutidos)
+        clientPlans: [],      // barbeiro: todas as atribuições; cliente: o seu próprio
+        planUsage: [],        // cliente: registros de uso da semana atual
+        isCreatingPlan: false,
+        editingPlanId: null,
+        plansAdminTab: 'list', // 'list' | 'clientes'
+        assigningPlanId: null, // id do plano que está sendo atribuído
+        assignClientData: null // objeto do cliente selecionado para atribuição
     }
 };

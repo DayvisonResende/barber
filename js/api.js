@@ -19,8 +19,12 @@ Object.assign(App, {
             await Promise.all([
                 this.loadAppointments(),
                 this.loadTransactions(),
-                this.loadProfiles()
+                this.loadProfiles(),
+                this.loadPlans(),
+                this.loadClientPlans()
             ]);
+            // Uso semanal depende de clientPlans já carregado
+            await this.loadPlanUsage();
             
             this.setupRealtime();
         }
@@ -670,6 +674,8 @@ Object.assign(App, {
             tasks.push(this.loadTransactions());
             tasks.push(this.loadProfiles());
             tasks.push(this.loadPayouts());
+            tasks.push(this.loadPlans());
+            tasks.push(this.loadClientPlans());
         }
         
         await Promise.all(tasks);
@@ -735,13 +741,17 @@ Object.assign(App, {
             const { data: { user } } = await supabaseClient.auth.getUser();
             if (!user) return;
 
+            const phoneClean = phone.replace(/\D/g, '').replace(/^55/, '');
+            const derivedEmail = `55${phoneClean}@finotrata.com`;
+
             const { error: profileError } = await supabaseClient
                 .from('profiles')
                 .update({
                     name: name,
                     phone: phone,
                     cpf: cpf,
-                    birth_date: this.inputToDbDate(birthDate)
+                    birth_date: this.inputToDbDate(birthDate),
+                    email: derivedEmail
                 })
                 .eq('id', user.id);
 
@@ -751,9 +761,11 @@ Object.assign(App, {
             }
 
             if (phoneChanged) {
-                const newPhoneClean = phone.replace(/\D/g, '');
-                const newEmail = `${newPhoneClean}@finotrata.com`;
-                await supabaseClient.auth.updateUser({ email: newEmail });
+                const { error: emailError } = await supabaseClient.rpc('change_user_email', {
+                    target_user_id: user.id,
+                    new_email: derivedEmail
+                });
+                if (emailError) console.error('Erro ao atualizar email auth:', emailError);
             }
 
             // Sincronizar nome/avatar com a tabela de Barbers se necessário
@@ -1300,25 +1312,24 @@ Object.assign(App, {
         const workingDays = [];
 
         daysLabels.forEach((_, idx) => {
-            const startEl = document.getElementById(`day-start-${barberId}-${idx}`);
-            const endEl   = document.getElementById(`day-end-${barberId}-${idx}`);
-            // O checkbox "Fechado" determina se o dia está fechado
-            const rowEl   = document.getElementById(`day-row-${barberId}-${idx}`);
-            const checkEl = rowEl?.querySelector('input[type="checkbox"]');
-            const isClosed = checkEl ? checkEl.checked : false;
+            const startEl      = document.getElementById(`day-start-${barberId}-${idx}`);
+            const endEl        = document.getElementById(`day-end-${barberId}-${idx}`);
+            const lunchStartEl = document.getElementById(`day-lunch-start-${barberId}-${idx}`);
+            const lunchEndEl   = document.getElementById(`day-lunch-end-${barberId}-${idx}`);
+            const rowEl        = document.getElementById(`day-row-${barberId}-${idx}`);
+            const checkEl      = rowEl?.querySelector('input[type="checkbox"]');
+            const isClosed     = checkEl ? checkEl.checked : false;
 
             daySchedules[idx] = {
-                closed: isClosed,
-                start: startEl?.value || '09:00',
-                end:   endEl?.value   || '18:00'
+                closed:      isClosed,
+                start:       startEl?.value      || '09:00',
+                end:         endEl?.value        || '18:00',
+                lunch_start: lunchStartEl?.value || null,
+                lunch_end:   lunchEndEl?.value   || null,
             };
 
             if (!isClosed) workingDays.push(idx);
         });
-
-        // Almoço global
-        const lunchStart = document.getElementById(`admin-lunch-start-${barberId}`)?.value || '12:00';
-        const lunchEnd   = document.getElementById(`admin-lunch-end-${barberId}`)?.value   || '13:00';
 
         // Deriva work_start/work_end do primeiro/último dia aberto para retrocompatibilidade com o motor
         const openDays = Object.entries(daySchedules).filter(([, v]) => !v.closed);
@@ -1332,8 +1343,6 @@ Object.assign(App, {
             working_days: workingDays,
             work_start: workStart,
             work_end: workEnd,
-            lunch_start: lunchStart,
-            lunch_end: lunchEnd
         });
     },
 
@@ -2218,12 +2227,13 @@ Object.assign(App, {
         // Ordenar horários
         activeSlots.sort();
 
-        // 3. Filtrar Almoço
+        // 3. Filtrar Almoço (por dia com fallback global)
         const config = this.state.barberConfigs.find(c => String(c.barber_id).toLowerCase() === bIdStr);
-        if (config && config.lunch_start && config.lunch_end) {
-            activeSlots = activeSlots.filter(time => {
-                return time < config.lunch_start || time >= config.lunch_end;
-            });
+        const dayCfg = config?.day_schedules?.[dayOfWeek] || {};
+        const lunchStart = dayCfg.lunch_start || config?.lunch_start;
+        const lunchEnd   = dayCfg.lunch_end   || config?.lunch_end;
+        if (lunchStart && lunchEnd) {
+            activeSlots = activeSlots.filter(time => time < lunchStart || time >= lunchEnd);
         }
 
         // 4. Filtrar Agendamentos Ocupados
@@ -2377,14 +2387,18 @@ Object.assign(App, {
             intervals.push({ inicio: start, fim: start + duration });
         });
 
-        // 2. Intervalo de almoço (barber_config)
+        // 2. Intervalo de almoço por dia com fallback global
+        const dayOfWeekBusy = new Date(dateStr + 'T00:00:00').getDay();
         const config = (this.state.barberConfigs || []).find(c =>
             String(c.barber_id).toLowerCase() === bIdStr
         );
-        if (config?.lunch_start && config?.lunch_end) {
+        const dayCfgBusy  = config?.day_schedules?.[dayOfWeekBusy] || {};
+        const lunchStartB = dayCfgBusy.lunch_start || config?.lunch_start;
+        const lunchEndB   = dayCfgBusy.lunch_end   || config?.lunch_end;
+        if (lunchStartB && lunchEndB) {
             intervals.push({
-                inicio: this.timeToMinutes(config.lunch_start),
-                fim: this.timeToMinutes(config.lunch_end)
+                inicio: this.timeToMinutes(lunchStartB),
+                fim:    this.timeToMinutes(lunchEndB)
             });
         }
 

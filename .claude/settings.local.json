@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(\\(Get-Content \"c:\\\\Users\\\\Dayvison Resende\\\\Documents\\\\Workspace\\\\barber\\\\js\\\\views.js\" | Measure-Object -Line\\).Lines)"
+    ]
+  }
+}

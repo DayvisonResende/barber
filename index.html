@@ -232,6 +232,22 @@
                 </div>
                 <span class="text-[10px] md:text-sm font-medium md:font-bold">Barbearia</span>
             </button>
+            <button id="nav-planos" onclick="App.setTab('planos')"
+                class="nav-btn flex flex-col md:flex-row items-center md:justify-start gap-1 md:gap-3 w-16 md:w-full md:px-4 md:py-3 md:rounded-xl transition-all duration-300 text-zinc-500 hover:bg-zinc-800/50 group"
+                data-tab="planos">
+                <div
+                    class="icon-container p-1.5 md:p-2 rounded-full md:rounded-lg transition-all duration-300 bg-transparent group-hover:bg-zinc-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="w-6 h-6 md:w-5 md:h-5">
+                        <rect width="20" height="14" x="2" y="5" rx="2"/>
+                        <line x1="2" x2="22" y1="10" y2="10"/>
+                        <path d="M6 15h.01"/>
+                        <path d="M10 15h4"/>
+                    </svg>
+                </div>
+                <span class="text-[10px] md:text-sm font-medium md:font-bold">Planos</span>
+            </button>
             <button id="nav-configuracoes" onclick="App.setTab('configuracoes')"
                 class="nav-btn flex flex-col md:flex-row items-center md:justify-start gap-1 md:gap-3 w-16 md:w-full md:px-4 md:py-3 md:rounded-xl transition-all duration-300 text-zinc-500 md:mt-auto hover:bg-zinc-800/50 group"
                 data-tab="configuracoes">
@@ -306,6 +322,7 @@
     <script src="js/effects.js" defer></script>
     <script src="js/ui.js" defer></script>
     <script src="js/views.js" defer></script>
+    <script src="js/plans.js" defer></script>
 
     <!-- Inicialização (Motor Principal) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

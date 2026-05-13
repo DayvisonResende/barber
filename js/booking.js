@@ -237,9 +237,15 @@ Object.assign(App, {
         // ── VALIDAÇÃO ANTI-RACE CONDITION: Re-busca dados frescos do servidor ──
         await this.loadInitialData();
 
-        const totalValue = services.reduce((sum, s) => sum + s.priceValue, 0);
+        const rawTotal = services.reduce((sum, s) => sum + s.priceValue, 0);
         const totalDuration = services.reduce((sum, s) => sum + s.durationMinutes, 0);
         const serviceNames = services.map(s => s.name).join(' + ');
+
+        // Aplicar desconto de plano (cliente com plano ativo, ou barbeiro agendando para cliente com plano)
+        const planDiscount = this.getBookingPlanDiscount
+            ? this.getBookingPlanDiscount(services)
+            : null;
+        const totalValue = planDiscount ? planDiscount.discountedTotal : rawTotal;
 
         const barberId = String(selectedBarber.user_id).toLowerCase().trim();
         const newStart = this.timeToMinutes(selectedTime);
@@ -341,6 +347,12 @@ Object.assign(App, {
         if (result.error) {
             this.showNotification('Erro ao Agendar', result.error.message);
             return;
+        }
+
+        // ── Registrar uso do plano (se aplicável) ──
+        if (planDiscount && !this.state.editingAppointmentId) {
+            const newAptId = result.data?.[0]?.id || null;
+            this.recordPlanUsage(planDiscount.clientPlan.id, newAptId, selectedDate).catch(() => {});
         }
 
         // ── Sucesso ──
@@ -472,10 +484,11 @@ Object.assign(App, {
         }
 
         const q = term.toLowerCase().trim();
+        const digitsOnly = q.replace(/\D/g, '');
         const results = (CLIENTES || []).filter(c => {
             if (c.role !== 'client') return false;
             const nameMatch = (c.name || '').toLowerCase().includes(q);
-            const phoneMatch = (c.phone || '').replace(/\D/g, '').includes(q.replace(/\D/g, ''));
+            const phoneMatch = digitsOnly.length > 0 && (c.phone || '').replace(/\D/g, '').includes(digitsOnly);
             return nameMatch || phoneMatch;
         }).slice(0, 8);
 

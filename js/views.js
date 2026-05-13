@@ -546,6 +546,9 @@ Object.assign(App, {
             const dateFormatted = dateObj.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
             const hasVariable = services.some(s => s.price_variable);
 
+            // Desconto de plano (apenas para cliente)
+            const planDiscount = this.getBookingPlanDiscount ? this.getBookingPlanDiscount(services) : null;
+
             return `
             <div class="space-y-5 fade-in slide-in-up">
                 <div class="flex items-center justify-between">
@@ -599,13 +602,25 @@ Object.assign(App, {
                         `).join('')}
                     </div>
 
+                    ${planDiscount ? `
+                    <div class="flex items-center justify-between p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="tag" class="w-4 h-4 text-emerald-400"></i>
+                            <span class="text-sm font-bold text-emerald-400">Plano ${App.escapeHTML(planDiscount.clientPlan.plan?.name || '')}</span>
+                        </div>
+                        <span class="text-sm font-black text-emerald-400">- R$ ${planDiscount.discountAmount.toFixed(2).replace('.', ',')}</span>
+                    </div>` : ''}
+
                     <div class="flex items-center justify-between pt-3 border-t border-theme/50">
                         <div class="flex items-center gap-1.5 text-xs text-muted-theme">
                             <i data-lucide="clock" class="w-3.5 h-3.5"></i> ${this.formatDuration ? this.formatDuration(totalDuration) : totalDuration + ' min'}
                         </div>
                         <div class="text-right">
-                            ${hasVariable ? '<p class="text-[9px] text-amber-500 font-black uppercase tracking-widest italic leading-none">A partir de</p>' : ''}
-                            <p class="text-2xl font-black text-amber-500">R$ ${totalValue.toFixed(2).replace('.', ',')}</p>
+                            ${planDiscount ? `<p class="text-sm text-muted-theme line-through leading-none mb-0.5">R$ ${totalValue.toFixed(2).replace('.', ',')}</p>` :
+                (hasVariable ? '<p class="text-[9px] text-amber-500 font-black uppercase tracking-widest italic leading-none">A partir de</p>' : '')}
+                            <p class="text-2xl font-black ${planDiscount ? 'text-emerald-400' : 'text-amber-500'}">
+                                R$ ${planDiscount ? planDiscount.discountedTotal.toFixed(2).replace('.', ',') : totalValue.toFixed(2).replace('.', ',')}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -1017,9 +1032,9 @@ Object.assign(App, {
                     ${slots.map(slot => {
                         const isHour = slot.time.endsWith('00');
                         return `
-                        <div class="flex h-[40px] border-b ${isHour ? 'border-zinc-700' : 'border-zinc-800'} relative group">
+                        <div class="flex h-[20px] border-b ${isHour ? 'border-zinc-700' : 'border-zinc-800'} relative group">
                             <div class="w-16 shrink-0 border-r border-zinc-800 flex items-center justify-center text-[10px] font-bold ${isHour ? 'text-theme bg-zinc-900/80' : 'text-muted-theme/50 bg-zinc-900/30'}">
-                                ${isHour || slot.apts.length > 0 ? slot.time : ''}
+                                ${slot.time}
                             </div>
                             
                             <div class="flex-1 relative">
@@ -1039,7 +1054,7 @@ Object.assign(App, {
                                     return `
                                         <div onclick="App.openAppointmentModal('${apt.id}')" 
                                              class="absolute top-[2px] bg-zinc-900 border ${apt.status === 'completed' ? 'border-emerald-500/50 border-l-emerald-500' : 'border-amber-500/50 border-l-amber-500'} border-l-[3px] rounded-lg p-2 shadow-lg cursor-pointer hover:border-amber-500 transition-colors z-10 overflow-hidden flex flex-col gap-1 hover:-translate-y-0.5"
-                                             style="height: calc(${spans * 40}px - 4px); left: calc(${left}% + 4px); width: calc(${width}% - 8px);">
+                                             style="height: calc(${spans * 20}px - 4px); left: calc(${left}% + 4px); width: calc(${width}% - 8px);">
                                             
                                             <div class="flex items-center gap-2">
                                                 <div class="w-6 h-6 rounded-full overflow-hidden shrink-0 bg-zinc-800 border border-theme flex items-center justify-center">
@@ -1986,7 +2001,7 @@ Object.assign(App, {
                             <i data-lucide="scissors" class="w-10 h-10 text-amber-500"></i>
                         `}
                     </div>
-                    <h2 class="text-3xl font-black text-theme relative z-10 tracking-tight italic uppercase">${App.escapeHTML(s.name)}</h2>
+                    <h2 class="text-3xl text-theme relative z-10 font-pristina">${App.escapeHTML(s.name)}</h2>
                     <p class="text-muted-theme text-sm mt-2 relative z-10 font-medium">${s.slogan || 'A melhor experiência em estilo e cuidado.'}</p>
                 </div>
 
@@ -2054,26 +2069,33 @@ Object.assign(App, {
                         <div class="w-8 h-px bg-theme/20"></div> Nossa Localização
                     </h3>
                     <div class="card-bg border border-theme rounded-3xl p-6 shadow-xl flex flex-col gap-6 group hover:border-amber-500/30 transition-all duration-300">
-                        <div class="flex items-center gap-5">
-                            <div class="card-bg border border-amber-500/20 p-4 rounded-2xl text-amber-500 self-start shadow-inner group-hover:bg-amber-500 group-hover:text-zinc-950 transition-all duration-500">
+                        <div class="flex items-start gap-4">
+                            <div class="card-bg border border-amber-500/20 p-4 rounded-2xl text-amber-500 flex-shrink-0 shadow-inner group-hover:bg-amber-500 group-hover:text-zinc-950 transition-all duration-500">
                                 <i data-lucide="map-pin" class="w-7 h-7"></i>
                             </div>
-                            <div class="flex-1">
-                                <p class="font-black text-theme text-lg italic tracking-tight uppercase">${s.address_street}</p>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-black text-theme text-base italic tracking-tight uppercase leading-snug">${s.address_street}</p>
                                 <p class="text-sm text-muted-theme font-medium mt-1">${s.address_city}</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="App.copyAddress()" class="p-3 input-bg text-amber-500 rounded-xl hover:bg-zinc-700 transition-all active:scale-95 border border-amber-500/10 shadow-sm" title="Copiar Endereço">
-                                    <i data-lucide="copy" class="w-5 h-5"></i>
-                                </button>
-                                <button onclick="App.shareLocation()" class="p-3 input-bg text-amber-500 rounded-xl hover:bg-zinc-700 transition-all active:scale-95 border border-amber-500/10 shadow-sm" title="Compartilhar">
-                                    <i data-lucide="share-2" class="w-5 h-5"></i>
-                                </button>
+                                <div class="flex gap-2 mt-3">
+                                    <button onclick="App.copyAddress()" class="p-2.5 input-bg text-amber-500 rounded-xl hover:bg-zinc-700 transition-all active:scale-95 border border-amber-500/10 shadow-sm" title="Copiar Endereço">
+                                        <i data-lucide="copy" class="w-4 h-4"></i>
+                                    </button>
+                                    <button onclick="App.shareLocation()" class="p-2.5 input-bg text-amber-500 rounded-xl hover:bg-zinc-700 transition-all active:scale-95 border border-amber-500/10 shadow-sm" title="Compartilhar">
+                                        <i data-lucide="share-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <a href="https://maps.google.com/?q=${encodeURIComponent(s.address_street + ', ' + s.address_city)}" target="_blank" class="w-full py-4 rounded-2xl font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.98] card-bg text-amber-500 border border-amber-500/20 hover:bg-amber-500 hover:text-zinc-950 hover:border-amber-500 shadow-lg text-xs uppercase tracking-widest">
-                            <i data-lucide="navigation" class="w-5 h-5"></i> Como chegar pelo Mapa
-                        </a>
+                        <div class="flex flex-col gap-3">
+                            <a href="https://maps.google.com/?q=${encodeURIComponent(s.address_street + ', ' + s.address_city)}" target="_blank" class="w-full py-4 rounded-2xl font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.98] card-bg text-amber-500 border border-amber-500/20 hover:bg-amber-500 hover:text-zinc-950 hover:border-amber-500 shadow-lg text-xs uppercase tracking-widest">
+                                <i data-lucide="navigation" class="w-5 h-5"></i> Como chegar pelo Mapa
+                            </a>
+                            <a href="https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(s.address_street + ', ' + s.address_city)}&dropoff[nickname]=Finno%20Trato%20Barbearia" target="_blank" class="w-full py-4 rounded-2xl font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.98] bg-zinc-950 text-white border border-zinc-700 hover:bg-white hover:text-zinc-950 hover:border-white shadow-lg text-xs uppercase tracking-widest">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 4.5a3.75 3.75 0 1 1 0 7.5 3.75 3.75 0 0 1 0-7.5zm0 14.25c-3.315 0-6.255-1.695-7.995-4.275.045-2.655 5.325-4.125 7.995-4.125 2.655 0 7.95 1.47 7.995 4.125C18.255 17.055 15.315 18.75 12 18.75z"/></svg>
+                                Chamar Uber até aqui
+                            </a>
+
+                        </div>
                     </div>
         </div>
             </div>
@@ -2331,21 +2353,8 @@ Object.assign(App, {
                                             <i data-lucide="calendar-days" class="w-4 h-4 text-amber-500"></i>
                                             Horário por Dia da Semana
                                         </h3>
-                                        <span class="text-[9px] text-amber-500/60 font-black uppercase tracking-widest">Almoço global</span>
                                     </div>
-                                    <p class="text-[10px] text-muted-theme italic">Configure o horário de início, fim e fechado individualmente para cada dia. O intervalo de almoço é único para todos os dias.</p>
-
-                                    <!-- Intervalo de Almoço Global -->
-                                    <div class="grid grid-cols-2 gap-3 p-3 bg-amber-500/5 rounded-xl border border-amber-500/20">
-                                        <div class="space-y-1">
-                                            <label class="text-[10px] text-amber-500/70 uppercase font-black tracking-widest flex items-center gap-1"><i data-lucide="coffee" class="w-3 h-3"></i> Almoço Início</label>
-                                            <input type="time" id="admin-lunch-start-${selectedBarberId}" value="${barberConfig.lunch_start || '12:00'}" class="w-full input-bg border border-theme rounded-xl p-2.5 text-theme outline-none focus:border-amber-500 text-sm font-bold" />
-                                        </div>
-                                        <div class="space-y-1">
-                                            <label class="text-[10px] text-amber-500/70 uppercase font-black tracking-widest">Almoço Fim</label>
-                                            <input type="time" id="admin-lunch-end-${selectedBarberId}" value="${barberConfig.lunch_end || '13:00'}" class="w-full input-bg border border-theme rounded-xl p-2.5 text-theme outline-none focus:border-amber-500 text-sm font-bold" />
-                                        </div>
-                                    </div>
+                                    <p class="text-[10px] text-muted-theme italic">Configure início, fim e intervalo de almoço individualmente para cada dia.</p>
 
                                     <!-- Linha por dia da semana -->
                                     <div class="space-y-2">
@@ -2355,22 +2364,38 @@ Object.assign(App, {
                                             const isClosed = dayCfg.closed === true;
                                             const dayStart = dayCfg.start || barberConfig.work_start || '09:00';
                                             const dayEnd = dayCfg.end || barberConfig.work_end || '18:00';
+                                            const dayLunchStart = dayCfg.lunch_start || barberConfig.lunch_start || '12:00';
+                                            const dayLunchEnd = dayCfg.lunch_end || barberConfig.lunch_end || '13:00';
                                             return `
-                                            <div class="flex items-center gap-2 p-3 rounded-xl border ${isClosed ? 'border-theme/30 opacity-50' : 'border-theme'} bg-zinc-900/40 transition-all" id="day-row-${selectedBarberId}-${idx}">
-                                                <div class="w-9 text-center">
-                                                    <span class="text-[10px] font-black uppercase ${isClosed ? 'text-muted-theme' : 'text-amber-500'}">${label}</span>
-                                                </div>
-                                                <div class="flex-1 grid grid-cols-2 gap-2 ${isClosed ? 'pointer-events-none opacity-40' : ''}">
-                                                    <input type="time" id="day-start-${selectedBarberId}-${idx}" value="${dayStart}" class="w-full input-bg border border-theme rounded-lg p-2 text-theme outline-none focus:border-amber-500 text-xs font-bold" />
-                                                    <input type="time" id="day-end-${selectedBarberId}-${idx}" value="${dayEnd}" class="w-full input-bg border border-theme rounded-lg p-2 text-theme outline-none focus:border-amber-500 text-xs font-bold" />
-                                                </div>
-                                                <label class="flex items-center gap-1.5 cursor-pointer flex-shrink-0">
-                                                    <input type="checkbox" ${isClosed ? 'checked' : ''} onchange="App.toggleDayClosed('${selectedBarberId}', ${idx}, this.checked)" class="sr-only peer" />
-                                                    <div class="relative w-9 h-5 bg-zinc-700 rounded-full transition-all peer-checked:bg-red-500/70">
-                                                        <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-4 ${isClosed ? 'translate-x-4' : ''}"></div>
+                                            <div class="rounded-xl border ${isClosed ? 'border-theme/30 opacity-50' : 'border-theme'} bg-zinc-900/40 transition-all overflow-hidden" id="day-row-${selectedBarberId}-${idx}">
+                                                <div class="flex items-center gap-2 p-3">
+                                                    <div class="w-9 text-center flex-shrink-0">
+                                                        <span class="text-[10px] font-black uppercase ${isClosed ? 'text-muted-theme' : 'text-amber-500'}">${label}</span>
                                                     </div>
-                                                    <span class="text-[9px] font-black uppercase ${isClosed ? 'text-red-400' : 'text-muted-theme'}">Fechado</span>
-                                                </label>
+                                                    <div class="flex-1 grid grid-cols-2 gap-2 ${isClosed ? 'pointer-events-none opacity-40' : ''}">
+                                                        <input type="time" id="day-start-${selectedBarberId}-${idx}" value="${dayStart}" class="w-full input-bg border border-theme rounded-lg p-2 text-theme outline-none focus:border-amber-500 text-xs font-bold" />
+                                                        <input type="time" id="day-end-${selectedBarberId}-${idx}" value="${dayEnd}" class="w-full input-bg border border-theme rounded-lg p-2 text-theme outline-none focus:border-amber-500 text-xs font-bold" />
+                                                    </div>
+                                                    <label class="flex items-center gap-1.5 cursor-pointer flex-shrink-0">
+                                                        <input type="checkbox" ${isClosed ? 'checked' : ''} onchange="App.toggleDayClosed('${selectedBarberId}', ${idx}, this.checked)" class="sr-only peer" />
+                                                        <div class="relative w-9 h-5 bg-zinc-700 rounded-full transition-all peer-checked:bg-red-500/70">
+                                                            <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-4 ${isClosed ? 'translate-x-4' : ''}"></div>
+                                                        </div>
+                                                        <span class="text-[9px] font-black uppercase ${isClosed ? 'text-red-400' : 'text-muted-theme'}">Fechado</span>
+                                                    </label>
+                                                </div>
+                                                ${!isClosed ? `
+                                                <div class="flex items-center gap-2 px-3 pb-3 pt-0">
+                                                    <div class="w-9 flex-shrink-0 flex justify-center">
+                                                        <i data-lucide="coffee" class="w-3 h-3 text-amber-500/50"></i>
+                                                    </div>
+                                                    <div class="flex-1 grid grid-cols-2 gap-2">
+                                                        <input type="time" id="day-lunch-start-${selectedBarberId}-${idx}" value="${dayLunchStart}" class="w-full input-bg border border-amber-500/20 rounded-lg p-1.5 text-amber-400/70 outline-none focus:border-amber-500 text-xs font-bold" />
+                                                        <input type="time" id="day-lunch-end-${selectedBarberId}-${idx}" value="${dayLunchEnd}" class="w-full input-bg border border-amber-500/20 rounded-lg p-1.5 text-amber-400/70 outline-none focus:border-amber-500 text-xs font-bold" />
+                                                    </div>
+                                                    <div class="flex-shrink-0 w-[5.5rem]"></div>
+                                                </div>
+                                                ` : ''}
                                             </div>`;
                                         }).join('')}
                                     </div>
@@ -3110,6 +3135,587 @@ Object.assign(App, {
                 </style>
             </div>
         `;
+    },
+
+    // ============================================================
+    // VIEWS DE PLANOS
+    // ============================================================
+
+    renderPlanos() {
+        const isStaff = ['admin', 'manager', 'barber'].includes(this.state.role);
+        if (isStaff) {
+            if (this.state.isCreatingPlan) return this.renderPlanForm();
+            if (this.state.assigningPlanId) return this.renderPlanAssignModal();
+            return this.renderPlanosStaff();
+        }
+        return this.renderPlanosClient();
+    },
+
+    renderPlanosClient() {
+        const clientPlan = this.getActiveClientPlan();
+        const DAYS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const todayDow = new Date().getDay();
+
+        if (!clientPlan || !clientPlan.plan) {
+            return `
+            <div class="space-y-6 fade-in-fast">
+                <div>
+                    <h2 class="text-2xl font-bold text-theme">Meu Plano</h2>
+                    <p class="text-xs text-muted-theme mt-0.5">Benefícios exclusivos para você</p>
+                </div>
+                <div class="flex flex-col items-center justify-center py-16 text-center space-y-4">
+                    <div class="w-20 h-20 bg-zinc-800/60 rounded-full flex items-center justify-center">
+                        <i data-lucide="tag" class="w-10 h-10 text-zinc-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-theme">Nenhum plano ativo</h3>
+                        <p class="text-xs text-muted-theme mt-1 max-w-xs">Fale com seu barbeiro para aderir a um plano e começar a economizar em cada visita.</p>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        const plan = clientPlan.plan;
+        const usedThisWeek = this.getPlanWeekUsageCount();
+        const remainingUses = Math.max(0, plan.usage_per_week - usedThisWeek);
+        const daysLeft = this.getDaysUntilPlanExpiry(clientPlan);
+        const isActiveToday = this.isPlanActiveToday(clientPlan);
+        const [sy, sm, sd] = clientPlan.start_date.split('-');
+        const [ey, em, ed] = clientPlan.end_date.split('-');
+
+        // Duração total em dias
+        const startTs = new Date(clientPlan.start_date + 'T00:00:00').getTime();
+        const endTs = new Date(clientPlan.end_date + 'T00:00:00').getTime();
+        const totalDays = Math.ceil((endTs - startTs) / (1000 * 60 * 60 * 24));
+        const elapsedDays = totalDays - daysLeft;
+        const progressPct = Math.min(100, Math.round((elapsedDays / totalDays) * 100));
+
+        const discountLabel = plan.discount_type === 'global'
+            ? `${plan.global_discount_percent}% em todos os serviços`
+            : 'Desconto individual por serviço';
+
+        return `
+        <div class="space-y-5 fade-in-fast">
+            <div>
+                <h2 class="text-2xl font-bold text-theme">Meu Plano</h2>
+                <p class="text-xs text-muted-theme mt-0.5">Seus benefícios ativos</p>
+            </div>
+
+            ${daysLeft !== null && daysLeft <= 7 ? `
+            <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-500 shrink-0 mt-0.5"></i>
+                <p class="text-sm text-amber-400 font-medium">
+                    ${daysLeft <= 0 ? 'Seu plano <b>expira hoje</b>!' : `Seu plano termina em <b>${daysLeft} dia${daysLeft !== 1 ? 's' : ''}</b>.`}
+                    <span class="block text-xs text-muted-theme mt-0.5 font-normal">Renove com seu barbeiro para não perder os benefícios.</span>
+                </p>
+            </div>` : ''}
+
+            <!-- Card principal do plano -->
+            <div class="card-bg border border-amber-500/30 rounded-3xl p-5 space-y-5 shadow-xl shadow-amber-500/5">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-amber-500">Plano Ativo</span>
+                        <h3 class="text-2xl font-black text-theme mt-0.5">${App.escapeHTML(plan.name)}</h3>
+                        ${plan.description ? `<p class="text-xs text-muted-theme mt-1">${App.escapeHTML(plan.description)}</p>` : ''}
+                    </div>
+                    <div class="bg-amber-500/10 border border-amber-500/20 p-3 rounded-2xl">
+                        <i data-lucide="award" class="w-7 h-7 text-amber-500"></i>
+                    </div>
+                </div>
+
+                <!-- Desconto -->
+                <div class="flex items-center gap-3 p-3 input-bg rounded-xl">
+                    <i data-lucide="tag" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                    <div>
+                        <p class="text-[10px] text-muted-theme uppercase font-bold tracking-widest">Desconto</p>
+                        <p class="text-sm font-bold text-emerald-400">${discountLabel}</p>
+                    </div>
+                </div>
+
+                <!-- Uso semanal -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-[10px] text-muted-theme uppercase font-bold tracking-widest flex items-center gap-1.5">
+                            <i data-lucide="repeat" class="w-3 h-3"></i> Usos esta semana
+                        </p>
+                        <p class="text-sm font-black text-theme">${usedThisWeek} / ${plan.usage_per_week}</p>
+                    </div>
+                    <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-500 ${remainingUses > 0 ? 'bg-emerald-500' : 'bg-red-500'}"
+                            style="width: ${Math.min(100, (usedThisWeek / plan.usage_per_week) * 100)}%"></div>
+                    </div>
+                    <p class="text-[11px] mt-1.5 ${remainingUses > 0 ? 'text-emerald-400' : 'text-red-400'} font-semibold">
+                        ${remainingUses > 0 ? `${remainingUses} uso${remainingUses !== 1 ? 's' : ''} disponível${remainingUses !== 1 ? 'is' : ''} esta semana` : 'Limite semanal atingido'}
+                    </p>
+                </div>
+
+                <!-- Dias ativos -->
+                <div>
+                    <p class="text-[10px] text-muted-theme uppercase font-bold tracking-widest mb-2 flex items-center gap-1.5">
+                        <i data-lucide="calendar-days" class="w-3 h-3"></i> Dias com desconto
+                    </p>
+                    <div class="flex gap-1.5">
+                        ${DAYS_PT.map((d, i) => {
+            const isActive = (plan.active_days || []).includes(i);
+            const isToday = i === todayDow;
+            return `<div class="flex-1 py-1.5 rounded-lg text-center text-[11px] font-black transition-all
+                            ${isActive && isToday ? 'bg-amber-500 text-zinc-950 ring-2 ring-amber-500/40' :
+                isActive ? 'bg-amber-500/15 text-amber-400' :
+                    'input-bg text-zinc-600'}">
+                            ${d}
+                        </div>`;
+        }).join('')}
+                    </div>
+                    ${!isActiveToday ? `<p class="text-[11px] text-muted-theme mt-1.5">O desconto não está ativo hoje.</p>` : `<p class="text-[11px] text-emerald-400 mt-1.5">Desconto ativo hoje!</p>`}
+                </div>
+
+                <!-- Validade -->
+                <div>
+                    <p class="text-[10px] text-muted-theme uppercase font-bold tracking-widest mb-2 flex items-center gap-1.5">
+                        <i data-lucide="calendar" class="w-3 h-3"></i> Validade
+                    </p>
+                    <div class="flex items-center justify-between text-sm mb-2">
+                        <span class="text-muted-theme">${sd}/${sm}/${sy}</span>
+                        <span class="font-bold ${daysLeft <= 7 ? 'text-amber-400' : 'text-theme'}">${ed}/${em}/${ey}</span>
+                    </div>
+                    <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-500 ${daysLeft <= 7 ? 'bg-amber-500' : 'bg-emerald-500'}"
+                            style="width: ${progressPct}%"></div>
+                    </div>
+                    <p class="text-[11px] mt-1.5 ${daysLeft <= 7 ? 'text-amber-400' : 'text-muted-theme'}">
+                        ${daysLeft <= 0 ? 'Expirado' : `${daysLeft} dia${daysLeft !== 1 ? 's' : ''} restante${daysLeft !== 1 ? 's' : ''}`}
+                    </p>
+                </div>
+            </div>
+
+            ${plan.discount_type === 'individual' && (plan.serviceDiscounts || []).length > 0 ? `
+            <div class="card-bg border border-theme rounded-2xl p-4 space-y-3">
+                <p class="text-[10px] text-muted-theme uppercase font-bold tracking-widest">Serviços com desconto</p>
+                ${plan.serviceDiscounts.map(sd => {
+            const svc = SERVICES.find(s => String(s.id) === String(sd.service_id));
+            if (!svc) return '';
+            return `<div class="flex items-center justify-between">
+                        <span class="text-sm text-theme">${App.escapeHTML(svc.name)}</span>
+                        <span class="text-sm font-black text-emerald-400">${sd.discount_percent}% off</span>
+                    </div>`;
+        }).join('')}
+            </div>` : ''}
+        </div>`;
+    },
+
+    renderPlanosStaff() {
+        const plans = this.state.plans || [];
+        const clientPlans = this.state.clientPlans || [];
+        const tab = this.state.plansAdminTab;
+        const DAYS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+        return `
+        <div class="space-y-5 fade-in-fast">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-theme">Planos</h2>
+                    <p class="text-xs text-muted-theme mt-0.5">Crie e gerencie planos de fidelidade</p>
+                </div>
+                ${tab === 'list' ? `
+                <button onclick="App.startCreatePlan()"
+                    class="flex items-center gap-2 px-4 py-2.5 bg-amber-500 text-zinc-950 rounded-xl font-black text-sm active:scale-95 transition-all shadow-md shadow-amber-500/20">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Criar
+                </button>` : ''}
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex gap-2 p-1 input-bg rounded-xl">
+                <button onclick="App.setPlansAdminTab('list')"
+                    class="flex-1 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'list' ? 'bg-amber-500 text-zinc-950 shadow-md' : 'text-muted-theme'}">
+                    Meus Planos (${plans.length})
+                </button>
+                <button onclick="App.setPlansAdminTab('clientes')"
+                    class="flex-1 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'clientes' ? 'bg-amber-500 text-zinc-950 shadow-md' : 'text-muted-theme'}">
+                    Clientes (${clientPlans.filter(cp => { const t = new Date().toISOString().split('T')[0]; return cp.status === 'active' && cp.end_date >= t; }).length})
+                </button>
+            </div>
+
+            ${tab === 'list' ? `
+            <!-- Lista de Planos -->
+            ${plans.length === 0 ? `
+                <div class="flex flex-col items-center justify-center py-12 text-center space-y-3">
+                    <div class="w-16 h-16 bg-zinc-800/60 rounded-full flex items-center justify-center">
+                        <i data-lucide="package-open" class="w-8 h-8 text-zinc-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-theme">Nenhum plano criado</h3>
+                        <p class="text-xs text-muted-theme mt-1">Crie seu primeiro plano para fidelizar clientes.</p>
+                    </div>
+                    <button onclick="App.startCreatePlan()"
+                        class="px-6 py-3 bg-amber-500 text-zinc-950 rounded-xl font-black text-sm active:scale-95 transition-all shadow-md shadow-amber-500/20">
+                        Criar Primeiro Plano
+                    </button>
+                </div>
+            ` : plans.map(plan => {
+            const activeCount = clientPlans.filter(cp => cp.plan_id === plan.id && cp.status === 'active').length;
+            const discountLabel = plan.discount_type === 'global'
+                ? `${plan.global_discount_percent}% em todos`
+                : `Individual por serviço`;
+            const durationLabel = `${plan.duration_value} ${plan.duration_type === 'days' ? 'dia' : 'mês'}${plan.duration_value > 1 ? 's' : ''}`;
+            return `
+                <div class="card-bg border border-theme rounded-2xl p-4 space-y-3 shadow-sm hover:border-amber-500/20 transition-colors">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-black text-theme text-lg truncate">${App.escapeHTML(plan.name)}</h3>
+                            ${plan.description ? `<p class="text-xs text-muted-theme truncate">${App.escapeHTML(plan.description)}</p>` : ''}
+                        </div>
+                        <span class="shrink-0 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            ${discountLabel}
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div class="input-bg rounded-xl p-2">
+                            <p class="text-[10px] text-muted-theme uppercase font-bold">Usos/sem</p>
+                            <p class="font-black text-theme">${plan.usage_per_week}×</p>
+                        </div>
+                        <div class="input-bg rounded-xl p-2">
+                            <p class="text-[10px] text-muted-theme uppercase font-bold">Duração</p>
+                            <p class="font-black text-theme text-xs">${durationLabel}</p>
+                        </div>
+                        <div class="input-bg rounded-xl p-2">
+                            <p class="text-[10px] text-muted-theme uppercase font-bold">Clientes</p>
+                            <p class="font-black text-amber-500">${activeCount}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-1">
+                        ${DAYS_PT.map((d, i) => `
+                            <div class="flex-1 py-1 rounded-lg text-center text-[10px] font-black
+                                ${(plan.active_days || []).includes(i) ? 'bg-amber-500/15 text-amber-400' : 'input-bg text-zinc-700'}">
+                                ${d}
+                            </div>`).join('')}
+                    </div>
+
+                    <div class="flex gap-2 pt-1">
+                        <button onclick="App.startAssignPlan('${plan.id}')"
+                            class="flex-1 py-2.5 rounded-xl font-bold text-sm bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-colors active:scale-95 flex items-center justify-center gap-1.5">
+                            <i data-lucide="user-plus" class="w-4 h-4"></i> Atribuir
+                        </button>
+                        <button onclick="App.startEditPlan('${plan.id}')"
+                            class="py-2.5 px-4 rounded-xl font-bold text-sm input-bg text-muted-theme border border-theme hover:text-theme transition-colors active:scale-95">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="App.confirmDeletePlan('${plan.id}')"
+                            class="py-2.5 px-4 rounded-xl font-bold text-sm input-bg text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-colors active:scale-95">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>`;
+        }).join('')}
+            ` : `
+            <!-- Lista de Clientes com Planos -->
+            ${clientPlans.length === 0 ? `
+                <div class="flex flex-col items-center justify-center py-12 text-center space-y-3">
+                    <div class="w-16 h-16 bg-zinc-800/60 rounded-full flex items-center justify-center">
+                        <i data-lucide="users" class="w-8 h-8 text-zinc-600"></i>
+                    </div>
+                    <p class="text-sm text-muted-theme">Nenhum cliente com plano atribuído.</p>
+                </div>
+            ` : clientPlans.map(cp => {
+            const client = CLIENTES.find(c => c.id === cp.client_id);
+            const clientName = client?.name || 'Cliente';
+            const clientAvatar = client?.avatar || null;
+            const planName = cp.plan?.name || 'Plano';
+            const daysLeft = this.getDaysUntilPlanExpiry(cp);
+            const [ey, em, ed] = (cp.end_date || '').split('-');
+            const today = new Date().toISOString().split('T')[0];
+            const isExpiredByDate = cp.status === 'active' && cp.end_date < today;
+            const effectiveStatus = isExpiredByDate ? 'expired' : cp.status;
+            const statusColor = effectiveStatus === 'active' ? 'text-emerald-400' : effectiveStatus === 'expired' ? 'text-red-400' : 'text-zinc-500';
+            const statusLabel = effectiveStatus === 'active' ? 'Ativo' : effectiveStatus === 'expired' ? 'Expirado' : 'Cancelado';
+            return `
+                <div class="card-bg border border-theme rounded-2xl p-4 flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-full flex-shrink-0 overflow-hidden bg-zinc-800 flex items-center justify-center border-2 ${effectiveStatus === 'active' ? 'border-amber-500/30' : 'border-zinc-700'}">
+                        ${clientAvatar
+                ? `<img src="${clientAvatar}" class="w-full h-full object-cover" />`
+                : `<span class="font-black text-amber-500/70 text-base">${(clientName[0] || 'C').toUpperCase()}</span>`
+            }
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(clientName)}</p>
+                        <p class="text-[11px] text-amber-500/80 font-semibold">${App.escapeHTML(planName)}</p>
+                        <p class="text-[10px] text-muted-theme">
+                            até ${ed}/${em}/${ey}
+                            ${effectiveStatus === 'active' && daysLeft !== null && daysLeft <= 7
+                ? `<span class="text-amber-400 font-bold"> · ${daysLeft}d restantes</span>`
+                : ''
+            }
+                        </p>
+                    </div>
+                    <div class="flex flex-col items-end gap-2">
+                        <span class="text-[10px] font-black uppercase ${statusColor}">${statusLabel}</span>
+                        ${effectiveStatus === 'active' ? `
+                        <button onclick="App.confirmRevokePlan('${cp.id}')"
+                            class="text-[11px] font-bold text-red-400 hover:text-red-300 transition-colors px-2 py-1 input-bg rounded-lg border border-red-500/20">
+                            Revogar
+                        </button>` : ''}
+                        ${cp.status === 'cancelled' && cp.end_date >= today ? `
+                        <button onclick="App.reactivateClientPlan('${cp.id}')"
+                            class="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors px-2 py-1 input-bg rounded-lg border border-emerald-500/20">
+                            Reativar
+                        </button>` : ''}
+                        ${effectiveStatus !== 'active' ? `
+                        <button onclick="App.deleteClientPlan('${cp.id}')"
+                            class="text-[11px] font-bold text-zinc-500 hover:text-red-400 transition-colors px-2 py-1 input-bg rounded-lg border border-theme">
+                            Excluir
+                        </button>` : ''}
+                    </div>
+                </div>`;
+        }).join('')}
+            `}
+        </div>`;
+    },
+
+    renderPlanForm() {
+        const DAYS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const isEditing = !!this.state.editingPlanId;
+        const plan = isEditing ? (this.state.plans || []).find(p => p.id === this.state.editingPlanId) : null;
+
+        const defaultDays = plan?.active_days || [0, 1, 2, 3, 4, 5, 6];
+        const defaultDiscountType = plan?.discount_type || 'global';
+        const defaultGlobalPct = plan?.global_discount_percent || '';
+        const defaultUsage = plan?.usage_per_week || 1;
+        const defaultDurationType = plan?.duration_type || 'months';
+        const defaultDurationValue = plan?.duration_value || 1;
+
+        return `
+        <div class="space-y-5 fade-in-fast slide-in-up">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-theme">${isEditing ? 'Editar Plano' : 'Novo Plano'}</h2>
+                    <p class="text-xs text-muted-theme mt-0.5">Configure os benefícios do plano</p>
+                </div>
+                <button onclick="App.cancelPlanForm()" class="p-2 input-bg rounded-full text-muted-theme hover:text-theme transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Nome e Descrição -->
+            <div class="space-y-3">
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Nome do Plano</label>
+                    <input type="text" id="plan-name" value="${App.escapeHTML(plan?.name || '')}"
+                        placeholder="Ex: Bronze, Prata, Ouro..."
+                        class="w-full card-bg border border-theme rounded-xl p-3 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Descrição (opcional)</label>
+                    <input type="text" id="plan-description" value="${App.escapeHTML(plan?.description || '')}"
+                        placeholder="Breve descrição para o cliente..."
+                        class="w-full card-bg border border-theme rounded-xl p-3 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
+                </div>
+            </div>
+
+            <!-- Tipo de Desconto -->
+            <div class="space-y-3">
+                <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Tipo de Desconto</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="plan-discount-type" value="global" class="sr-only"
+                            ${defaultDiscountType === 'global' ? 'checked' : ''}
+                            onchange="App.togglePlanDiscountType('global')" />
+                        <div class="plan-dtype-btn p-3 rounded-xl border-2 text-center transition-all
+                            ${defaultDiscountType === 'global' ? 'border-amber-500 bg-amber-500/10' : 'border-theme input-bg'}">
+                            <i data-lucide="percent" class="w-5 h-5 mx-auto mb-1 ${defaultDiscountType === 'global' ? 'text-amber-500' : 'text-muted-theme'}"></i>
+                            <p class="text-sm font-bold ${defaultDiscountType === 'global' ? 'text-amber-500' : 'text-muted-theme'}">Global</p>
+                            <p class="text-[10px] text-muted-theme">Todos os serviços</p>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="plan-discount-type" value="individual" class="sr-only"
+                            ${defaultDiscountType === 'individual' ? 'checked' : ''}
+                            onchange="App.togglePlanDiscountType('individual')" />
+                        <div class="plan-dtype-btn p-3 rounded-xl border-2 text-center transition-all
+                            ${defaultDiscountType === 'individual' ? 'border-amber-500 bg-amber-500/10' : 'border-theme input-bg'}">
+                            <i data-lucide="list" class="w-5 h-5 mx-auto mb-1 ${defaultDiscountType === 'individual' ? 'text-amber-500' : 'text-muted-theme'}"></i>
+                            <p class="text-sm font-bold ${defaultDiscountType === 'individual' ? 'text-amber-500' : 'text-muted-theme'}">Individual</p>
+                            <p class="text-[10px] text-muted-theme">Por serviço</p>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Desconto Global -->
+                <div id="plan-global-section" class="${defaultDiscountType !== 'global' ? 'hidden' : ''} space-y-1.5">
+                    <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Percentual de Desconto (%)</label>
+                    <div class="relative">
+                        <input type="number" id="plan-global-pct" value="${defaultGlobalPct}" min="1" max="100" step="1"
+                            placeholder="Ex: 20"
+                            class="w-full card-bg border border-theme rounded-xl p-3 pr-12 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-amber-500 font-black">%</span>
+                    </div>
+                </div>
+
+                <!-- Desconto Individual por Serviço -->
+                <div id="plan-individual-section" class="${defaultDiscountType !== 'individual' ? 'hidden' : ''} space-y-2">
+                    <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Desconto por Serviço (%)</label>
+                    ${SERVICES.map(svc => {
+            const existing = (plan?.serviceDiscounts || []).find(d => String(d.service_id) === String(svc.id));
+            return `
+                        <div class="flex items-center gap-3 card-bg border border-theme rounded-xl p-3">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-bold text-theme truncate">${App.escapeHTML(svc.name)}</p>
+                                <p class="text-[11px] text-muted-theme">${svc.price}</p>
+                            </div>
+                            <div class="relative w-24">
+                                <input type="number" id="plan-svc-${svc.id}" value="${existing?.discount_percent || ''}"
+                                    min="0" max="100" step="0.5" placeholder="0"
+                                    class="w-full input-bg border border-theme rounded-lg p-2 pr-6 text-theme text-sm text-right focus:outline-none focus:border-amber-500 transition-colors" />
+                                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-amber-500 text-xs font-black">%</span>
+                            </div>
+                        </div>`;
+        }).join('')}
+                </div>
+            </div>
+
+            <!-- Dias Ativos -->
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Dias com Desconto</label>
+                <div class="flex gap-1.5">
+                    ${DAYS_PT.map((d, i) => `
+                        <label class="flex-1 cursor-pointer">
+                            <input type="checkbox" id="plan-day-${i}" class="sr-only"
+                                ${defaultDays.includes(i) ? 'checked' : ''}
+                                onchange="this.closest('label').querySelector('.day-chip').classList.toggle('bg-amber-500', this.checked); this.closest('label').querySelector('.day-chip').classList.toggle('text-zinc-950', this.checked); this.closest('label').querySelector('.day-chip').classList.toggle('input-bg', !this.checked); this.closest('label').querySelector('.day-chip').classList.toggle('text-muted-theme', !this.checked);" />
+                            <div class="day-chip py-2 rounded-xl text-center text-[11px] font-black transition-all
+                                ${defaultDays.includes(i) ? 'bg-amber-500 text-zinc-950' : 'input-bg text-muted-theme border border-theme'}">
+                                ${d}
+                            </div>
+                        </label>`).join('')}
+                </div>
+            </div>
+
+            <!-- Frequência e Duração -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Usos por Semana</label>
+                    <input type="number" id="plan-usage-week" value="${defaultUsage}" min="1" max="7"
+                        class="w-full card-bg border border-theme rounded-xl p-3 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Duração</label>
+                    <input type="number" id="plan-duration-value" value="${defaultDurationValue}" min="1"
+                        class="w-full card-bg border border-theme rounded-xl p-3 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <label class="flex-1 cursor-pointer">
+                    <input type="radio" name="plan-duration-type" value="days" class="sr-only"
+                        ${defaultDurationType === 'days' ? 'checked' : ''}
+                        onchange="document.getElementById('plan-dur-days').className='py-2.5 rounded-xl text-center text-sm font-bold border-2 transition-all border-amber-500 bg-amber-500/10 text-amber-500';document.getElementById('plan-dur-months').className='py-2.5 rounded-xl text-center text-sm font-bold border-2 transition-all border-theme input-bg text-muted-theme'" />
+                    <div id="plan-dur-days" class="py-2.5 rounded-xl text-center text-sm font-bold border-2 transition-all
+                        ${defaultDurationType === 'days' ? 'border-amber-500 bg-amber-500/10 text-amber-500' : 'border-theme input-bg text-muted-theme'}">
+                        Dias
+                    </div>
+                </label>
+                <label class="flex-1 cursor-pointer">
+                    <input type="radio" name="plan-duration-type" value="months" class="sr-only"
+                        ${defaultDurationType === 'months' ? 'checked' : ''}
+                        onchange="document.getElementById('plan-dur-months').className='py-2.5 rounded-xl text-center text-sm font-bold border-2 transition-all border-amber-500 bg-amber-500/10 text-amber-500';document.getElementById('plan-dur-days').className='py-2.5 rounded-xl text-center text-sm font-bold border-2 transition-all border-theme input-bg text-muted-theme'" />
+                    <div id="plan-dur-months" class="py-2.5 rounded-xl text-center text-sm font-bold border-2 transition-all
+                        ${defaultDurationType === 'months' ? 'border-amber-500 bg-amber-500/10 text-amber-500' : 'border-theme input-bg text-muted-theme'}">
+                        Meses
+                    </div>
+                </label>
+            </div>
+
+            <!-- Botão salvar -->
+            <button onclick="App.savePlanForm()"
+                class="w-full py-4 rounded-2xl font-black text-lg bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                <i data-lucide="check-circle" class="w-5 h-5"></i>
+                ${isEditing ? 'Salvar Alterações' : 'Criar Plano'}
+            </button>
+        </div>`;
+    },
+
+    renderPlanAssignModal() {
+        const planId = this.state.assigningPlanId;
+        const plan = (this.state.plans || []).find(p => p.id === planId);
+        if (!plan) return this.renderPlanosStaff();
+
+        const today = new Date().toISOString().split('T')[0];
+        const defaultEndDate = this.calcPlanEndDate(today, plan.duration_value, plan.duration_type);
+        const [ey, em, ed] = defaultEndDate.split('-');
+        const client = this.state.assignClientData;
+
+        return `
+        <div class="space-y-5 fade-in-fast slide-in-up">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-theme">Atribuir Plano</h2>
+                    <p class="text-xs text-amber-500 font-semibold mt-0.5">${App.escapeHTML(plan.name)}</p>
+                </div>
+                <button onclick="App.cancelAssignPlan()" class="p-2 input-bg rounded-full text-muted-theme hover:text-theme transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Busca de cliente -->
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Cliente</label>
+                ${client ? `
+                <div class="flex items-center gap-3 p-3 card-bg border border-amber-500/30 rounded-xl">
+                    <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-zinc-800 flex items-center justify-center border border-amber-500/30">
+                        ${client.avatar
+                ? `<img src="${client.avatar}" class="w-full h-full object-cover" />`
+                : `<span class="font-black text-amber-500/70">${(client.name?.[0] || 'C').toUpperCase()}</span>`
+            }
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-bold text-theme text-sm">${App.escapeHTML(client.name)}</p>
+                        <p class="text-[11px] text-muted-theme">${App.formatDisplayPhone ? App.formatDisplayPhone(client.phone) : client.phone || ''}</p>
+                    </div>
+                    <button onclick="App.clearAssignClient()" class="p-1.5 input-bg border border-theme rounded-lg">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-muted-theme"></i>
+                    </button>
+                </div>` : `
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-theme pointer-events-none"></i>
+                    <input type="text" id="assign-client-search" placeholder="Buscar cliente por nome ou telefone..."
+                        class="w-full card-bg border border-theme rounded-xl p-3 pl-9 text-theme focus:border-amber-500 outline-none transition-colors text-sm"
+                        oninput="App.searchAssignClients(this.value)" autocomplete="off" />
+                </div>
+                <div id="assign-client-results" class="max-h-48 overflow-y-auto rounded-xl input-bg border border-theme/50">
+                    <p class="text-[11px] text-muted-theme text-center py-3">Digite ao menos 2 caracteres.</p>
+                </div>`}
+            </div>
+
+            <!-- Data de início -->
+            <div class="space-y-1.5">
+                <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Data de Início</label>
+                <input type="date" id="assign-start-date" value="${today}" min="${today}"
+                    onchange="App.updateAssignEndDate()"
+                    class="w-full card-bg border border-theme rounded-xl p-3 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
+            </div>
+
+            <!-- Data de encerramento calculada -->
+            <div class="flex items-center justify-between p-3 input-bg rounded-xl border border-theme">
+                <div class="flex items-center gap-2 text-muted-theme text-sm">
+                    <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                    Expira em
+                </div>
+                <span class="font-black text-theme" id="assign-end-date-display">${ed}/${em}/${ey}</span>
+            </div>
+
+            <div class="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl text-[11px] text-muted-theme space-y-1">
+                <p class="flex items-center gap-1.5 font-bold text-amber-400">
+                    <i data-lucide="info" class="w-3.5 h-3.5"></i> Informações do plano
+                </p>
+                <p>· Duração: ${plan.duration_value} ${plan.duration_type === 'days' ? 'dia' : 'mês'}${plan.duration_value > 1 ? 's' : ''}</p>
+                <p>· Usos por semana: ${plan.usage_per_week}×</p>
+                <p>· Se o cliente já tiver um plano ativo, ele será cancelado.</p>
+            </div>
+
+            <button onclick="App.confirmAssignPlan()"
+                class="w-full py-4 rounded-2xl font-black text-lg bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                <i data-lucide="user-check" class="w-5 h-5"></i> Confirmar Atribuição
+            </button>
+        </div>`;
     },
 
     renderSplitPaymentModal(id) {
