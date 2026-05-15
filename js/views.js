@@ -1020,10 +1020,24 @@ Object.assign(App, {
                                 </button>
                             `}
                             
-                            <!-- Badge de Duração (Estático) -->
-                            <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-zinc-800 text-muted-theme text-[10px] font-bold uppercase tracking-wider border border-zinc-700/50 cursor-default">
-                                <i data-lucide="clock" class="w-3 h-3 text-amber-500"></i> ${apt.total_duration || 30} MIN
-                            </div>
+                            <!-- Badge de Duração (Editável) -->
+                            ${this.state.editingDurationId === apt.id ? `
+                                <div class="flex items-center gap-1 fade-in">
+                                    <div class="relative">
+                                        <input type="number" id="adj-dur-${apt.id}" value="${apt.total_duration || 30}" class="w-16 bg-zinc-800 border border-amber-500 rounded px-1 py-0.5 text-[10px] text-amber-500 font-bold outline-none" step="5" />
+                                    </div>
+                                    <button onclick="App.updateAppointmentDuration('${apt.id}', document.getElementById('adj-dur-${apt.id}').value)" class="p-1 bg-amber-500 text-zinc-950 rounded hover:bg-amber-400">
+                                        <i data-lucide="check" class="w-3 h-3"></i>
+                                    </button>
+                                    <button onclick="App.cancelEditDuration()" class="p-1 bg-zinc-700 text-muted-theme rounded hover:bg-zinc-600">
+                                        <i data-lucide="x" class="w-3 h-3"></i>
+                                    </button>
+                                </div>
+                            ` : `
+                                <button onclick="App.initEditDuration('${apt.id}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-zinc-800 text-muted-theme text-[10px] font-bold uppercase tracking-wider border border-zinc-700/50 hover:border-amber-500/30 transition-all" title="Editar Duração">
+                                    <i data-lucide="clock" class="w-3 h-3 text-amber-500"></i> ${apt.total_duration || 30} MIN
+                                </button>
+                            `}
                         </div>
                     </div>
                     <div class="text-right flex-shrink-0">
