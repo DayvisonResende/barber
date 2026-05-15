@@ -93,6 +93,17 @@ Object.assign(App, {
             return;
         }
 
+        // Garantir que o telefone seja salvo no perfil (caso a trigger do banco falhe ou esteja incompleta)
+        if (data?.user) {
+            try {
+                await supabaseClient.from('profiles').update({ 
+                    phone: cleanPhone 
+                }).eq('id', data.user.id);
+            } catch (err) {
+                console.error("Erro ao atualizar telefone no perfil:", err);
+            }
+        }
+
         this.state.showRegistrationSuccess = true;
         this.render();
     },

@@ -956,8 +956,185 @@ Object.assign(App, {
     },
 
     renderAppointmentCard(apt) {
-                return this.renderAppointmentCard(apt);
+        if (!apt) return '';
+        const clientInitial = (apt.clientName?.[0] || 'C').toUpperCase();
+        const isExpanded = this.state.expandedAppointmentId === apt.id || this.state.openAppointmentModalId === apt.id;
+        
+        return `
+            <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm border-l-4 border-l-amber-500">
+                <div class="flex justify-between items-start gap-3 cursor-pointer" onclick="if(event.target.closest('button') || event.target.closest('input') || event.target.closest('select')) return; App.toggleAppointmentAccordion('${apt.id}')">
+                    <!-- Avatar do Cliente -->
+                    <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-zinc-900 flex items-center justify-center bg-zinc-800 shadow-inner">
+                        ${apt.clientAvatar ? `
+                            <img src="${apt.clientAvatar}" class="w-full h-full object-cover" />
+                        ` : `
+                            <span class="text-lg font-black text-amber-500/50">${clientInitial}</span>
+                        `}
+                    </div>
 
+                    <div class="flex-1 min-w-0">
+                        <h3 class="font-bold text-theme text-lg truncate">${App.escapeHTML(apt.clientName)}</h3>
+                        <div class="flex flex-wrap gap-1.5 mt-1.5">
+                            ${this.state.editingServicesId === apt.id ? `
+                                <div class="w-full bg-zinc-900/40 border border-amber-500/30 rounded-xl p-3 flex flex-col gap-3 fade-in shadow-inner">
+                                    <div class="flex flex-wrap gap-1.5">
+                                        ${SERVICES.filter(s => {
+                                            const specialties = (this.state.barberServices || []).filter(bs => String(bs.barber_id) === String(apt.barber_id)).map(bs => bs.service_id);
+                                            return specialties.length === 0 || specialties.includes(s.id);
+                                        }).map(s => {
+                                            const isSelected = (this.state.tempSelectedServices || []).some(ts => ts.id === s.id);
+                                            return `
+                                                <button onclick="App.toggleEditService(${s.id})" class="px-2 py-1 rounded-md text-[9px] font-bold uppercase transition-all ${isSelected ? 'bg-amber-500 text-zinc-950 shadow-sm' : 'bg-zinc-800 text-muted-theme border border-transparent hover:border-amber-500/30'}">
+                                                    ${s.name}
+                                                </button>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="App.updateAppointmentServices('${apt.id}')" class="flex-1 py-1.5 bg-amber-500 text-zinc-950 rounded-lg text-[10px] font-black uppercase shadow-sm active:scale-95">Salvar</button>
+                                        <button onclick="App.cancelEditServices()" class="flex-1 py-1.5 bg-zinc-700 text-muted-theme rounded-lg text-[10px] font-bold uppercase border border-theme active:scale-95">X</button>
+                                    </div>
+                                </div>
+                            ` : `
+                                <button onclick="App.initEditServices('${apt.id}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 text-[10px] font-bold uppercase tracking-wider border border-amber-500/20 hover:bg-amber-500/20 transition-all" title="Editar Serviço(s)">
+                                    <i data-lucide="scissors" class="w-3 h-3"></i> ${apt.service?.name || 'Serviço'}
+                                </button>
+                            `}
+
+                            ${this.state.editingPriceId === apt.id ? `
+                                <div class="flex items-center gap-1 fade-in">
+                                    <div class="relative">
+                                        <span class="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-emerald-500 font-bold">R$</span>
+                                        <input type="text" id="adj-price-${apt.id}" value="${apt.numericValue?.toFixed(2).replace('.', ',') || '0,00'}" class="w-20 bg-zinc-800 border border-emerald-500 rounded pl-6 pr-1 py-0.5 text-[10px] text-emerald-500 font-bold outline-none" inputmode="decimal" />
+                                    </div>
+                                    <button onclick="App.updateAppointmentPrice('${apt.id}', document.getElementById('adj-price-${apt.id}').value)" class="p-1 bg-emerald-500 text-zinc-950 rounded hover:bg-emerald-400">
+                                        <i data-lucide="check" class="w-3 h-3"></i>
+                                    </button>
+                                    <button onclick="App.cancelEditPrice()" class="p-1 bg-zinc-700 text-muted-theme rounded hover:bg-zinc-600">
+                                        <i data-lucide="x" class="w-3 h-3"></i>
+                                    </button>
+                                </div>
+                            ` : `
+                                <button onclick="App.initEditPrice('${apt.id}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/20 hover:bg-emerald-500/20 transition-all" title="Editar Valor">
+                                    <i data-lucide="dollar-sign" class="w-3 h-3"></i> ${apt.service?.price?.replace('A partir de', '<span class="text-amber-500 mr-0.5 italic">A partir de</span>') || 'R$ 0,00'}
+                                </button>
+                            `}
+                            
+                            <!-- Badge de Duração (Estático) -->
+                            <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-zinc-800 text-muted-theme text-[10px] font-bold uppercase tracking-wider border border-zinc-700/50 cursor-default">
+                                <i data-lucide="clock" class="w-3 h-3 text-amber-500"></i> ${apt.total_duration || 30} MIN
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        ${this.state.editingTimeId === apt.id ? `
+                            <div class="flex flex-col items-end gap-1 fade-in">
+                                <select id="adj-time-${apt.id}" class="bg-zinc-800 border border-amber-500 rounded px-1 text-sm text-amber-500 font-bold outline-none leading-none h-8">
+                                    ${AVAILABLE_TIMES.map(t => `<option value="${t}" ${apt.time === t ? 'selected' : ''}>${t}</option>`).join('')}
+                                </select>
+                                <div class="flex gap-1">
+                                    <button onclick="App.updateAppointmentTime('${apt.id}', document.getElementById('adj-time-${apt.id}').value)" class="p-1 bg-amber-500 text-zinc-950 rounded hover:bg-amber-400 shadow-sm">
+                                        <i data-lucide="check" class="w-3 h-3"></i>
+                                    </button>
+                                    <button onclick="App.cancelEditTime()" class="p-1 input-bg text-muted-theme rounded hover:bg-zinc-700 shadow-sm border border-theme">
+                                        <i data-lucide="x" class="w-3 h-3"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        ` : `
+                            <button onclick="App.initEditTime('${apt.id}')" class="text-amber-500 font-black text-xl flex items-center gap-1 justify-end italic leading-none hover:scale-105 transition-transform active:scale-95" title="Alterar Horário">
+                                ${apt.time}
+                            </button>
+                        `}
+                        <span class="text-[9px] text-muted-theme font-bold uppercase tracking-tighter mt-1 block">${apt.date?.split('-').reverse().join('/') || ''}</span>
+                    </div>
+                </div>
+                <div class="accordion-content ${isExpanded ? 'open' : ''}">
+                    <!-- Ações Rápidas -->
+                    <div class="flex gap-2 mt-4 pt-4 border-t border-theme overflow-x-auto scrollbar-hide">
+                        <a href="https://wa.me/${App.formatWA(apt.clientPhone)}?text=Olá%20${encodeURIComponent(apt.clientName)},%20seu%20horário%20de%20${encodeURIComponent(apt.time)}%20está%20chegando!%20Te%20aguardo." target="_blank" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-semibold">
+                            <i data-lucide="bell-ring" class="w-3.5 h-3.5"></i> Lembrete
+                        </a>
+                        <a href="https://wa.me/${App.formatWA(apt.clientPhone)}" target="_blank" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 input-bg text-muted-theme hover:text-theme border border-theme transition-colors text-xs font-semibold">
+                            <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> Mensagem
+                        </a>
+                        <a href="tel:+55${apt.clientPhone}" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 input-bg text-muted-theme hover:text-theme border border-theme transition-colors text-xs font-semibold">
+                            <i data-lucide="phone" class="w-3.5 h-3.5"></i> Ligar
+                        </a>
+                        <button onclick="App.cancelAppointment('${apt.id}')" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-all text-xs font-bold active:scale-95">
+                            <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Cancelar
+                        </button>
+                    </div>
+                    
+                    <!-- Comanda (Barbeiro) -->
+                    <div class="mt-4 pt-4 border-t border-theme">
+                        <div class="flex justify-between items-center mb-3">
+                            <p class="text-xs font-semibold text-muted-theme uppercase tracking-wide flex items-center gap-1.5">
+                                <i data-lucide="shopping-bag" class="w-3 h-3 text-amber-500"></i> Comanda
+                            </p>
+                            <button onclick="App.openComandaModal('${apt.id}')" class="text-[10px] bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 px-2 py-1 rounded font-bold uppercase transition-colors">
+                                + Adicionar
+                            </button>
+                        </div>
+                        ${(!apt.comanda_items || apt.comanda_items.length === 0) ? `
+                            <p class="text-[10px] text-muted-theme/50 italic">Nenhum item na comanda.</p>
+                        ` : `
+                            <div class="space-y-2">
+                                ${(apt.comanda_items || []).map((item, idx) => `
+                                    <div class="flex justify-between items-center bg-zinc-900/50 p-2 rounded-lg border border-theme/50">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-amber-500 font-bold text-xs">${item.qty}x</span>
+                                            <span class="text-theme text-xs font-medium">${item.name}</span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-emerald-500 text-xs font-bold">R$ ${(item.price * item.qty).toFixed(2).replace('.', ',')}</span>
+                                            <button onclick="App.removeComandaItem('${apt.id}', ${idx})" class="text-red-500 hover:text-red-400 p-1">
+                                                <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `}
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-theme">
+                        <p class="text-xs font-semibold text-muted-theme mb-2 uppercase tracking-wide">Como o cliente pagou?</p>
+                        ${this.state.confirmingPaymentId === apt.id ? `
+                            <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex flex-col items-center gap-3 fade-in">
+                                <p class="text-sm font-medium text-amber-500">Confirmar <span class="font-bold uppercase">${this.state.confirmingPaymentMethod}</span>?</p>
+                                <div class="flex gap-2 w-full">
+                                    <button onclick="App.cancelCompleteAppointment()" class="flex-1 py-2 rounded-lg font-medium transition-all duration-200 input-bg text-theme hover:bg-zinc-700 text-xs border border-theme active:scale-[0.98]">
+                                        Cancelar
+                                    </button>
+                                    <button onclick="App.completeAppointment()" class="flex-1 py-2 rounded-lg font-bold transition-all duration-200 bg-amber-500 text-zinc-950 hover:bg-amber-400 text-xs shadow-md shadow-amber-500/20 active:scale-[0.98]">
+                                        Finalizar
+                                    </button>
+                                </div>
+                            </div>
+                        ` : `
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Dinheiro')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
+                                <i data-lucide="banknote" class="w-4 h-4 text-emerald-500"></i> Dinheiro
+                            </button>
+                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Pix')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
+                                <i data-lucide="zap" class="w-4 h-4 text-teal-400"></i> Pix
+                            </button>
+                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Débito')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
+                                <i data-lucide="credit-card" class="w-4 h-4 text-blue-400"></i> Débito
+                            </button>
+                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Crédito')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
+                                <i data-lucide="credit-card" class="w-4 h-4 text-amber-500"></i> Crédito
+                            </button>
+                        </div>
+                        <button onclick="App.initSplitPayment('${apt.id}')" class="w-full mt-2 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 bg-zinc-800 text-muted-theme hover:bg-zinc-700 border border-zinc-700 text-xs active:scale-[0.98]">
+                            <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i> Pagamento Dividido
+                        </button>
+                        `}
+                    </div>
+                </div>
+            </div>
+        `;
     },
 
     renderDailyTable(filteredApts, dateStr) {
@@ -1160,22 +1337,26 @@ Object.assign(App, {
             if (this.state.agendaViewMode === 'table') {
                 setTimeout(() => {
                     const mc = document.getElementById('modal-container');
-                    if (mc && this.state.openAppointmentModalId) {
+                    if (mc && this.state.openAppointmentModalId && !this.state.showingSplitPaymentId && !this.state.comandaModalOpen) {
                         const apt = this.state.appointments.find(a => a.id === this.state.openAppointmentModalId);
                         if (apt) {
                             mc.innerHTML = `
-                                <div class="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 fade-in" onclick="if(event.target === this) App.closeAppointmentModal()">
-                                    <div class="w-full max-w-md max-h-[90vh] overflow-y-auto custom-scrollbar relative">
-                                        <button onclick="App.closeAppointmentModal()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-zinc-950 text-muted-theme hover:text-red-500 hover:bg-red-500/10 border border-theme transition-colors z-20 shadow-md">
-                                            <i data-lucide="x" class="w-4 h-4"></i>
-                                        </button>
-                                        ${this.renderAppointmentCard(apt)}
+                                <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 fade-in" onclick="if(event.target === this) App.closeAppointmentModal()">
+                                    <div class="w-full max-w-md max-h-[90vh] flex flex-col gap-2 relative">
+                                        <div class="flex justify-end">
+                                            <button onclick="App.closeAppointmentModal()" class="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900 text-muted-theme hover:text-red-500 hover:bg-red-500/10 border border-theme transition-colors shadow-2xl">
+                                                <i data-lucide="x" class="w-5 h-5"></i>
+                                            </button>
+                                        </div>
+                                        <div class="overflow-y-auto custom-scrollbar">
+                                            ${this.renderAppointmentCard(apt)}
+                                        </div>
                                     </div>
                                 </div>
                             `;
                             if (window.lucide) lucide.createIcons({ root: mc });
                         }
-                    } else if (mc && !this.state.isDateRangeModalOpen && !this.state.isComandaModalOpen) {
+                    } else if (mc && !this.state.isDateRangeModalOpen && !this.state.comandaModalOpen && !this.state.showingSplitPaymentId) {
                         mc.innerHTML = '';
                     }
                 }, 0);
@@ -1186,7 +1367,7 @@ Object.assign(App, {
                 const mc = document.getElementById('modal-container');
                 if (mc) {
                     mc.innerHTML = this.state.isDateRangeModalOpen ? `
-                        <div class="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 fade-in">
+                        <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 fade-in">
                             <div class="card-bg w-full max-w-sm rounded-3xl border border-theme shadow-2xl overflow-hidden scale-in">
                                 <div class="bg-zinc-900/50 p-6 border-b border-theme relative">
                                     <button onclick="App.toggleDateRangeModal()" class="absolute top-4 right-4 p-2 input-bg rounded-full text-muted-theme hover:text-red-500 transition-colors">
@@ -1251,192 +1432,15 @@ Object.assign(App, {
                     </div>
 
                             ${filteredApts.length === 0 ? `
-                        <div class="text-center py-12 text-muted-theme">
-                            <i data-lucide="calendar" class="w-16 h-16 mx-auto mb-4 opacity-40"></i>
-                            <p>Nenhum agendamento encontrado.</p>
-                        </div>
-                    ` : `
-                        <div class="space-y-4">
-                            ${filteredApts.map(apt => {
-                const clientInitial = (apt.clientName[0] || 'C').toUpperCase();
-                return `
-                                <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm border-l-4 border-l-amber-500">
-                                    <div class="flex justify-between items-start gap-3 cursor-pointer" onclick="if(event.target.closest('button') || event.target.closest('input') || event.target.closest('select')) return; App.toggleAppointmentAccordion('${apt.id}')">
-                                        <!-- Avatar do Cliente -->
-                                        <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-zinc-900 flex items-center justify-center bg-zinc-800 shadow-inner">
-                                            ${apt.clientAvatar ? `
-                                                <img src="${apt.clientAvatar}" class="w-full h-full object-cover" />
-                                            ` : `
-                                                <span class="text-lg font-black text-amber-500/50">${clientInitial}</span>
-                                            `}
-                                        </div>
-
-                                        <div class="flex-1 min-w-0">
-                                            <h3 class="font-bold text-theme text-lg truncate">${App.escapeHTML(apt.clientName)}</h3>
-                                            <div class="flex flex-wrap gap-1.5 mt-1.5">
-                                                ${this.state.editingServicesId === apt.id ? `
-                                                    <div class="w-full bg-zinc-900/40 border border-amber-500/30 rounded-xl p-3 flex flex-col gap-3 fade-in shadow-inner">
-                                                        <div class="flex flex-wrap gap-1.5">
-                                                            ${SERVICES.filter(s => {
-                    const specialties = (this.state.barberServices || []).filter(bs => String(bs.barber_id) === String(apt.barber_id)).map(bs => bs.service_id);
-                    return specialties.length === 0 || specialties.includes(s.id);
-                }).map(s => {
-                    const isSelected = (this.state.tempSelectedServices || []).some(ts => ts.id === s.id);
-                    return `
-                                                                    <button onclick="App.toggleEditService(${s.id})" class="px-2 py-1 rounded-md text-[9px] font-bold uppercase transition-all ${isSelected ? 'bg-amber-500 text-zinc-950 shadow-sm' : 'bg-zinc-800 text-muted-theme border border-transparent hover:border-amber-500/30'}">
-                                                                        ${s.name}
-                                                                    </button>
-                                                                `;
-                }).join('')}
-                                                        </div>
-                                                        <div class="flex gap-2">
-                                                            <button onclick="App.updateAppointmentServices('${apt.id}')" class="flex-1 py-1.5 bg-amber-500 text-zinc-950 rounded-lg text-[10px] font-black uppercase shadow-sm active:scale-95">Salvar</button>
-                                                            <button onclick="App.cancelEditServices()" class="flex-1 py-1.5 bg-zinc-700 text-muted-theme rounded-lg text-[10px] font-bold uppercase border border-theme active:scale-95">X</button>
-                                                        </div>
-                                                    </div>
-                                                ` : `
-                                                    <button onclick="App.initEditServices('${apt.id}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 text-[10px] font-bold uppercase tracking-wider border border-amber-500/20 hover:bg-amber-500/20 transition-all" title="Editar Serviço(s)">
-                                                        <i data-lucide="scissors" class="w-3 h-3"></i> ${apt.service.name}
-                                                    </button>
-                                                `}
-
-                                                ${this.state.editingPriceId === apt.id ? `
-                                                    <div class="flex items-center gap-1 fade-in">
-                                                        <div class="relative">
-                                                            <span class="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-emerald-500 font-bold">R$</span>
-                                                            <input type="text" id="adj-price-${apt.id}" value="${apt.numericValue.toFixed(2).replace('.', ',')}" class="w-20 bg-zinc-800 border border-emerald-500 rounded pl-6 pr-1 py-0.5 text-[10px] text-emerald-500 font-bold outline-none" inputmode="decimal" />
-                                                        </div>
-                                                        <button onclick="App.updateAppointmentPrice('${apt.id}', document.getElementById('adj-price-${apt.id}').value)" class="p-1 bg-emerald-500 text-zinc-950 rounded hover:bg-emerald-400">
-                                                            <i data-lucide="check" class="w-3 h-3"></i>
-                                                        </button>
-                                                        <button onclick="App.cancelEditPrice()" class="p-1 bg-zinc-700 text-muted-theme rounded hover:bg-zinc-600">
-                                                            <i data-lucide="x" class="w-3 h-3"></i>
-                                                        </button>
-                                                    </div>
-                                                ` : `
-                                                    <button onclick="App.initEditPrice('${apt.id}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/20 hover:bg-emerald-500/20 transition-all" title="Editar Valor">
-                                                        <i data-lucide="dollar-sign" class="w-3 h-3"></i> ${apt.service.price.replace('A partir de', '<span class="text-amber-500 mr-0.5 italic">A partir de</span>')}
-                                                    </button>
-                                                `}
-                                                
-                                                <!-- Badge de Duração (Estático) -->
-                                                <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-zinc-800 text-muted-theme text-[10px] font-bold uppercase tracking-wider border border-zinc-700/50 cursor-default">
-                                                    <i data-lucide="clock" class="w-3 h-3 text-amber-500"></i > ${apt.total_duration || 30} MIN
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="text-right flex-shrink-0">
-                                            ${this.state.editingTimeId === apt.id ? `
-                                                <div class="flex flex-col items-end gap-1 fade-in">
-                                                    <select id="adj-time-${apt.id}" class="bg-zinc-800 border border-amber-500 rounded px-1 text-sm text-amber-500 font-bold outline-none leading-none h-8">
-                                                        ${AVAILABLE_TIMES.map(t => `<option value="${t}" ${apt.time === t ? 'selected' : ''}>${t}</option>`).join('')}
-                                                    </select>
-                                                    <div class="flex gap-1">
-                                                        <button onclick="App.updateAppointmentTime('${apt.id}', document.getElementById('adj-time-${apt.id}').value)" class="p-1 bg-amber-500 text-zinc-950 rounded hover:bg-amber-400 shadow-sm">
-                                                            <i data-lucide="check" class="w-3 h-3"></i>
-                                                        </button>
-                                                        <button onclick="App.cancelEditTime()" class="p-1 input-bg text-muted-theme rounded hover:bg-zinc-700 shadow-sm border border-theme">
-                                                            <i data-lucide="x" class="w-3 h-3"></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ` : `
-                                                <button onclick="App.initEditTime('${apt.id}')" class="text-amber-500 font-black text-xl flex items-center gap-1 justify-end italic leading-none hover:scale-105 transition-transform active:scale-95" title="Alterar Horário">
-                                                    ${apt.time}
-                                                </button>
-                                            `}
-                                            <span class="text-[9px] text-muted-theme font-bold uppercase tracking-tighter mt-1 block">${apt.date.split('-').reverse().join('/')}</span>
-                                        </div>
-                                    </div>
-                                    <div class="accordion-content ${this.state.expandedAppointmentId === apt.id ? 'open' : ''}">
-                                        <!-- Ações Rápidas -->
-                                        <div class="flex gap-2 mt-4 pt-4 border-t border-theme overflow-x-auto scrollbar-hide">
-                                        <a href="https://wa.me/${App.formatWA(apt.clientPhone)}?text=Olá%20${encodeURIComponent(apt.clientName)},%20seu%20horário%20de%20${encodeURIComponent(apt.time)}%20está%20chegando!%20Te%20aguardo." target="_blank" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-semibold">
-                                            <i data-lucide="bell-ring" class="w-3.5 h-3.5"></i> Lembrete
-                                        </a>
-                                        <a href="https://wa.me/${App.formatWA(apt.clientPhone)}" target="_blank" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 input-bg text-muted-theme hover:text-theme border border-theme transition-colors text-xs font-semibold">
-                                            <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> Mensagem
-                                        </a>
-                                        <a href="tel:+55${apt.clientPhone}" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 input-bg text-muted-theme hover:text-theme border border-theme transition-colors text-xs font-semibold">
-                                            <i data-lucide="phone" class="w-3.5 h-3.5"></i> Ligar
-                                        </a>
-                                        <button onclick="App.cancelAppointment('${apt.id}')" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-all text-xs font-bold active:scale-95">
-                                            <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Cancelar
-                                        </button>
-                                    </div>
-                                    
-                                    <!-- Comanda (Barbeiro) -->
-                                    <div class="mt-4 pt-4 border-t border-theme">
-                                        <div class="flex justify-between items-center mb-3">
-                                            <p class="text-xs font-semibold text-muted-theme uppercase tracking-wide flex items-center gap-1.5">
-                                                <i data-lucide="shopping-bag" class="w-3 h-3 text-amber-500"></i> Comanda
-                                            </p>
-                                            <button onclick="App.openComandaModal('${apt.id}')" class="text-[10px] bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 px-2 py-1 rounded font-bold uppercase transition-colors">
-                                                + Adicionar
-                                            </button>
-                                        </div>
-                                        ${(!apt.comanda_items || apt.comanda_items.length === 0) ? `
-                                            <p class="text-[10px] text-muted-theme/50 italic">Nenhum item na comanda.</p>
-                                        ` : `
-                                            <div class="space-y-2">
-                                                ${(apt.comanda_items || []).map((item, idx) => `
-                                                    <div class="flex justify-between items-center bg-zinc-900/50 p-2 rounded-lg border border-theme/50">
-                                                        <div class="flex items-center gap-2">
-                                                            <span class="text-amber-500 font-bold text-xs">${item.qty}x</span>
-                                                            <span class="text-theme text-xs font-medium">${item.name}</span>
-                                                        </div>
-                                                        <div class="flex items-center gap-3">
-                                                            <span class="text-emerald-500 text-xs font-bold">R$ ${(item.price * item.qty).toFixed(2).replace('.', ',')}</span>
-                                                            <button onclick="App.removeComandaItem('${apt.id}', ${idx})" class="text-red-500 hover:text-red-400 p-1">
-                                                                <i data-lucide="trash-2" class="w-3 h-3"></i>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                `).join('')}
-                                            </div>
-                                        `}
-                                    </div>
-
-                                    <div class="mt-4 pt-4 border-t border-theme">
-                                        <p class="text-xs font-semibold text-muted-theme mb-2 uppercase tracking-wide">Como o cliente pagou?</p>
-                                        ${this.state.confirmingPaymentId === apt.id ? `
-                                            <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex flex-col items-center gap-3 fade-in">
-                                                <p class="text-sm font-medium text-amber-500">Confirmar <span class="font-bold uppercase">${this.state.confirmingPaymentMethod}</span>?</p>
-                                                <div class="flex gap-2 w-full">
-                                                    <button onclick="App.cancelCompleteAppointment()" class="flex-1 py-2 rounded-lg font-medium transition-all duration-200 input-bg text-theme hover:bg-zinc-700 text-xs border border-theme active:scale-[0.98]">
-                                                        Cancelar
-                                                    </button>
-                                                    <button onclick="App.completeAppointment()" class="flex-1 py-2 rounded-lg font-bold transition-all duration-200 bg-amber-500 text-zinc-950 hover:bg-amber-400 text-xs shadow-md shadow-amber-500/20 active:scale-[0.98]">
-                                                        Finalizar
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ` : `
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Dinheiro')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
-                                                <i data-lucide="banknote" class="w-4 h-4 text-emerald-500"></i> Dinheiro
-                                            </button>
-                                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Pix')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
-                                                <i data-lucide="zap" class="w-4 h-4 text-teal-400"></i> Pix
-                                            </button>
-                                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Débito')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
-                                                <i data-lucide="credit-card" class="w-4 h-4 text-blue-400"></i> Débito
-                                            </button>
-                                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Crédito')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
-                                                <i data-lucide="credit-card" class="w-4 h-4 text-amber-500"></i> Crédito
-                                            </button>
-                                        </div>
-                                            <button onclick="App.initSplitPayment('${apt.id}')" class="w-full mt-2 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 bg-zinc-800 text-muted-theme hover:bg-zinc-700 border border-zinc-700 text-xs active:scale-[0.98]">
-                                            <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i> Pagamento Dividido
-                                        </button>
-                                        `}
-                                        </div>
-                                    </div>
+                                <div class="text-center py-12 text-muted-theme">
+                                    <i data-lucide="calendar" class="w-16 h-16 mx-auto mb-4 opacity-40"></i>
+                                    <p>Nenhum agendamento encontrado.</p>
                                 </div>
-                                `;
-            }).join('')}
-                        </div>
-                    `}
+                            ` : `
+                                <div class="space-y-4">
+                                    ${filteredApts.map(apt => this.renderAppointmentCard(apt)).join('')}
+                                </div>
+                            `}
                     <!-- Modal de pagamento dividido gerenciado via #modal-container em ui.js -->
                 </div>
 
