@@ -1052,7 +1052,7 @@ Object.assign(App, {
                 <div class="accordion-content ${isExpanded ? 'open' : ''}">
                     <!-- Ações Rápidas -->
                     <div class="flex gap-2 mt-4 pt-4 border-t border-theme overflow-x-auto scrollbar-hide">
-                        <a href="https://wa.me/${App.formatWA(apt.clientPhone)}?text=Olá%20${encodeURIComponent(apt.clientName)},%20seu%20horário%20de%20${encodeURIComponent(apt.time)}%20está%20chegando!%20Te%20aguardo." target="_blank" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-semibold">
+                        <a href="https://wa.me/${App.formatWA(apt.clientPhone)}?text=Olá%20${encodeURIComponent(apt.clientName)},%20seu%20horário%20de%20${encodeURIComponent(apt.time)}%20no%20dia%20${encodeURIComponent(apt.date?.split('-').reverse().join('/') || '')}%20com%20o%20barbeiro%20${encodeURIComponent(apt.barberName || 'Profissional')}%20está%20chegando!%20Aguardamos%20você." target="_blank" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-semibold">
                             <i data-lucide="bell-ring" class="w-3.5 h-3.5"></i> Lembrete
                         </a>
                         <a href="https://wa.me/${App.formatWA(apt.clientPhone)}" target="_blank" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 input-bg text-muted-theme hover:text-theme border border-theme transition-colors text-xs font-semibold">
