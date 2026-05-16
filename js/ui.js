@@ -940,10 +940,6 @@ Object.assign(App, {
         const tx = this.state.completedTransactions.find(t => t.id === txId);
         if (!tx) return;
 
-        this.state.transactionDetailId = txId;
-        this.state.transactionDetailApt = null;
-        this.render();
-
         let apt = this.state.appointments.find(a => a.id === tx.appointmentId);
         if (!apt && tx.appointmentId) {
             const { data } = await supabaseClient
@@ -953,6 +949,8 @@ Object.assign(App, {
                 .single();
             apt = data || null;
         }
+
+        this.state.transactionDetailId = txId;
         this.state.transactionDetailApt = apt || { comanda_items: [] };
         this.render();
     },
