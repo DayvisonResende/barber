@@ -1626,9 +1626,15 @@ Object.assign(App, {
                                             </div>
                                         ` : `
                                             <div class="flex gap-2">
-                                                <button onclick="App.editAppointment('${apt.id}')" class="p-2 input-bg text-amber-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Alterar Horário">
-                                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
-                                                </button>
+                                                ${(() => {
+                                                    if (this.state.role === 'client') {
+                                                        const diffMs = new Date(`${apt.date}T${apt.time}:00`) - new Date();
+                                                        if (diffMs > 0 && diffMs < 2 * 60 * 60 * 1000) return '';
+                                                    }
+                                                    return `<button onclick="App.editAppointment('${apt.id}')" class="p-2 input-bg text-amber-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Alterar Horário">
+                                                        <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                                    </button>`;
+                                                })()}
                                                 <button onclick="App.cancelAppointment('${apt.id}')" class="p-2 input-bg text-rose-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Cancelar">
                                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                                 </button>

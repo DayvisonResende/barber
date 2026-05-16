@@ -961,6 +961,69 @@ Object.assign(App, {
         this.render();
     },
 
+    showEarlyCancelModal(apt) {
+        const mc = document.getElementById('modal-container');
+        if (!mc) return;
+
+        const barberFirst = (apt.barberName || 'Barbeiro').split(' ')[0];
+        const shopPhone = (this.state.shopSettings?.phone || '').replace(/\D/g, '');
+        const dateFmt = apt.date.split('-').reverse().join('/');
+        const waMsg = encodeURIComponent(`Olá! Preciso cancelar meu agendamento com ${apt.barberName || 'o barbeiro'} no dia ${dateFmt} às ${apt.time}. Pode me ajudar?`);
+        const waLink = shopPhone ? `https://wa.me/55${shopPhone}?text=${waMsg}` : null;
+
+        mc.innerHTML = `
+            <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm px-4 fade-in" onclick="if(event.target===this) App.closeEarlyCancelModal()">
+                <div class="w-full max-w-sm card-bg rounded-3xl border border-theme shadow-2xl overflow-hidden scale-in">
+                    <div class="p-6 flex flex-col items-center text-center gap-4">
+                        <div class="w-16 h-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                            <i data-lucide="clock-alert" class="w-8 h-8 text-orange-400"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-theme">Cancelamento não permitido</h3>
+                            <p class="text-sm text-muted-theme mt-2 leading-relaxed">
+                                Cancelamentos com menos de <span class="font-bold text-theme">2 horas de antecedência</span> não podem ser feitos pelo app.
+                            </p>
+                            <p class="text-sm text-muted-theme mt-1 leading-relaxed">
+                                Entre em contato diretamente com <span class="font-bold text-amber-500">${App.escapeHTML(barberFirst)}</span> para que ele possa cancelar o horário.
+                            </p>
+                        </div>
+                        <div class="w-full input-bg border border-theme rounded-2xl p-3 flex items-center gap-3 text-left">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                                <i data-lucide="scissors" class="w-5 h-5 text-amber-500"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[10px] text-muted-theme uppercase font-bold">Profissional</p>
+                                <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(apt.barberName || 'Barbeiro')}</p>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <p class="text-[10px] text-muted-theme uppercase font-bold">${dateFmt}</p>
+                                <p class="font-bold text-amber-500 text-sm">${apt.time}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 pt-0 flex flex-col gap-2">
+                        ${waLink ? `
+                            <a href="${waLink}" target="_blank" onclick="App.closeEarlyCancelModal()"
+                               class="w-full py-3.5 rounded-2xl font-bold bg-[#25D366] text-white flex items-center justify-center gap-2 text-sm active:scale-95 transition-all shadow-lg shadow-green-500/20">
+                                <i data-lucide="message-circle" class="w-4 h-4"></i>
+                                Falar com ${App.escapeHTML(barberFirst)} no WhatsApp
+                            </a>
+                        ` : ''}
+                        <button onclick="App.closeEarlyCancelModal()" class="w-full py-3 rounded-2xl font-bold input-bg text-muted-theme border border-theme text-sm active:scale-95 transition-all">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons({ root: mc });
+    },
+
+    closeEarlyCancelModal() {
+        const mc = document.getElementById('modal-container');
+        if (mc) mc.innerHTML = '';
+    },
+
     toggleAppointmentAccordion(id) {
         this.state.expandedAppointmentId = (this.state.expandedAppointmentId === id) ? null : id;
         this.render();

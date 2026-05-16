@@ -1654,6 +1654,18 @@ Object.assign(App, {
     },
 
     async cancelAppointment(id) {
+        if (this.state.role === 'client') {
+            const apt = this.state.appointments.find(a => a.id === id);
+            if (apt) {
+                const aptDateTime = new Date(`${apt.date}T${apt.time}:00`);
+                const diffMs = aptDateTime - new Date();
+                if (diffMs > 0 && diffMs < 2 * 60 * 60 * 1000) {
+                    this.showEarlyCancelModal(apt);
+                    return;
+                }
+            }
+        }
+
         this.showConfirm("Cancelar Agendamento", "Tem certeza que deseja cancelar este atendimento? O horário será liberado imediatamente.", true, async () => {
             try {
                 // Restaurar estoque de todos os itens da comanda antes de cancelar

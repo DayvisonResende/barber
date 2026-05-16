@@ -417,6 +417,14 @@ Object.assign(App, {
         const apt = this.state.appointments.find(a => a.id === id);
         if (!apt) return;
 
+        if (this.state.role === 'client') {
+            const diffMs = new Date(`${apt.date}T${apt.time}:00`) - new Date();
+            if (diffMs > 0 && diffMs < 2 * 60 * 60 * 1000) {
+                this.showEarlyCancelModal(apt);
+                return;
+            }
+        }
+
         const serviceNames = (apt.service?.name || '').split(' + ');
         const services = SERVICES.filter(s => serviceNames.includes(s.name));
         const barber = BARBERS.find(b => b.name === apt.barberName) || BARBERS[0];
