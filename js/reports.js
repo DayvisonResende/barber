@@ -63,7 +63,7 @@ Object.assign(App, {
             window.revenueChart.destroy();
         }
 
-        const isLight = document.body.classList.contains('light-mode');
+        const isLight = this.state.theme !== 'dark';
 
         window.revenueChart = new Chart(ctx, {
             type: 'line',

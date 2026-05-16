@@ -18,14 +18,81 @@
     font-weight: normal !important;
 }
 
+/* === TEMA CLARO (Melhorado — tons quentes e aconchegantes) === */
 body.light-mode {
-    --bg-app: #f8f9fa; /* Light grey-blue */
-    --bg-card: #ffffff;
-    --bg-input: #f1f3f5;
-    --text-main: #111827; /* Darker for better contrast */
-    --text-muted: #4b5563; /* Darker muted text */
-    --border-main: #d1d5db; /* Darker borders for better definition */
-    --shadow-theme: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+    --bg-app: #f7f5f0;
+    --bg-card: #fdfcf8;
+    --bg-input: #ede8de;
+    --text-main: #1c1917;
+    --text-muted: #78716c;
+    --border-main: #ddd8ce;
+    --shadow-theme: 0 10px 30px -5px rgba(0, 0, 0, 0.06);
+}
+
+/* === PASTEL VERDE === */
+body.theme-green {
+    --bg-app: #f0f8f1;
+    --bg-card: #f8fdf9;
+    --bg-input: #ddf0e2;
+    --text-main: #1a3022;
+    --text-muted: #4d7a58;
+    --border-main: #b8ddc2;
+    --shadow-theme: 0 10px 30px -5px rgba(34, 85, 50, 0.08);
+}
+
+/* === PASTEL ROSA === */
+body.theme-pink {
+    --bg-app: #fdf2f5;
+    --bg-card: #fef8fa;
+    --bg-input: #f8dde8;
+    --text-main: #3a1025;
+    --text-muted: #8a4060;
+    --border-main: #f0c5d6;
+    --shadow-theme: 0 10px 30px -5px rgba(130, 40, 80, 0.08);
+}
+
+/* === PASTEL AZUL === */
+body.theme-blue {
+    --bg-app: #eff6fc;
+    --bg-card: #f7fbfe;
+    --bg-input: #daeaf8;
+    --text-main: #0f2540;
+    --text-muted: #3a6090;
+    --border-main: #b8d5ee;
+    --shadow-theme: 0 10px 30px -5px rgba(20, 60, 120, 0.08);
+}
+
+/* === PASTEL AMARELO === */
+body.theme-yellow {
+    --bg-app: #fdf9ec;
+    --bg-card: #fefdf5;
+    --bg-input: #f5e8b8;
+    --text-main: #3a2800;
+    --text-muted: #7a5c10;
+    --border-main: #e5d280;
+    --shadow-theme: 0 10px 30px -5px rgba(120, 90, 10, 0.08);
+}
+
+/* === PASTEL MARROM / CAFÉ === */
+body.theme-brown {
+    --bg-app: #f8f0e8;
+    --bg-card: #fdf8f2;
+    --bg-input: #edd8bc;
+    --text-main: #2a1500;
+    --text-muted: #7a4a20;
+    --border-main: #d8bc98;
+    --shadow-theme: 0 10px 30px -5px rgba(80, 40, 10, 0.10);
+}
+
+/* === PASTEL VERMELHO === */
+body.theme-red {
+    --bg-app: #fdf0ee;
+    --bg-card: #fef8f7;
+    --bg-input: #f8d8d2;
+    --text-main: #3a0808;
+    --text-muted: #8a2820;
+    --border-main: #f0b5ae;
+    --shadow-theme: 0 10px 30px -5px rgba(120, 30, 20, 0.08);
 }
 
 :root {
@@ -59,6 +126,7 @@ body {
 /* Interações */
 .hover-bg:hover { background-color: var(--border-main) !important; opacity: 0.9; }
 .active-scale:active { transform: scale(0.98); }
+.divide-theme > :not([hidden]) ~ :not([hidden]) { border-color: var(--border-main) !important; }
 
 /* Transições suaves para todos os elementos que mudam de cor */
 * {

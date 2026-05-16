@@ -1493,7 +1493,7 @@ Object.assign(App, {
                             </div>
                         `;
                         if (window.lucide) lucide.createIcons({ root: mc });
-                    } else if (mc && !this.state.isDateRangeModalOpen && !this.state.comandaModalOpen && !this.state.showingSplitPaymentId && !this.state.isQuickBlockOpen) {
+                    } else if (mc && !this.state.isDateRangeModalOpen && !this.state.comandaModalOpen && !this.state.showingSplitPaymentId && !this.state.isQuickBlockOpen && !this.state.transactionDetailId) {
                         mc.innerHTML = '';
                     }
                 }, 0);
@@ -1779,6 +1779,20 @@ Object.assign(App, {
         const reportTitle = isManagement ? 'Balanço Global' : 'Meu Desempenho';
         const revenueLabel = isManagement ? 'Faturamento Total da Casa' : 'Minhas Entradas Totais';
 
+        setTimeout(() => {
+            const mc = document.getElementById('modal-container');
+            if (!mc) return;
+            if (this.state.transactionDetailId) {
+                const tx = this.state.completedTransactions.find(t => t.id === this.state.transactionDetailId);
+                if (tx) {
+                    mc.innerHTML = this.renderTransactionDetailModal(tx, this.state.transactionDetailApt);
+                    if (window.lucide) lucide.createIcons({ root: mc });
+                }
+            } else if (!this.state.isDateRangeModalOpen && !this.state.comandaModalOpen && !this.state.isQuickBlockOpen) {
+                mc.innerHTML = '';
+            }
+        }, 0);
+
         return `
             <div class="space-y-6 fade-in">
                 <!-- Tab: Financeiro | Produtos -->
@@ -1901,25 +1915,21 @@ Object.assign(App, {
                         <div class="space-y-3 pb-8">
                             ${myAdvancesHtml}
                             ${displayTxs.map(tx => {
-            const isExpanded = this.state.expandedTransactionId === tx.id;
             return `
-                                <div onclick="App.toggleTransactionExpand('${tx.id}')" class="card-bg rounded-xl border ${isExpanded ? 'border-amber-500/50 bg-amber-500/5 shadow-amber-500/10' : 'border-theme shadow-sm'} p-3 shadow-md flex items-start justify-between hover:border-amber-500/30 transition-all gap-3 cursor-pointer group">
+                                <div onclick="App.openTransactionDetail('${tx.id}')" class="card-bg rounded-xl border border-theme shadow-sm p-3 flex items-start justify-between hover:border-amber-500/30 transition-all gap-3 cursor-pointer group">
                                     <div class="flex items-start gap-3 min-w-0 flex-1">
-                                        <div class="input-bg p-2 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:input-bg transition-colors">
+                                        <div class="input-bg p-2 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                                             ${tx.paymentMethod === 'Pix' ? '<i data-lucide="zap" class="w-5 h-5 text-teal-400"></i>' : tx.paymentMethod === 'Dinheiro' ? '<i data-lucide="banknote" class="w-5 h-5 text-emerald-500"></i>' : tx.paymentMethod === 'Débito' ? '<i data-lucide="credit-card" class="w-5 h-5 text-blue-400"></i>' : '<i data-lucide="credit-card" class="w-5 h-5 text-amber-500"></i>'}
                                         </div>
                                         <div class="min-w-0 flex-1">
-                                            <div class="flex items-center gap-2">
-                                                <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(tx.clientName)}</p>
-                                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-muted-theme transition-transform duration-300 ${isExpanded ? 'rotate-180 text-amber-500' : 'group-hover:translate-y-0.5'}"></i>
-                                            </div>
+                                            <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(tx.clientName)}</p>
                                             <div class="text-[10px] text-muted-theme flex items-center gap-1.5 mt-0.5 flex-wrap">
                                                 <span class="input-bg px-1.5 py-0.5 rounded border border-theme font-bold text-amber-500 uppercase tracking-tighter flex-shrink-0">${tx.paymentMethod}</span>
                                                 <span class="opacity-30 flex-shrink-0">•</span>
-                                                <span class="${isExpanded ? 'whitespace-normal leading-relaxed text-theme' : 'truncate block'} transition-all">${tx.service.name}</span>
+                                                <span class="truncate">${tx.service.name}</span>
                                                 ${isManagement && tx.barberName ? `
                                                     <span class="opacity-30 flex-shrink-0">•</span>
-                                                    <span class="text-amber-500 font-bold uppercase tracking-tighter bg-amber-500/10 px-1 rounded truncate flex-shrink-0">${tx.barberName.split(' ')[0]}</span>
+                                                    <span class="text-amber-500 font-bold uppercase tracking-tighter bg-amber-500/10 px-1 rounded flex-shrink-0">${tx.barberName.split(' ')[0]}</span>
                                                 ` : ''}
                                             </div>
                                         </div>
@@ -1933,6 +1943,107 @@ Object.assign(App, {
         }).join('')}
                         </div>
                     `}
+                </div>
+            </div>
+        `;
+    },
+
+    renderTransactionDetailModal(tx, apt) {
+        const payMap = {
+            'Pix':     { icon: 'zap',         color: 'text-teal-400',    bg: 'bg-teal-500/10',    badge: 'bg-teal-500 text-zinc-950' },
+            'Dinheiro':{ icon: 'banknote',     color: 'text-emerald-500', bg: 'bg-emerald-500/10', badge: 'bg-emerald-500 text-zinc-950' },
+            'Débito':  { icon: 'credit-card',  color: 'text-blue-400',    bg: 'bg-blue-500/10',    badge: 'bg-blue-500 text-zinc-950' },
+            'Crédito': { icon: 'credit-card',  color: 'text-amber-500',   bg: 'bg-amber-500/10',   badge: 'bg-amber-500 text-zinc-950' },
+        };
+        const pay = payMap[tx.paymentMethod] || payMap['Crédito'];
+
+        const comanda = (apt && apt.comanda_items) ? apt.comanda_items : [];
+        const comandaTotal = comanda.reduce((sum, i) => sum + (i.price * (i.qty || 1)), 0);
+        const servicesTotal = Math.max(0, tx.numericValue - comandaTotal);
+        const servicesList = (tx.service.name || '').split(' + ').map(s => s.trim()).filter(Boolean);
+        const dateFmt = tx.date.split('-').reverse().join('/');
+        const isLoading = apt === null;
+
+        return `
+            <div class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm px-4 pb-4 fade-in" onclick="if(event.target===this) App.closeTransactionDetail()">
+                <div class="w-full max-w-sm card-bg rounded-3xl border border-theme shadow-2xl overflow-hidden scale-in">
+
+                    <!-- Cabeçalho -->
+                    <div class="bg-zinc-900/50 p-5 border-b border-theme">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="${pay.bg} w-11 h-11 rounded-2xl flex items-center justify-center shrink-0">
+                                    <i data-lucide="${pay.icon}" class="w-5 h-5 ${pay.color}"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h2 class="font-black text-theme text-base leading-tight truncate">${App.escapeHTML(tx.clientName)}</h2>
+                                    <p class="text-[11px] text-muted-theme mt-0.5">${dateFmt} • ${tx.time} • ${App.escapeHTML((tx.barberName || '').split(' ')[0])}</p>
+                                </div>
+                            </div>
+                            <button onclick="App.closeTransactionDetail()" class="w-9 h-9 flex items-center justify-center rounded-xl input-bg text-muted-theme hover:text-red-400 transition-colors border border-theme shrink-0">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <div class="mt-3">
+                            <span class="text-[10px] font-black px-2.5 py-1 rounded-lg ${pay.badge} uppercase tracking-widest">${tx.paymentMethod}</span>
+                        </div>
+                    </div>
+
+                    <!-- Corpo -->
+                    <div class="p-5 space-y-5 max-h-[60vh] overflow-y-auto custom-scrollbar">
+
+                        <!-- Serviços -->
+                        <div class="space-y-1">
+                            <p class="text-[10px] font-black text-muted-theme uppercase tracking-widest flex items-center gap-1.5 mb-2">
+                                <i data-lucide="scissors" class="w-3 h-3"></i> Serviços
+                            </p>
+                            ${servicesList.map((s, idx) => `
+                                <div class="flex items-center justify-between py-1.5 border-b border-theme/30 last:border-0">
+                                    <span class="text-sm text-theme">${App.escapeHTML(s)}</span>
+                                    ${servicesList.length === 1 ? `<span class="text-sm font-bold text-theme">R$ ${servicesTotal.toFixed(2).replace('.', ',')}</span>` : ''}
+                                </div>
+                            `).join('')}
+                            ${servicesList.length > 1 ? `
+                                <div class="flex items-center justify-between pt-1.5">
+                                    <span class="text-xs text-muted-theme">Subtotal</span>
+                                    <span class="text-sm font-bold text-theme">R$ ${servicesTotal.toFixed(2).replace('.', ',')}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <!-- Produtos da Comanda -->
+                        ${isLoading ? `
+                            <div class="flex items-center justify-center gap-2 py-2 text-muted-theme">
+                                <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
+                                <span class="text-xs">Carregando comanda...</span>
+                            </div>
+                        ` : comanda.length > 0 ? `
+                            <div class="space-y-1">
+                                <p class="text-[10px] font-black text-muted-theme uppercase tracking-widest flex items-center gap-1.5 mb-2">
+                                    <i data-lucide="shopping-bag" class="w-3 h-3"></i> Produtos da Comanda
+                                </p>
+                                ${comanda.map(item => `
+                                    <div class="flex items-center justify-between py-1.5 border-b border-theme/30 last:border-0">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <span class="text-[10px] font-black text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md shrink-0">${item.qty || 1}×</span>
+                                            <span class="text-sm text-theme truncate">${App.escapeHTML(item.name)}</span>
+                                        </div>
+                                        <span class="text-sm font-bold text-theme shrink-0 ml-3">R$ ${(item.price * (item.qty || 1)).toFixed(2).replace('.', ',')}</span>
+                                    </div>
+                                `).join('')}
+                                <div class="flex items-center justify-between pt-1.5">
+                                    <span class="text-xs text-muted-theme">Subtotal produtos</span>
+                                    <span class="text-sm font-bold text-theme">R$ ${comandaTotal.toFixed(2).replace('.', ',')}</span>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Rodapé / Total -->
+                    <div class="p-5 border-t border-theme bg-zinc-900/30 flex items-center justify-between">
+                        <span class="text-sm font-bold text-muted-theme uppercase tracking-wider">Total</span>
+                        <span class="text-2xl font-black text-theme">R$ ${tx.numericValue.toFixed(2).replace('.', ',')}</span>
+                    </div>
                 </div>
             </div>
         `;
@@ -3384,7 +3495,7 @@ Object.assign(App, {
 
                 <div class="space-y-2 mt-8">
                     <h3 class="text-sm font-medium text-muted-theme uppercase tracking-wider mb-2">Preferências</h3>
-                    <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm divide-y divide-zinc-800">
+                    <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm divide-y divide-theme">
                         <div class="flex items-center justify-between py-3" onclick="App.requestNotificationPermission()">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="bell" class="w-5 h-5 text-muted-theme"></i>
@@ -3394,13 +3505,36 @@ Object.assign(App, {
                                 <div class="w-4 h-4 card-bg rounded-full ${Notification.permission === 'granted' ? 'translate-x-4' : 'translate-x-0'} shadow-sm transition-transform"></div>
                             </div>
                         </div>
-                        <div class="flex items-center justify-between py-3" onclick="App.toggleTheme()">
-                            <div class="flex items-center gap-3">
-                                <i data-lucide="${this.state.theme === 'dark' ? 'moon' : 'sun'}" class="w-5 h-5 text-muted-theme"></i>
-                                <span class="text-theme">Modo ${this.state.theme === 'dark' ? 'Escuro' : 'Claro'}</span>
+                        <div class="py-3">
+                            <div class="flex items-center gap-3 mb-3">
+                                <i data-lucide="palette" class="w-5 h-5 text-muted-theme"></i>
+                                <span class="text-theme font-medium">Tema</span>
                             </div>
-                            <div class="w-10 h-6 ${this.state.theme === 'light' ? 'input-bg' : 'bg-amber-500'} rounded-full flex items-center p-1 cursor-pointer transition-colors">
-                                <div class="w-4 h-4 card-bg rounded-full ${this.state.theme === 'light' ? 'translate-x-0' : 'translate-x-4'} shadow-sm transition-transform"></div>
+                            <div class="grid grid-cols-4 gap-2">
+                                ${(() => {
+                                    const themes = [
+                                        { id: 'dark',   label: 'Escuro',  bg: '#18181b', border: '#3f3f46', dot: '#f59e0b', text: '#e4e4e7' },
+                                        { id: 'light',  label: 'Claro',   bg: '#f7f5f0', border: '#ddd8ce', dot: '#f59e0b', text: '#1c1917' },
+                                        { id: 'green',  label: 'Verde',   bg: '#f0f8f1', border: '#b8ddc2', dot: '#16a34a', text: '#1a3022' },
+                                        { id: 'pink',   label: 'Rosa',    bg: '#fdf2f5', border: '#f0c5d6', dot: '#ec4899', text: '#3a1025' },
+                                        { id: 'blue',   label: 'Azul',    bg: '#eff6fc', border: '#b8d5ee', dot: '#3b82f6', text: '#0f2540' },
+                                        { id: 'yellow', label: 'Dourado', bg: '#fdf9ec', border: '#e5d280', dot: '#ca8a04', text: '#3a2800' },
+                                        { id: 'brown',  label: 'Café',    bg: '#f8f0e8', border: '#d8bc98', dot: '#92400e', text: '#2a1500' },
+                                        { id: 'red',    label: 'Rubi',    bg: '#fdf0ee', border: '#f0b5ae', dot: '#ef4444', text: '#3a0808' },
+                                    ];
+                                    return themes.map(t => {
+                                        const isActive = this.state.theme === t.id;
+                                        return `
+                                            <button onclick="App.setTheme('${t.id}')"
+                                                    style="background:${t.bg}; border-color:${isActive ? t.dot : t.border};"
+                                                    class="relative rounded-xl border-2 p-2 flex flex-col items-center justify-center gap-1.5 h-16 transition-all active:scale-95${isActive ? ' shadow-lg' : ''}">
+                                                <div style="background:${t.dot}" class="w-5 h-5 rounded-full shadow-sm"></div>
+                                                <span style="color:${t.text}" class="text-[9px] font-bold leading-none">${t.label}</span>
+                                                ${isActive ? `<div class="absolute top-1 right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center" style="background:${t.dot}"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>` : ''}
+                                            </button>
+                                        `;
+                                    }).join('');
+                                })()}
                             </div>
                         </div>
                     </div>

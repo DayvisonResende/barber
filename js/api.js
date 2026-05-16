@@ -249,12 +249,13 @@ Object.assign(App, {
                 const barber = BARBERS.find(b => String(b.user_id) === String(t.barber_id));
                 return {
                     id: t.id,
+                    appointmentId: t.appointment_id,
                     clientName: t.client_name,
                     service: { name: t.service_name },
                     paymentMethod: t.payment_method,
                     numericValue: t.numeric_value,
                     barberName: barber ? barber.name : (t.barber_name || 'Profissional'),
-                    barberId: t.barber_id, // Importante para o financeiro
+                    barberId: t.barber_id,
                     date: t.date,
                     time: t.time,
                     completedAt: t.completed_at,

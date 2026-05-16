@@ -104,14 +104,21 @@ Object.assign(App, {
     },
 
     applyTheme() {
-        document.body.classList.toggle('light-mode', this.state.theme === 'light');
+        const ALL = ['light-mode', 'theme-green', 'theme-pink', 'theme-blue', 'theme-yellow', 'theme-brown', 'theme-red'];
+        document.body.classList.remove(...ALL);
+        const MAP = { light: 'light-mode', green: 'theme-green', pink: 'theme-pink', blue: 'theme-blue', yellow: 'theme-yellow', brown: 'theme-brown', red: 'theme-red' };
+        if (MAP[this.state.theme]) document.body.classList.add(MAP[this.state.theme]);
+    },
+
+    setTheme(theme) {
+        this.state.theme = theme;
+        localStorage.setItem('finotrato-theme', theme);
+        this.applyTheme();
+        this.render();
     },
 
     toggleTheme() {
-        this.state.theme = this.state.theme === 'dark' ? 'light' : 'dark';
-        localStorage.setItem('finotrato-theme', this.state.theme);
-        this.applyTheme();
-        this.render();
+        this.setTheme(this.state.theme === 'dark' ? 'light' : 'dark');
     },
 
     // --- Ações de Estado ---
@@ -925,8 +932,34 @@ Object.assign(App, {
     },
 
     toggleTransactionExpand(id) {
-        // Toggle: Se clicar no mesmo, fecha. Se no outro, abre o outro e fecha o anterior.
         this.state.expandedTransactionId = (this.state.expandedTransactionId === id) ? null : id;
+        this.render();
+    },
+
+    async openTransactionDetail(txId) {
+        const tx = this.state.completedTransactions.find(t => t.id === txId);
+        if (!tx) return;
+
+        this.state.transactionDetailId = txId;
+        this.state.transactionDetailApt = null;
+        this.render();
+
+        let apt = this.state.appointments.find(a => a.id === tx.appointmentId);
+        if (!apt && tx.appointmentId) {
+            const { data } = await supabaseClient
+                .from('appointments')
+                .select('id, comanda_items')
+                .eq('id', tx.appointmentId)
+                .single();
+            apt = data || null;
+        }
+        this.state.transactionDetailApt = apt || { comanda_items: [] };
+        this.render();
+    },
+
+    closeTransactionDetail() {
+        this.state.transactionDetailId = null;
+        this.state.transactionDetailApt = null;
         this.render();
     },
 

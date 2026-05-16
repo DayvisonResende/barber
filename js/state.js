@@ -97,6 +97,10 @@ const App = {
         isLoadingProductSales: false,
 
         // --- Bloqueio Rápido ---
-        isQuickBlockOpen: false
+        isQuickBlockOpen: false,
+
+        // --- Detalhe de Transação ---
+        transactionDetailId: null,
+        transactionDetailApt: null
     }
 };
