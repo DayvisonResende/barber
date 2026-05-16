@@ -1253,7 +1253,7 @@ Object.assign(App, {
         return `
             <div class="space-y-4 fade-in slide-in-up flex flex-col h-full min-h-[70vh]">
                 <div class="flex items-center justify-between card-bg p-3 rounded-2xl border border-theme shadow-sm shrink-0">
-                    <button onclick="App.prevAgendaDay()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-800 text-muted-theme hover:text-theme hover:bg-zinc-700 transition-colors active:scale-95">
+                    <button onclick="App.prevAgendaDay()" class="w-10 h-10 flex items-center justify-center rounded-xl input-bg border border-theme text-muted-theme hover:text-theme transition-colors active:scale-95">
                         <i data-lucide="arrow-left" class="w-5 h-5"></i>
                     </button>
                     <div class="text-center flex-1 cursor-pointer select-none" onclick="document.getElementById('agenda-date-picker').showPicker()">
@@ -1261,7 +1261,7 @@ Object.assign(App, {
                         <p class="text-xs text-amber-500 font-bold">${dateFmt}</p>
                         <input type="date" id="agenda-date-picker" class="opacity-0 absolute w-0 h-0" value="${dateStr}" onchange="App.setAgendaDay(this.value)">
                     </div>
-                    <button onclick="App.nextAgendaDay()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-800 text-muted-theme hover:text-theme hover:bg-zinc-700 transition-colors active:scale-95">
+                    <button onclick="App.nextAgendaDay()" class="w-10 h-10 flex items-center justify-center rounded-xl input-bg border border-theme text-muted-theme hover:text-theme transition-colors active:scale-95">
                         <i data-lucide="arrow-right" class="w-5 h-5"></i>
                     </button>
                 </div>
@@ -1269,16 +1269,16 @@ Object.assign(App, {
                 <div class="flex justify-between items-center shrink-0">
                     <h3 class="text-xl font-bold text-theme">Grade Horária</h3>
                     <div class="flex items-center gap-2">
-                        <button onclick="App.toggleQuickBlock()" class="text-xs text-orange-400 bg-zinc-800 hover:bg-orange-500/10 px-3 py-1.5 rounded-lg font-bold uppercase transition-colors flex items-center gap-1.5 border border-zinc-700 hover:border-orange-500/30">
+                        <button onclick="App.toggleQuickBlock()" class="text-xs text-orange-400 input-bg hover:bg-orange-500/10 px-3 py-1.5 rounded-lg font-bold uppercase transition-colors flex items-center gap-1.5 border border-theme hover:border-orange-500/30">
                             <i data-lucide="lock" class="w-3.5 h-3.5"></i> Bloquear
                         </button>
-                        <button onclick="App.setAgendaViewMode('list')" class="text-xs text-muted-theme bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg font-bold uppercase transition-colors flex items-center gap-1.5 border border-zinc-700">
+                        <button onclick="App.setAgendaViewMode('list')" class="text-xs text-muted-theme input-bg px-3 py-1.5 rounded-lg font-bold uppercase transition-colors flex items-center gap-1.5 border border-theme">
                             <i data-lucide="list" class="w-3.5 h-3.5"></i> Lista
                         </button>
                     </div>
                 </div>
 
-                <div class="flex-1 overflow-y-auto custom-scrollbar rounded-2xl border border-theme shadow-md relative bg-zinc-950 pb-20">
+                <div class="flex-1 overflow-y-auto custom-scrollbar rounded-2xl border border-theme shadow-md relative pb-20" style="background: var(--bg-app)">
                     ${(() => {
                         const blockedOnDate = new Set(
                             (this.state.blockedTimesFull || [])
@@ -1289,8 +1289,8 @@ Object.assign(App, {
                         const isHour = slot.time.endsWith('00');
                         const isBlocked = blockedOnDate.has(slot.time);
                         return `
-                        <div class="flex h-[20px] border-b ${isHour ? 'border-zinc-700' : 'border-zinc-800'} relative group ${isBlocked ? 'bg-orange-500/5' : ''}">
-                            <div class="w-16 shrink-0 border-r ${isBlocked ? 'border-orange-500/20' : 'border-zinc-800'} flex items-center justify-center text-[10px] font-bold ${isHour ? `${isBlocked ? 'text-orange-400/70' : 'text-theme'} bg-zinc-900/80` : `${isBlocked ? 'text-orange-500/40' : 'text-muted-theme/50'} bg-zinc-900/30`}">
+                        <div class="flex h-[20px] relative group ${isBlocked ? 'bg-orange-500/5' : ''}" style="border-bottom: 1px solid ${isHour ? 'var(--border-main)' : 'color-mix(in srgb, var(--border-main) 30%, transparent)'}">
+                            <div class="w-16 shrink-0 flex items-center justify-center text-[10px] font-bold ${isHour ? `${isBlocked ? 'text-orange-400/70' : 'text-theme'}` : `${isBlocked ? 'text-orange-500/40' : 'text-muted-theme'} opacity-60`}" style="border-right: 1px solid ${isBlocked ? 'rgba(249,115,22,0.2)' : 'color-mix(in srgb, var(--border-main) 30%, transparent)'}; background: ${isHour ? 'var(--bg-card)' : 'transparent'}">
                                 ${isBlocked && isHour ? '<i data-lucide="lock" class="w-2.5 h-2.5"></i>' : slot.time}
                             </div>
 
@@ -1310,21 +1310,21 @@ Object.assign(App, {
                                     
                                     if (apt.isLunch) {
                                         return `
-                                            <div class="absolute top-[2px] bg-zinc-800/80 border border-dashed border-zinc-600 rounded-lg p-2 shadow-inner z-0 overflow-hidden flex flex-col items-center justify-center gap-1 opacity-70 cursor-default"
+                                            <div class="absolute top-[2px] input-bg border border-dashed border-theme rounded-lg p-2 shadow-inner z-0 overflow-hidden flex flex-col items-center justify-center gap-1 opacity-70 cursor-default"
                                                  style="height: calc(${spans * 20}px - 4px); left: calc(${left}% + 4px); width: calc(${width}% - 8px);">
                                                 <i data-lucide="coffee" class="w-4 h-4 text-muted-theme"></i>
                                                 <p class="text-[9px] font-black text-muted-theme uppercase">${apt.clientName}</p>
-                                                <p class="text-[8px] font-bold text-zinc-500">${apt.barberName}</p>
+                                                <p class="text-[8px] font-bold text-muted-theme">${apt.barberName}</p>
                                             </div>
                                         `;
                                     }
                                     return `
                                         <div onclick="App.openAppointmentModal('${apt.id}')" 
-                                             class="absolute top-[2px] bg-zinc-900 border ${apt.status === 'completed' ? 'border-emerald-500/50 border-l-emerald-500' : 'border-amber-500/50 border-l-amber-500'} border-l-[3px] rounded-lg p-2 shadow-lg cursor-pointer hover:border-amber-500 transition-colors z-10 overflow-hidden flex flex-col gap-1 hover:-translate-y-0.5"
+                                             class="absolute top-[2px] card-bg border ${apt.status === 'completed' ? 'border-emerald-500/50 border-l-emerald-500' : 'border-amber-500/50 border-l-amber-500'} border-l-[3px] rounded-lg p-2 shadow-lg cursor-pointer hover:border-amber-500 transition-colors z-10 overflow-hidden flex flex-col gap-1 hover:-translate-y-0.5"
                                              style="height: calc(${spans * 20}px - 4px); left: calc(${left}% + 4px); width: calc(${width}% - 8px);">
                                             
                                             <div class="flex items-center gap-2">
-                                                <div class="w-6 h-6 rounded-full overflow-hidden shrink-0 bg-zinc-800 border border-theme flex items-center justify-center">
+                                                <div class="w-6 h-6 rounded-full overflow-hidden shrink-0 input-bg border border-theme flex items-center justify-center">
                                                     ${apt.clientAvatar ? `<img src="${apt.clientAvatar}" class="w-full h-full object-cover">` : `<span class="w-full h-full flex items-center justify-center text-amber-500 text-[9px] font-black">${clientInitial}</span>`}
                                                 </div>
                                                 <div class="flex-1 min-w-0">
