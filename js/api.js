@@ -1655,6 +1655,19 @@ Object.assign(App, {
     async cancelAppointment(id) {
         this.showConfirm("Cancelar Agendamento", "Tem certeza que deseja cancelar este atendimento? O horário será liberado imediatamente.", true, async () => {
             try {
+                // Restaurar estoque de todos os itens da comanda antes de cancelar
+                const apt = this.state.appointments.find(a => a.id === id);
+                if (apt && apt.comanda_items && apt.comanda_items.length > 0) {
+                    for (const item of apt.comanda_items) {
+                        const prod = PRODUCTS.find(p => p.id === item.id);
+                        if (prod && prod.stock_quantity != null) {
+                            const newStock = prod.stock_quantity + (item.qty || 1);
+                            await supabaseClient.from('products').update({ stock_quantity: newStock }).eq('id', item.id);
+                            prod.stock_quantity = newStock;
+                        }
+                    }
+                }
+
                 const { error } = await supabaseClient
                     .from('appointments')
                     .update({ status: 'cancelled' })
@@ -2657,11 +2670,18 @@ Object.assign(App, {
                     
                     if (error) throw error;
 
+                    // Decrementar estoque se o produto tiver controle de quantidade
+                    if (product.stock_quantity != null) {
+                        const newStock = Math.max(0, product.stock_quantity - qty);
+                        await supabaseClient.from('products').update({ stock_quantity: newStock }).eq('id', product.id);
+                        product.stock_quantity = newStock;
+                    }
+
                     this.showNotification("Sucesso", `${qty}x ${product.name} adicionado à comanda!`);
                     this.closeComandaModal(); // Fecha modal e limpa flag de interação
                     await this.loadAppointments();
                     this.render();
-                    
+
                 } catch (error) {
                     console.error("Erro ao adicionar item na comanda:", error);
                     this.showNotification("Erro", "Falha ao adicionar item.");
@@ -2705,10 +2725,18 @@ Object.assign(App, {
             
             if (error) throw error;
 
+            // Restaurar 1 unidade ao estoque
+            const prod = PRODUCTS.find(p => p.id === item.id);
+            if (prod && prod.stock_quantity != null) {
+                const newStock = prod.stock_quantity + 1;
+                await supabaseClient.from('products').update({ stock_quantity: newStock }).eq('id', item.id);
+                prod.stock_quantity = newStock;
+            }
+
             this.showNotification("Removido", "Item removido da comanda.");
             await this.loadAppointments();
             this.render();
-            
+
         } catch (error) {
             console.error("Erro ao remover item da comanda:", error);
             this.showNotification("Erro", "Falha ao remover item.");
@@ -2747,18 +2775,17 @@ Object.assign(App, {
         }
     },
 
-    async addProduct(name, priceStr, categoryId) {
+    async addProduct(name, priceStr, categoryId, stockStr = '') {
         if (!name || !priceStr || !categoryId) {
             this.showNotification("Erro", "Preencha todos os campos do produto.");
             return;
         }
         const numericValue = parseFloat(priceStr.replace(',', '.'));
+        const stockQty = stockStr !== '' && stockStr !== null ? parseInt(stockStr, 10) : null;
+        const insertData = { name, price: numericValue, category_id: categoryId };
+        if (stockQty !== null && !isNaN(stockQty)) insertData.stock_quantity = stockQty;
         try {
-            const { error } = await supabaseClient.from('products').insert({
-                name: name,
-                price: numericValue,
-                category_id: categoryId
-            });
+            const { error } = await supabaseClient.from('products').insert(insertData);
             if (error) throw error;
             this.showNotification("Sucesso", "Produto criado.");
             await this.loadInitialData();
@@ -2779,7 +2806,7 @@ Object.assign(App, {
         this.render();
     },
 
-    async updateProduct(id, newName, newPriceStr, newCategoryId) {
+    async updateProduct(id, newName, newPriceStr, newCategoryId, stockStr = '') {
         if (!newName || !newPriceStr || !newCategoryId) {
             this.showNotification("Erro", "Preencha todos os campos do produto.");
             return;
@@ -2789,12 +2816,15 @@ Object.assign(App, {
             this.showNotification("Erro", "Valor inválido.");
             return;
         }
+        const stockQty = (stockStr !== '' && stockStr != null) ? parseInt(stockStr, 10) : null;
+        const updateData = {
+            name: newName,
+            price: numericValue,
+            category_id: newCategoryId,
+            stock_quantity: (stockQty !== null && !isNaN(stockQty)) ? stockQty : null
+        };
         try {
-            const { error } = await supabaseClient.from('products').update({
-                name: newName,
-                price: numericValue,
-                category_id: newCategoryId
-            }).eq('id', id);
+            const { error } = await supabaseClient.from('products').update(updateData).eq('id', id);
             
             if (error) throw error;
             
@@ -2820,6 +2850,127 @@ Object.assign(App, {
             console.error("Erro ao excluir produto:", e);
             this.showNotification("Erro", "Falha ao excluir.");
         }
+    },
+
+    async loadProductSales() {
+        this.state.isLoadingProductSales = true;
+        this.render();
+
+        const filter = this.state.productDateFilter;
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+        let startDate, endDate;
+        switch (filter) {
+            case 'day':
+                startDate = endDate = fmt(now); break;
+            case 'week': {
+                const s = new Date(now);
+                s.setDate(now.getDate() - now.getDay());
+                startDate = fmt(s); endDate = fmt(now); break;
+            }
+            case 'year':
+                startDate = `${now.getFullYear()}-01-01`;
+                endDate = fmt(now); break;
+            case 'custom':
+                startDate = this.state.productDateStart;
+                endDate = this.state.productDateEnd; break;
+            default: // 'month'
+                startDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+                endDate = fmt(now);
+        }
+
+        if (!startDate || !endDate) {
+            this.state.isLoadingProductSales = false;
+            this.render();
+            return;
+        }
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('appointments')
+                .select('id, date, client_name, comanda_items, barber_name')
+                .eq('status', 'completed')
+                .gte('date', startDate)
+                .lte('date', endDate);
+
+            if (!error && data) {
+                this.state.productSales = data.filter(a => a.comanda_items && a.comanda_items.length > 0);
+            }
+        } catch (e) {
+            console.error('Erro ao carregar vendas de produtos:', e);
+        }
+
+        this.state.isLoadingProductSales = false;
+        this.render();
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // BLOQUEIO RÁPIDO DA GRADE HORÁRIA
+    // ─────────────────────────────────────────────────────────────────
+
+    toggleQuickBlock() {
+        this.state.isQuickBlockOpen = !this.state.isQuickBlockOpen;
+        this.render();
+    },
+
+    async quickBlockTimeWindow() {
+        const barberId = document.getElementById('qb-barber')?.value;
+        const start    = document.getElementById('qb-start')?.value;
+        const end      = document.getElementById('qb-end')?.value;
+        const date     = this.state.agendaSelectedDate;
+
+        if (!start || !end) {
+            this.showNotification('Campos incompletos', 'Preencha início e fim do bloqueio.');
+            return;
+        }
+
+        const startMin = this.timeToMinutes(start);
+        const endMin   = this.timeToMinutes(end);
+
+        if (endMin <= startMin) {
+            this.showNotification('Horário inválido', 'O horário de fim deve ser depois do início.');
+            return;
+        }
+
+        const targetIds = barberId === 'all'
+            ? BARBERS.map(b => b.user_id).filter(Boolean)
+            : [barberId];
+
+        if (targetIds.length === 0) {
+            this.showNotification('Nenhum barbeiro', 'Nenhum barbeiro encontrado.');
+            return;
+        }
+
+        const slots = [];
+        for (const bid of targetIds) {
+            for (let t = startMin; t < endMin; t += 5) {
+                slots.push({ barber_id: bid, date, blocked_time: this.minutesToTime(t) });
+            }
+        }
+
+        const { error } = await supabaseClient
+            .from('blocked_times')
+            .upsert(slots, { onConflict: 'barber_id,date,blocked_time', ignoreDuplicates: true });
+
+        if (error) {
+            this.showNotification('Erro ao bloquear', error.message);
+            return;
+        }
+
+        const existing = (this.state.blockedTimesFull || []).filter(b =>
+            !(targetIds.includes(b.barber_id) && b.date === date &&
+              b.blocked_time >= start && b.blocked_time < end)
+        );
+        this.state.blockedTimesFull = [...existing, ...slots];
+
+        this.state.isQuickBlockOpen = false;
+        const label = barberId === 'all'
+            ? 'todos os barbeiros'
+            : (BARBERS.find(b => b.user_id === barberId)?.name || 'barbeiro');
+        this.showNotification('Bloqueado ✓', `${start} – ${end} bloqueado para ${label}.`);
+        this.render();
     }
 });
 

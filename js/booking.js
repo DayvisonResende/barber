@@ -33,6 +33,8 @@ Object.assign(App, {
         this.state.selectedServices = [];
         this.state.bookingAvailableSlots = {};
         this.state.editingAppointmentId = null;
+        this.state.gridBookingDate = null;
+        this.state.gridBookingTime = null;
         this.render();
     },
 
@@ -122,6 +124,7 @@ Object.assign(App, {
         }
 
         const duracaoTotal = services.reduce((sum, s) => sum + (s.durationMinutes || 30), 0);
+        const gridTime = this.state.gridBookingTime || null;
 
         // Sincroniza com selectedServices (legado) e bookingSelectedService (primeiro item)
         this.state.selectedServices = services;
@@ -130,6 +133,8 @@ Object.assign(App, {
         this.state.selectedBarber = null;
         this.state.bookingIsLoadingSlots = true;
         this.state.bookingStep = 'slots';
+        this.state.gridBookingDate = null;
+        this.state.gridBookingTime = null;
         this.render();
 
         // Motor de disponibilidade com duração total dos serviços combinados
@@ -143,6 +148,16 @@ Object.assign(App, {
 
         this.state.bookingAvailableSlots = slots;
         this.state.bookingIsLoadingSlots = false;
+
+        // Se veio da grade, tenta auto-selecionar o barbeiro no horário pré-definido
+        if (gridTime) {
+            const barbersAtTime = slots[gridTime] || [];
+            if (barbersAtTime.length === 1) {
+                this.selectTimeAndBarberNew(gridTime, barbersAtTime[0].id);
+                return;
+            }
+        }
+
         this.render();
     },
 
@@ -424,7 +439,9 @@ Object.assign(App, {
     // STAFF BOOKING — Agendamento Manual pelo Barbeiro/Admin
     // ─────────────────────────────────────────────────────────────────
 
-    startStaffBooking() {
+    startStaffBooking(dateStr, time) {
+        this.state.gridBookingDate = dateStr || null;
+        this.state.gridBookingTime = time || null;
         this.openStaffBookingModal();
     },
 
@@ -486,7 +503,24 @@ Object.assign(App, {
         this.state.isStaffBooking = true;
         this.state.staffBookingMode = mode;
         this.state.staffSelectedClient = null;
-        this.startBooking();
+
+        if (this.state.gridBookingDate && this.state.gridBookingTime) {
+            // Modo rápido da grade: data e hora já conhecidas, pular para seleção de serviço
+            this.state.isBooking = true;
+            this.state.selectedDate = this.state.gridBookingDate;
+            this.state.selectedTime = '';
+            this.state.selectedBarber = null;
+            this.state.bookingSelectedService = null;
+            this.state.bookingSelectedServices = [];
+            this.state.selectedServices = [];
+            this.state.bookingAvailableSlots = {};
+            this.state.bookingIsLoadingSlots = false;
+            this.state.editingAppointmentId = null;
+            this.state.bookingStep = 'service';
+            this.render();
+        } else {
+            this.startBooking();
+        }
     },
 
     searchStaffClients(term) {

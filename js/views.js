@@ -1157,24 +1157,43 @@ Object.assign(App, {
         const dayName = daysOfWeek[targetDate.getDay()].split('-')[0];
         const dateFmt = dateStr.split('-').reverse().join('/').slice(0, 5);
 
-        // Pegar horário de funcionamento a partir dos barberConfigs (horário real dos barbeiros)
+        // Pegar horário de funcionamento por dia da semana (usa day_schedules se disponível)
+        const dow = new Date(dateStr + 'T12:00:00').getDay();
         const activeConfigs = (this.state.barberConfigs || []);
+
+        const workingConfigsToday = activeConfigs.map(cfg => {
+            const dayCfg = (cfg.day_schedules || {})[dow] || {};
+            if (dayCfg.closed) return null;
+            return {
+                barber_id:       cfg.barber_id,
+                todayStart:      dayCfg.start       || cfg.work_start  || '09:00',
+                todayEnd:        dayCfg.end         || cfg.work_end    || '18:00',
+                todayLunchStart: dayCfg.lunch_start || cfg.lunch_start || null,
+                todayLunchEnd:   dayCfg.lunch_end   || cfg.lunch_end   || null,
+            };
+        }).filter(Boolean);
+
         let gridStart = '09:00';
         let gridEnd = '18:00';
-        if (activeConfigs.length > 0) {
-            const allStarts = activeConfigs.map(c => c.work_start).filter(Boolean).sort();
-            const allEnds = activeConfigs.map(c => c.work_end).filter(Boolean).sort();
+        if (workingConfigsToday.length > 0) {
+            const allStarts = workingConfigsToday.map(c => c.todayStart).filter(Boolean).sort();
+            const allEnds   = workingConfigsToday.map(c => c.todayEnd).filter(Boolean).sort();
             if (allStarts.length > 0) gridStart = allStarts[0];
-            if (allEnds.length > 0) gridEnd = allEnds[allEnds.length - 1];
+            if (allEnds.length > 0)   gridEnd   = allEnds[allEnds.length - 1];
+        } else if (activeConfigs.length > 0) {
+            const allStarts = activeConfigs.map(c => c.work_start).filter(Boolean).sort();
+            const allEnds   = activeConfigs.map(c => c.work_end).filter(Boolean).sort();
+            if (allStarts.length > 0) gridStart = allStarts[0];
+            if (allEnds.length > 0)   gridEnd   = allEnds[allEnds.length - 1];
         }
         let minMin = parseInt(gridStart.split(':')[0]) * 60 + parseInt(gridStart.split(':')[1] || 0);
         let maxMin = parseInt(gridEnd.split(':')[0]) * 60 + parseInt(gridEnd.split(':')[1] || 0);
         const lunchApts = [];
-        (this.state.barberConfigs || []).forEach(cfg => {
+        workingConfigsToday.forEach(cfg => {
             const bInfo = (typeof BARBERS !== 'undefined' ? BARBERS : []).find(b => String(b.id) === String(cfg.barber_id) || String(b.user_id) === String(cfg.barber_id));
             if (!bInfo) return;
-            const lStart = cfg.lunch_start || '12:00';
-            const lEnd = cfg.lunch_end || '13:00';
+            const lStart = cfg.todayLunchStart || '12:00';
+            const lEnd = cfg.todayLunchEnd || '13:00';
             const [sh, sm] = lStart.split(':').map(Number);
             const [eh, em] = lEnd.split(':').map(Number);
             const dur = (eh * 60 + em) - (sh * 60 + sm);
@@ -1249,22 +1268,34 @@ Object.assign(App, {
 
                 <div class="flex justify-between items-center shrink-0">
                     <h3 class="text-xl font-bold text-theme">Grade Horária</h3>
-                    <button onclick="App.setAgendaViewMode('list')" class="text-xs text-muted-theme bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg font-bold uppercase transition-colors flex items-center gap-1.5 border border-zinc-700">
-                        <i data-lucide="list" class="w-3.5 h-3.5"></i> Lista
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="App.toggleQuickBlock()" class="text-xs text-orange-400 bg-zinc-800 hover:bg-orange-500/10 px-3 py-1.5 rounded-lg font-bold uppercase transition-colors flex items-center gap-1.5 border border-zinc-700 hover:border-orange-500/30">
+                            <i data-lucide="lock" class="w-3.5 h-3.5"></i> Bloquear
+                        </button>
+                        <button onclick="App.setAgendaViewMode('list')" class="text-xs text-muted-theme bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg font-bold uppercase transition-colors flex items-center gap-1.5 border border-zinc-700">
+                            <i data-lucide="list" class="w-3.5 h-3.5"></i> Lista
+                        </button>
+                    </div>
                 </div>
 
                 <div class="flex-1 overflow-y-auto custom-scrollbar rounded-2xl border border-theme shadow-md relative bg-zinc-950 pb-20">
-                    ${slots.map(slot => {
+                    ${(() => {
+                        const blockedOnDate = new Set(
+                            (this.state.blockedTimesFull || [])
+                                .filter(b => b.date === dateStr)
+                                .map(b => b.blocked_time)
+                        );
+                        return slots.map(slot => {
                         const isHour = slot.time.endsWith('00');
+                        const isBlocked = blockedOnDate.has(slot.time);
                         return `
-                        <div class="flex h-[20px] border-b ${isHour ? 'border-zinc-700' : 'border-zinc-800'} relative group">
-                            <div class="w-16 shrink-0 border-r border-zinc-800 flex items-center justify-center text-[10px] font-bold ${isHour ? 'text-theme bg-zinc-900/80' : 'text-muted-theme/50 bg-zinc-900/30'}">
-                                ${slot.time}
+                        <div class="flex h-[20px] border-b ${isHour ? 'border-zinc-700' : 'border-zinc-800'} relative group ${isBlocked ? 'bg-orange-500/5' : ''}">
+                            <div class="w-16 shrink-0 border-r ${isBlocked ? 'border-orange-500/20' : 'border-zinc-800'} flex items-center justify-center text-[10px] font-bold ${isHour ? `${isBlocked ? 'text-orange-400/70' : 'text-theme'} bg-zinc-900/80` : `${isBlocked ? 'text-orange-500/40' : 'text-muted-theme/50'} bg-zinc-900/30`}">
+                                ${isBlocked && isHour ? '<i data-lucide="lock" class="w-2.5 h-2.5"></i>' : slot.time}
                             </div>
-                            
+
                             <div class="flex-1 relative">
-                                ${!slot.isCovered ? `
+                                ${!slot.isCovered && !isBlocked ? `
                                     <button onclick="App.state.appointmentsFilterStart = '${dateStr}'; App.state.appointmentsFilterEnd = '${dateStr}'; App.startStaffBooking('${dateStr}', '${slot.time}')" class="absolute inset-0 w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-amber-500/10 transition-all text-amber-500 z-0">
                                         <i data-lucide="plus" class="w-5 h-5"></i>
                                     </button>
@@ -1314,7 +1345,8 @@ Object.assign(App, {
                             </div>
                         </div>
                         `;
-                    }).join('')}
+                    }).join('');
+                    })()}
                 </div>
             </div>
         `;
@@ -1370,7 +1402,98 @@ Object.assign(App, {
                             `;
                             if (window.lucide) lucide.createIcons({ root: mc });
                         }
-                    } else if (mc && !this.state.isDateRangeModalOpen && !this.state.comandaModalOpen && !this.state.showingSplitPaymentId) {
+                    } else if (mc && this.state.isQuickBlockOpen) {
+                        const qbDate = this.state.agendaSelectedDate;
+                        const dateFmt = qbDate.split('-').reverse().join('/').slice(0, 5);
+
+                        // Bloqueios ativos no dia, agrupados por barbeiro
+                        const blocksToday = (this.state.blockedTimesFull || []).filter(b => b.date === qbDate && b.barber_id);
+                        const blocksByBarber = blocksToday.reduce((acc, b) => {
+                            if (!acc[b.barber_id]) acc[b.barber_id] = [];
+                            acc[b.barber_id].push(b.blocked_time);
+                            return acc;
+                        }, {});
+                        const activeBlocksHtml = Object.keys(blocksByBarber).length === 0
+                            ? '<p class="text-[11px] text-muted-theme italic text-center py-1">Nenhum bloqueio neste dia.</p>'
+                            : Object.entries(blocksByBarber).map(([bid, times]) => {
+                                const barber = BARBERS.find(b => b.user_id === bid);
+                                const name = barber ? App.escapeHTML(barber.name.split(' ')[0]) : 'Barbeiro';
+                                const sorted = times.slice().sort();
+                                const first = sorted[0];
+                                const [lh, lm] = sorted[sorted.length - 1].split(':').map(Number);
+                                const endMin = lh * 60 + lm + 5;
+                                const endTime = String(Math.floor(endMin / 60)).padStart(2, '0') + ':' + String(endMin % 60).padStart(2, '0');
+                                return `
+                                    <div class="flex items-center justify-between p-3 bg-orange-500/5 border border-orange-500/20 rounded-xl">
+                                        <div class="flex items-center gap-2.5 min-w-0">
+                                            <i data-lucide="lock" class="w-3.5 h-3.5 text-orange-400 shrink-0"></i>
+                                            <div class="min-w-0">
+                                                <p class="text-xs font-black text-theme truncate">${name}</p>
+                                                <p class="text-[10px] text-orange-400/80 font-bold">${first} – ${endTime}</p>
+                                            </div>
+                                        </div>
+                                        <button onclick="App.removeTimeBlockWindow('${bid}', '${qbDate}')" class="w-8 h-8 flex items-center justify-center rounded-lg text-muted-theme hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0">
+                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                    </div>
+                                `;
+                            }).join('');
+
+                        mc.innerHTML = `
+                            <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 fade-in" onclick="if(event.target===this) App.toggleQuickBlock()">
+                                <div class="w-full max-w-sm card-bg rounded-3xl border border-theme shadow-2xl overflow-hidden scale-in">
+                                    <div class="bg-zinc-900/50 p-5 border-b border-theme flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center">
+                                                <i data-lucide="lock" class="w-5 h-5 text-orange-400"></i>
+                                            </div>
+                                            <div>
+                                                <h2 class="text-base font-black text-theme">Bloqueio Rápido</h2>
+                                                <p class="text-[11px] text-orange-400 font-bold">${dateFmt}</p>
+                                            </div>
+                                        </div>
+                                        <button onclick="App.toggleQuickBlock()" class="w-9 h-9 flex items-center justify-center rounded-xl input-bg text-muted-theme hover:text-red-400 transition-colors border border-theme">
+                                            <i data-lucide="x" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                    <div class="p-5 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                                        <!-- Bloqueios ativos -->
+                                        ${Object.keys(blocksByBarber).length > 0 ? `
+                                        <div class="space-y-2">
+                                            <p class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Bloqueios Ativos</p>
+                                            ${activeBlocksHtml}
+                                        </div>
+                                        <div class="border-t border-theme/50"></div>
+                                        ` : ''}
+
+                                        <!-- Criar novo bloqueio -->
+                                        <p class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Novo Bloqueio</p>
+                                        <div class="space-y-1.5">
+                                            <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Barbeiro</label>
+                                            <select id="qb-barber" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-orange-400 outline-none text-sm">
+                                                <option value="all">Todos os Barbeiros</option>
+                                                ${BARBERS.map(b => `<option value="${b.user_id}">${App.escapeHTML(b.name)}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div class="space-y-1.5">
+                                                <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">De</label>
+                                                <input type="time" id="qb-start" value="12:00" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-orange-400 outline-none text-sm font-bold" />
+                                            </div>
+                                            <div class="space-y-1.5">
+                                                <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Até</label>
+                                                <input type="time" id="qb-end" value="14:00" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-orange-400 outline-none text-sm font-bold" />
+                                            </div>
+                                        </div>
+                                        <button onclick="App.quickBlockTimeWindow()" class="w-full py-3.5 rounded-xl bg-orange-500 text-zinc-950 font-black text-sm uppercase tracking-widest hover:bg-orange-400 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20">
+                                            <i data-lucide="lock" class="w-4 h-4"></i> Bloquear Horário
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        if (window.lucide) lucide.createIcons({ root: mc });
+                    } else if (mc && !this.state.isDateRangeModalOpen && !this.state.comandaModalOpen && !this.state.showingSplitPaymentId && !this.state.isQuickBlockOpen) {
                         mc.innerHTML = '';
                     }
                 }, 0);
@@ -1547,6 +1670,10 @@ Object.assign(App, {
             return this.renderAnalyticsDashboard();
         }
 
+        if (this.state.productReportTab === 'products') {
+            return this.renderProductsReport();
+        }
+
         const todayObj = new Date();
         const year = todayObj.getFullYear();
         const month = String(todayObj.getMonth() + 1).padStart(2, '0');
@@ -1654,6 +1781,12 @@ Object.assign(App, {
 
         return `
             <div class="space-y-6 fade-in">
+                <!-- Tab: Financeiro | Produtos -->
+                <div class="flex card-bg p-1 rounded-xl border border-theme">
+                    <button onclick="App.setProductReportTab('financial')" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all bg-amber-500 text-zinc-950">Financeiro</button>
+                    <button onclick="App.setProductReportTab('products')" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all text-muted-theme hover:text-theme">Produtos</button>
+                </div>
+
                 <!-- Header & View Toggle -->
                 <div class="flex items-end justify-between mb-2">
                     <h2 class="text-2xl font-bold text-theme">${reportTitle}</h2>
@@ -1906,7 +2039,123 @@ Object.assign(App, {
         `;
     },
 
+    renderProductsReport() {
+        const { aggregatedItems, totalRevenue, totalQty } = this.getFilteredProductItems();
+        const isLoading = this.state.isLoadingProductSales;
+        const dateFilter = this.state.productDateFilter;
+        const catFilter = this.state.productCategoryFilter;
 
+        const dateFilterLabels = {
+            'day': 'Hoje', 'week': 'Esta Semana', 'month': 'Este Mês', 'year': 'Este Ano', 'custom': 'No Período'
+        };
+
+        return `
+            <div class="space-y-6 fade-in pb-12">
+                <!-- Tab: Financeiro | Produtos -->
+                <div class="flex card-bg p-1 rounded-xl border border-theme">
+                    <button onclick="App.setProductReportTab('financial')" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all text-muted-theme hover:text-theme">Financeiro</button>
+                    <button onclick="App.setProductReportTab('products')" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all bg-amber-500 text-zinc-950">Produtos</button>
+                </div>
+
+                <!-- Header -->
+                <div class="flex items-end justify-between">
+                    <h2 class="text-2xl font-bold text-theme">Produtos Vendidos</h2>
+                    <button onclick="App.exportProductsToCSV()" class="p-2 rounded-lg card-bg border border-theme text-muted-theme hover:text-amber-500 hover:border-amber-500/30 transition-all active:scale-95" title="Exportar CSV">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <!-- Filtros de Data -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    <button onclick="App.setProductDateFilter('day')" class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${dateFilter === 'day' ? 'bg-amber-500 text-zinc-950 shadow-md' : 'input-bg text-muted-theme hover:text-theme'}">Hoje</button>
+                    <button onclick="App.setProductDateFilter('week')" class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${dateFilter === 'week' ? 'bg-amber-500 text-zinc-950 shadow-md' : 'input-bg text-muted-theme hover:text-theme'}">Semana</button>
+                    <button onclick="App.setProductDateFilter('month')" class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${dateFilter === 'month' ? 'bg-amber-500 text-zinc-950 shadow-md' : 'input-bg text-muted-theme hover:text-theme'}">Mês</button>
+                    <button onclick="App.setProductDateFilter('year')" class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${dateFilter === 'year' ? 'bg-amber-500 text-zinc-950 shadow-md' : 'input-bg text-muted-theme hover:text-theme'}">Ano</button>
+                    <button onclick="App.setProductDateFilter('custom')" class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center justify-center ${dateFilter === 'custom' ? 'bg-amber-500 text-zinc-950 shadow-md' : 'input-bg text-muted-theme hover:text-theme'}">
+                        <i data-lucide="calendar-search" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                ${dateFilter === 'custom' ? `
+                    <div class="card-bg border border-theme p-3 rounded-xl flex gap-2 items-end fade-in">
+                        <div class="flex-1">
+                            <label class="text-xs text-muted-theme mb-1 block">De</label>
+                            <input type="date" id="product-start-date" value="${this.state.productDateStart}" class="w-full input-bg text-theme text-sm rounded-lg p-2 border-none outline-none focus:ring-1 focus:ring-amber-500">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-xs text-muted-theme mb-1 block">Até</label>
+                            <input type="date" id="product-end-date" value="${this.state.productDateEnd}" class="w-full input-bg text-theme text-sm rounded-lg p-2 border-none outline-none focus:ring-1 focus:ring-amber-500">
+                        </div>
+                        <button onclick="App.setCustomProductRange()" class="bg-amber-500 text-zinc-950 p-2 rounded-lg font-bold hover:bg-amber-400 active:scale-95"><i data-lucide="search" class="w-5 h-5"></i></button>
+                    </div>
+                ` : ''}
+
+                <!-- Filtros de Categoria -->
+                ${CATEGORIES.length > 0 ? `
+                    <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide" style="-ms-overflow-style: none; scrollbar-width: none;">
+                        <button onclick="App.setProductCategoryFilter('all')" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${catFilter === 'all' ? 'bg-zinc-100 text-zinc-950' : 'input-bg text-muted-theme hover:text-theme'}">Todas</button>
+                        ${CATEGORIES.map(cat => `
+                            <button onclick="App.setProductCategoryFilter('${cat.id}')" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${catFilter === cat.id ? 'bg-amber-500 text-zinc-950' : 'input-bg text-muted-theme hover:text-amber-400'}">${App.escapeHTML(cat.name)}</button>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                <!-- Card Resumo -->
+                <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-5 shadow-theme relative overflow-hidden transition-all duration-300">
+                    <div class="absolute right-[-20px] top-[-20px] opacity-20">
+                        <i data-lucide="package" class="w-32 h-32 text-zinc-950"></i>
+                    </div>
+                    <p class="text-zinc-900 font-medium text-sm">Receita de Produtos — ${dateFilterLabels[dateFilter] || ''}</p>
+                    <h3 class="text-4xl font-bold text-zinc-950 mt-1 mb-4">R$ ${isLoading ? '...' : totalRevenue.toFixed(2).replace('.', ',')}</h3>
+                    <div class="flex justify-between items-center text-zinc-900 text-sm font-medium pt-3 border-t border-zinc-950/20">
+                        <span>${isLoading ? '—' : totalQty + ' itens vendidos'}</span>
+                        <span class="text-[10px] uppercase font-black opacity-60">${isLoading ? '' : aggregatedItems.length + ' produtos distintos'}</span>
+                    </div>
+                </div>
+
+                <!-- Lista de Produtos -->
+                <div class="space-y-4">
+                    <h3 class="text-sm font-medium text-muted-theme uppercase tracking-wider">Itens Vendidos no Período</h3>
+
+                    ${isLoading ? `
+                        <div class="text-center py-10 text-muted-theme">
+                            <i data-lucide="loader" class="w-8 h-8 mx-auto mb-2 animate-spin text-amber-500"></i>
+                            <p class="text-sm">Carregando produtos...</p>
+                        </div>
+                    ` : aggregatedItems.length === 0 ? `
+                        <div class="text-center py-10 text-muted-theme card-bg rounded-xl border border-theme">
+                            <i data-lucide="package-open" class="w-10 h-10 mx-auto mb-2 opacity-30"></i>
+                            <p class="text-sm cursor-default">Nenhum produto vendido no período.</p>
+                        </div>
+                    ` : `
+                        <div class="space-y-3">
+                            ${aggregatedItems.map(item => `
+                                <div class="card-bg rounded-xl border border-theme p-3 shadow-sm flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                                        <div class="input-bg p-2 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <i data-lucide="package" class="w-5 h-5 text-amber-500"></i>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(item.name)}</p>
+                                            <div class="text-[10px] text-muted-theme flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                                <span class="input-bg px-1.5 py-0.5 rounded border border-theme font-bold text-amber-500 uppercase tracking-tighter">${App.escapeHTML(item.categoryName)}</span>
+                                                <span class="opacity-30">•</span>
+                                                <span>${item.totalQty}x vendido${item.totalQty > 1 ? 's' : ''}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right flex-shrink-0 flex flex-col items-end min-w-[80px]">
+                                        <p class="font-black text-theme leading-none text-base">R$ ${item.totalRevenue.toFixed(2).replace('.', ',')}</p>
+                                        <p class="text-[9px] text-muted-theme font-mono mt-1 opacity-60">R$ ${item.price.toFixed(2).replace('.', ',')} / un</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    },
 
     renderBarbearia() {
         if (this.state.isManagingShop) {
@@ -2855,8 +3104,8 @@ Object.assign(App, {
                         ${CATEGORIES.length === 0 ? `
                             <p class="text-xs text-amber-500 italic">Crie uma categoria primeiro para adicionar produtos.</p>
                         ` : `
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                                <div class="space-y-1">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                <div class="space-y-1 col-span-2 md:col-span-1">
                                     <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Nome *</label>
                                     <input type="text" id="new-product-name" placeholder="Ex: Heineken LN" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors text-sm" />
                                 </div>
@@ -2871,8 +3120,12 @@ Object.assign(App, {
                                         ${CATEGORIES.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
                                     </select>
                                 </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Estoque inicial</label>
+                                    <input type="number" id="new-product-stock" placeholder="∞ ilimitado" min="0" step="1" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors text-sm" />
+                                </div>
                             </div>
-                            <button onclick="App.addProduct(document.getElementById('new-product-name').value, document.getElementById('new-product-price').value, document.getElementById('new-product-category').value)" class="w-full bg-amber-500 text-zinc-950 py-3 rounded-xl font-black uppercase tracking-wider hover:bg-amber-400 active:scale-[0.98] transition-all shadow-theme mb-6">
+                            <button onclick="App.addProduct(document.getElementById('new-product-name').value, document.getElementById('new-product-price').value, document.getElementById('new-product-category').value, document.getElementById('new-product-stock').value)" class="w-full bg-amber-500 text-zinc-950 py-3 rounded-xl font-black uppercase tracking-wider hover:bg-amber-400 active:scale-[0.98] transition-all shadow-theme mb-6">
                                 + Adicionar Produto
                             </button>
                         `}
@@ -2891,13 +3144,14 @@ Object.assign(App, {
                                                         <div class="flex gap-2">
                                                             <input type="text" id="edit-prod-name-${p.id}" value="${App.escapeHTML(p.name)}" placeholder="Nome" class="flex-1 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
                                                             <input type="number" id="edit-prod-price-${p.id}" value="${p.price.toFixed(2)}" step="0.01" class="w-20 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
+                                                            <input type="number" id="edit-prod-stock-${p.id}" value="${p.stock_quantity != null ? p.stock_quantity : ''}" placeholder="∞" min="0" step="1" title="Estoque (vazio = ilimitado)" class="w-16 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
                                                         </div>
                                                         <div class="flex justify-between items-center mt-1">
                                                             <select id="edit-prod-cat-${p.id}" class="input-bg border border-theme rounded p-1.5 text-xs text-theme max-w-[150px] focus:border-amber-500 outline-none">
                                                                 ${CATEGORIES.map(c => `<option value="${c.id}" ${c.id === p.category_id ? 'selected' : ''}>${c.name}</option>`).join('')}
                                                             </select>
                                                             <div class="flex gap-1">
-                                                                <button onclick="App.updateProduct('${p.id}', document.getElementById('edit-prod-name-${p.id}').value, document.getElementById('edit-prod-price-${p.id}').value, document.getElementById('edit-prod-cat-${p.id}').value)" class="p-1.5 bg-emerald-500 text-zinc-950 rounded hover:bg-emerald-400">
+                                                                <button onclick="App.updateProduct('${p.id}', document.getElementById('edit-prod-name-${p.id}').value, document.getElementById('edit-prod-price-${p.id}').value, document.getElementById('edit-prod-cat-${p.id}').value, document.getElementById('edit-prod-stock-${p.id}').value)" class="p-1.5 bg-emerald-500 text-zinc-950 rounded hover:bg-emerald-400">
                                                                     <i data-lucide="check" class="w-3.5 h-3.5"></i>
                                                                 </button>
                                                                 <button onclick="App.cancelEditProduct()" class="p-1.5 bg-zinc-700 text-muted-theme rounded hover:bg-zinc-600">
@@ -2912,7 +3166,10 @@ Object.assign(App, {
                                                         <span class="font-bold text-theme text-sm">${App.escapeHTML(p.name)}</span>
                                                         <span class="text-xs text-emerald-500 font-bold">R$ ${p.price.toFixed(2).replace('.', ',')}</span>
                                                     </div>
-                                                    <div class="flex gap-1">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${p.stock_quantity === 0 ? 'bg-rose-500/15 text-rose-400' : p.stock_quantity != null && p.stock_quantity <= 3 ? 'bg-amber-500/15 text-amber-400' : 'bg-zinc-700/50 text-muted-theme'}">
+                                                            ${p.stock_quantity != null ? p.stock_quantity + ' un' : '∞'}
+                                                        </span>
                                                         <button onclick="App.initEditProduct('${p.id}')" class="text-amber-500 hover:bg-amber-500/10 p-2 rounded-lg transition-colors">
                                                             <i data-lucide="edit-2" class="w-4 h-4"></i>
                                                         </button>
@@ -3990,7 +4247,7 @@ Object.assign(App, {
                         ` : `
                             <div class="overflow-y-auto pr-2 space-y-4 mb-6 flex-1 min-h-0 custom-scrollbar">
                                 ${CATEGORIES.map((cat, idx) => {
-            const catProducts = PRODUCTS.filter(p => p.category_id === cat.id);
+            const catProducts = PRODUCTS.filter(p => p.category_id === cat.id && (p.stock_quantity == null || p.stock_quantity > 0));
             if (catProducts.length === 0) return '';
             return `
                                         <div class="border border-theme rounded-[2.5rem] overflow-hidden bg-zinc-900/40 mb-3 last:mb-0 shadow-sm">
@@ -4022,9 +4279,12 @@ Object.assign(App, {
                                                 <div class="p-6 pt-0 space-y-3">
                                                     ${catProducts.map(p => `
                                                         <div class="flex flex-col p-4 rounded-2xl border border-theme bg-zinc-950/40 hover:border-amber-500/30 transition-all duration-300 group">
-                                                            <div>
-                                                                <p class="text-sm font-bold text-theme group-hover:text-amber-500 transition-colors leading-tight">${p.name}</p>
-                                                                <p class="text-xs text-emerald-500 font-black mt-1" id="price-${p.id}" data-price="${p.price}">R$ ${p.price.toFixed(2).replace('.', ',')}</p>
+                                                            <div class="flex items-start justify-between gap-2">
+                                                                <div>
+                                                                    <p class="text-sm font-bold text-theme group-hover:text-amber-500 transition-colors leading-tight">${p.name}</p>
+                                                                    <p class="text-xs text-emerald-500 font-black mt-1" id="price-${p.id}" data-price="${p.price}">R$ ${p.price.toFixed(2).replace('.', ',')}</p>
+                                                                </div>
+                                                                ${p.stock_quantity != null ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${p.stock_quantity <= 3 ? 'bg-rose-500/15 text-rose-400' : 'bg-amber-500/10 text-amber-500'}">${p.stock_quantity} restante${p.stock_quantity !== 1 ? 's' : ''}</span>` : ''}
                                                             </div>
                                                             <div class="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-theme/40">
                                                                 <div class="flex items-center bg-zinc-900 border border-theme rounded-lg h-10 px-1 shadow-inner shrink-0">
@@ -4032,7 +4292,7 @@ Object.assign(App, {
                                                                         <i data-lucide="minus" class="w-4 h-4"></i>
                                                                     </button>
                                                                     <span class="w-6 text-center text-xs font-bold text-theme select-none" id="qty-${p.id}">1</span>
-                                                                    <button onclick="event.stopPropagation(); const q=this.previousElementSibling; let v=parseInt(q.innerText)+1; q.innerText=v; const pel = document.getElementById('price-${p.id}'); pel.innerText = 'R$ ' + (parseFloat(pel.dataset.price)*v).toFixed(2).replace('.',',');" class="w-9 h-9 flex items-center justify-center text-muted-theme hover:text-white active:scale-95 transition-all">
+                                                                    <button onclick="event.stopPropagation(); const max=${p.stock_quantity != null ? p.stock_quantity : 999}; const q=this.previousElementSibling; let v=parseInt(q.innerText); if(v>=max) return; v++; q.innerText=v; const pel=document.getElementById('price-${p.id}'); pel.innerText='R$ '+(parseFloat(pel.dataset.price)*v).toFixed(2).replace('.',',');" class="w-9 h-9 flex items-center justify-center text-muted-theme hover:text-white active:scale-95 transition-all">
                                                                         <i data-lucide="plus" class="w-4 h-4"></i>
                                                                     </button>
                                                                 </div>

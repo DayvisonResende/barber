@@ -160,5 +160,120 @@ Object.assign(App, {
         document.body.removeChild(link);
         
         this.showNotification("Sucesso", "CSV gerado com sucesso!");
+    },
+
+    // --- Relatório de Produtos ---
+
+    setProductReportTab(tab) {
+        this.state.productReportTab = tab;
+        if (tab === 'products' && this.state.productSales.length === 0) {
+            this.loadProductSales();
+        } else {
+            this.render();
+        }
+    },
+
+    setProductCategoryFilter(catId) {
+        this.state.productCategoryFilter = catId;
+        this.render();
+    },
+
+    setProductDateFilter(filter) {
+        this.state.productDateFilter = filter;
+        this.loadProductSales();
+    },
+
+    setCustomProductRange() {
+        const start = document.getElementById('product-start-date')?.value;
+        const end = document.getElementById('product-end-date')?.value;
+        if (start && end) {
+            this.state.productDateStart = start;
+            this.state.productDateEnd = end;
+            this.state.productDateFilter = 'custom';
+            this.loadProductSales();
+        }
+    },
+
+    getFilteredProductItems() {
+        const catFilter = this.state.productCategoryFilter;
+        const sales = this.state.productSales || [];
+
+        const allItems = [];
+        sales.forEach(apt => {
+            (apt.comanda_items || []).forEach(item => {
+                const product = PRODUCTS.find(p => p.id === item.id);
+                const category = product ? CATEGORIES.find(c => c.id === product.category_id) : null;
+                const categoryId = product ? product.category_id : null;
+                const categoryName = category ? category.name : 'Sem Categoria';
+
+                if (catFilter !== 'all' && categoryId !== catFilter) return;
+
+                allItems.push({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    qty: item.qty || 1,
+                    categoryId,
+                    categoryName
+                });
+            });
+        });
+
+        const aggregated = {};
+        allItems.forEach(item => {
+            const key = item.id || item.name;
+            if (!aggregated[key]) {
+                aggregated[key] = {
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    categoryId: item.categoryId,
+                    categoryName: item.categoryName,
+                    totalQty: 0,
+                    totalRevenue: 0
+                };
+            }
+            aggregated[key].totalQty += item.qty;
+            aggregated[key].totalRevenue += item.price * item.qty;
+        });
+
+        const aggregatedItems = Object.values(aggregated).sort((a, b) => b.totalRevenue - a.totalRevenue);
+        const totalRevenue = aggregatedItems.reduce((sum, i) => sum + i.totalRevenue, 0);
+        const totalQty = aggregatedItems.reduce((sum, i) => sum + i.totalQty, 0);
+
+        return { aggregatedItems, totalRevenue, totalQty };
+    },
+
+    exportProductsToCSV() {
+        const { aggregatedItems } = this.getFilteredProductItems();
+        if (!aggregatedItems || aggregatedItems.length === 0) {
+            this.showNotification("Aviso", "Não há produtos para exportar no período.");
+            return;
+        }
+
+        const headers = ["Produto", "Categoria", "Qtd Vendida", "Valor Unit (R$)", "Total (R$)"];
+        const rows = aggregatedItems.map(item => [
+            item.name,
+            item.categoryName,
+            item.totalQty,
+            item.price.toFixed(2).replace('.', ','),
+            item.totalRevenue.toFixed(2).replace('.', ',')
+        ]);
+
+        const csvContent = [
+            headers.join(";"),
+            ...rows.map(r => r.join(";"))
+        ].join("\n");
+
+        const blob = new Blob(["﻿" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `relatorio_produtos_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showNotification("Sucesso", "CSV de produtos gerado!");
     }
 });

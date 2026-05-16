@@ -85,6 +85,18 @@ const App = {
         editingPlanId: null,
         plansAdminTab: 'list', // 'list' | 'clientes'
         assigningPlanId: null, // id do plano que está sendo atribuído
-        assignClientData: null // objeto do cliente selecionado para atribuição
+        assignClientData: null, // objeto do cliente selecionado para atribuição
+
+        // --- Relatório de Produtos ---
+        productReportTab: 'financial', // 'financial' | 'products'
+        productCategoryFilter: 'all',
+        productDateFilter: 'month',
+        productDateStart: '',
+        productDateEnd: '',
+        productSales: [],
+        isLoadingProductSales: false,
+
+        // --- Bloqueio Rápido ---
+        isQuickBlockOpen: false
     }
 };
