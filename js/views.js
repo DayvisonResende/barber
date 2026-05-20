@@ -495,8 +495,8 @@ Object.assign(App, {
                     </div>
                 ` : validTimes.length === 0 ? `
                     <div class="flex flex-col items-center justify-center py-16 text-center space-y-4">
-                        <div class="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center">
-                            <i data-lucide="calendar-x" class="w-8 h-8 text-zinc-600"></i>
+                        <div class="w-16 h-16 input-bg border border-theme rounded-full flex items-center justify-center">
+                            <i data-lucide="calendar-x" class="w-8 h-8 text-muted-theme"></i>
                         </div>
                         <div>
                             <h4 class="font-bold text-theme">Sem horários disponíveis</h4>
