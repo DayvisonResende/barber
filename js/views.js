@@ -2555,8 +2555,8 @@ Object.assign(App, {
                                 <i data-lucide="navigation" class="w-5 h-5"></i> Como chegar pelo Mapa
                             </a>
                             <a href="https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(s.address_street + ', ' + s.address_city)}&dropoff[nickname]=Finno%20Trato%20Barbearia" target="_blank" class="w-full py-4 rounded-2xl font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-[0.98] bg-zinc-950 text-white border border-zinc-700 hover:bg-white hover:text-zinc-950 hover:border-white shadow-lg text-xs uppercase tracking-widest">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 4.5a3.75 3.75 0 1 1 0 7.5 3.75 3.75 0 0 1 0-7.5zm0 14.25c-3.315 0-6.255-1.695-7.995-4.275.045-2.655 5.325-4.125 7.995-4.125 2.655 0 7.95 1.47 7.995 4.125C18.255 17.055 15.315 18.75 12 18.75z"/></svg>
-                                Chamar Uber até aqui
+                                <img src="assets/Uber_App_Icon.svg" alt="Uber" class="w-7 h-7 rounded-sm">
+                                Chamar Uber
                             </a>
 
                         </div>
