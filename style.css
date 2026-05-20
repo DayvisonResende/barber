@@ -350,3 +350,14 @@ body {
     max-height: 2000px;
     opacity: 1;
 }
+
+/* Nav hover theme-aware */
+.nav-btn:hover {
+    background-color: color-mix(in srgb, var(--border-main) 50%, transparent) !important;
+}
+.nav-btn:hover .icon-container {
+    background-color: var(--border-main) !important;
+}
+.nav-btn.text-amber-500:hover .icon-container {
+    background-color: rgba(245, 158, 11, 0.2) !important;
+}

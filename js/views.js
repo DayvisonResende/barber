@@ -964,7 +964,7 @@ Object.assign(App, {
             <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm border-l-4 border-l-amber-500">
                 <div class="flex justify-between items-start gap-3 cursor-pointer" onclick="if(event.target.closest('button') || event.target.closest('input') || event.target.closest('select')) return; App.toggleAppointmentAccordion('${apt.id}')">
                     <!-- Avatar do Cliente -->
-                    <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-zinc-900 flex items-center justify-center bg-zinc-800 shadow-inner">
+                    <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-theme flex items-center justify-center input-bg shadow-inner">
                         ${apt.clientAvatar ? `
                             <img src="${apt.clientAvatar}" class="w-full h-full object-cover" />
                         ` : `
@@ -976,7 +976,7 @@ Object.assign(App, {
                         <h3 class="font-bold text-theme text-lg truncate">${App.escapeHTML(apt.clientName)}</h3>
                         <div class="flex flex-wrap gap-1.5 mt-1.5">
                             ${this.state.editingServicesId === apt.id ? `
-                                <div class="w-full bg-zinc-900/40 border border-amber-500/30 rounded-xl p-3 flex flex-col gap-3 fade-in shadow-inner">
+                                <div class="w-full input-bg border border-amber-500/30 rounded-xl p-3 flex flex-col gap-3 fade-in shadow-inner">
                                     <div class="flex flex-wrap gap-1.5">
                                         ${SERVICES.filter(s => {
                                             const specialties = (this.state.barberServices || []).filter(bs => String(bs.barber_id) === String(apt.barber_id)).map(bs => bs.service_id);
@@ -984,7 +984,7 @@ Object.assign(App, {
                                         }).map(s => {
                                             const isSelected = (this.state.tempSelectedServices || []).some(ts => ts.id === s.id);
                                             return `
-                                                <button onclick="App.toggleEditService(${s.id})" class="px-2 py-1 rounded-md text-[9px] font-bold uppercase transition-all ${isSelected ? 'bg-amber-500 text-zinc-950 shadow-sm' : 'bg-zinc-800 text-muted-theme border border-transparent hover:border-amber-500/30'}">
+                                                <button onclick="App.toggleEditService(${s.id})" class="px-2 py-1 rounded-md text-[9px] font-bold uppercase transition-all ${isSelected ? 'bg-amber-500 text-zinc-950 shadow-sm' : 'input-bg text-muted-theme border border-theme hover:border-amber-500/30'}">
                                                     ${s.name}
                                                 </button>
                                             `;
@@ -992,7 +992,7 @@ Object.assign(App, {
                                     </div>
                                     <div class="flex gap-2">
                                         <button onclick="App.updateAppointmentServices('${apt.id}')" class="flex-1 py-1.5 bg-amber-500 text-zinc-950 rounded-lg text-[10px] font-black uppercase shadow-sm active:scale-95">Salvar</button>
-                                        <button onclick="App.cancelEditServices()" class="flex-1 py-1.5 bg-zinc-700 text-muted-theme rounded-lg text-[10px] font-bold uppercase border border-theme active:scale-95">X</button>
+                                        <button onclick="App.cancelEditServices()" class="flex-1 py-1.5 input-bg text-muted-theme rounded-lg text-[10px] font-bold uppercase border border-theme active:scale-95">X</button>
                                     </div>
                                 </div>
                             ` : `
@@ -1005,12 +1005,12 @@ Object.assign(App, {
                                 <div class="flex items-center gap-1 fade-in">
                                     <div class="relative">
                                         <span class="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-emerald-500 font-bold">R$</span>
-                                        <input type="text" id="adj-price-${apt.id}" value="${apt.numericValue?.toFixed(2).replace('.', ',') || '0,00'}" class="w-20 bg-zinc-800 border border-emerald-500 rounded pl-6 pr-1 py-0.5 text-[10px] text-emerald-500 font-bold outline-none" inputmode="decimal" />
+                                        <input type="text" id="adj-price-${apt.id}" value="${apt.numericValue?.toFixed(2).replace('.', ',') || '0,00'}" class="w-20 input-bg border border-emerald-500 rounded pl-6 pr-1 py-0.5 text-[10px] text-emerald-500 font-bold outline-none" inputmode="decimal" />
                                     </div>
                                     <button onclick="App.updateAppointmentPrice('${apt.id}', document.getElementById('adj-price-${apt.id}').value)" class="p-1 bg-emerald-500 text-zinc-950 rounded hover:bg-emerald-400">
                                         <i data-lucide="check" class="w-3 h-3"></i>
                                     </button>
-                                    <button onclick="App.cancelEditPrice()" class="p-1 bg-zinc-700 text-muted-theme rounded hover:bg-zinc-600">
+                                    <button onclick="App.cancelEditPrice()" class="p-1 input-bg text-muted-theme rounded border border-theme">
                                         <i data-lucide="x" class="w-3 h-3"></i>
                                     </button>
                                 </div>
@@ -1024,17 +1024,17 @@ Object.assign(App, {
                             ${this.state.editingDurationId === apt.id ? `
                                 <div class="flex items-center gap-1 fade-in">
                                     <div class="relative">
-                                        <input type="number" id="adj-dur-${apt.id}" value="${apt.total_duration || 30}" class="w-16 bg-zinc-800 border border-amber-500 rounded px-1 py-0.5 text-[10px] text-amber-500 font-bold outline-none" step="5" />
+                                        <input type="number" id="adj-dur-${apt.id}" value="${apt.total_duration || 30}" class="w-16 input-bg border border-amber-500 rounded px-1 py-0.5 text-[10px] text-amber-500 font-bold outline-none" step="5" />
                                     </div>
                                     <button onclick="App.updateAppointmentDuration('${apt.id}', document.getElementById('adj-dur-${apt.id}').value)" class="p-1 bg-amber-500 text-zinc-950 rounded hover:bg-amber-400">
                                         <i data-lucide="check" class="w-3 h-3"></i>
                                     </button>
-                                    <button onclick="App.cancelEditDuration()" class="p-1 bg-zinc-700 text-muted-theme rounded hover:bg-zinc-600">
+                                    <button onclick="App.cancelEditDuration()" class="p-1 input-bg text-muted-theme rounded border border-theme">
                                         <i data-lucide="x" class="w-3 h-3"></i>
                                     </button>
                                 </div>
                             ` : `
-                                <button onclick="App.initEditDuration('${apt.id}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-zinc-800 text-muted-theme text-[10px] font-bold uppercase tracking-wider border border-zinc-700/50 hover:border-amber-500/30 transition-all" title="Editar Duração">
+                                <button onclick="App.initEditDuration('${apt.id}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md input-bg text-muted-theme text-[10px] font-bold uppercase tracking-wider border border-theme hover:border-amber-500/30 transition-all" title="Editar Duração">
                                     <i data-lucide="clock" class="w-3 h-3 text-amber-500"></i> ${apt.total_duration || 30} MIN
                                 </button>
                             `}
@@ -1043,7 +1043,7 @@ Object.assign(App, {
                     <div class="text-right flex-shrink-0">
                         ${this.state.editingTimeId === apt.id ? `
                             <div class="flex flex-col items-end gap-1 fade-in">
-                                <select id="adj-time-${apt.id}" class="bg-zinc-800 border border-amber-500 rounded px-1 text-sm text-amber-500 font-bold outline-none leading-none h-8">
+                                <select id="adj-time-${apt.id}" class="input-bg border border-amber-500 rounded px-1 text-sm text-amber-500 font-bold outline-none leading-none h-8">
                                     ${AVAILABLE_TIMES.map(t => `<option value="${t}" ${apt.time === t ? 'selected' : ''}>${t}</option>`).join('')}
                                 </select>
                                 <div class="flex gap-1">
@@ -1095,7 +1095,7 @@ Object.assign(App, {
                         ` : `
                             <div class="space-y-2">
                                 ${(apt.comanda_items || []).map((item, idx) => `
-                                    <div class="flex justify-between items-center bg-zinc-900/50 p-2 rounded-lg border border-theme/50">
+                                    <div class="flex justify-between items-center input-bg p-2 rounded-lg border border-theme">
                                         <div class="flex items-center gap-2">
                                             <span class="text-amber-500 font-bold text-xs">${item.qty}x</span>
                                             <span class="text-theme text-xs font-medium">${item.name}</span>
@@ -1128,20 +1128,20 @@ Object.assign(App, {
                             </div>
                         ` : `
                         <div class="grid grid-cols-2 gap-2">
-                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Dinheiro')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
+                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Dinheiro')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover-bg border border-theme text-xs active:scale-[0.98]">
                                 <i data-lucide="banknote" class="w-4 h-4 text-emerald-500"></i> Dinheiro
                             </button>
-                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Pix')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
+                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Pix')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover-bg border border-theme text-xs active:scale-[0.98]">
                                 <i data-lucide="zap" class="w-4 h-4 text-teal-400"></i> Pix
                             </button>
-                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Débito')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
+                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Débito')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover-bg border border-theme text-xs active:scale-[0.98]">
                                 <i data-lucide="credit-card" class="w-4 h-4 text-blue-400"></i> Débito
                             </button>
-                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Crédito')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme text-xs active:scale-[0.98]">
+                            <button onclick="App.initCompleteAppointment('${apt.id}', 'Crédito')" class="py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-theme hover-bg border border-theme text-xs active:scale-[0.98]">
                                 <i data-lucide="credit-card" class="w-4 h-4 text-amber-500"></i> Crédito
                             </button>
                         </div>
-                        <button onclick="App.initSplitPayment('${apt.id}')" class="w-full mt-2 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 bg-zinc-800 text-muted-theme hover:bg-zinc-700 border border-zinc-700 text-xs active:scale-[0.98]">
+                        <button onclick="App.initSplitPayment('${apt.id}')" class="w-full mt-2 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-muted-theme hover-bg border border-theme text-xs active:scale-[0.98]">
                             <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i> Pagamento Dividido
                         </button>
                         `}
@@ -1526,8 +1526,8 @@ Object.assign(App, {
                     mc.innerHTML = this.state.isDateRangeModalOpen ? `
                         <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 fade-in">
                             <div class="card-bg w-full max-w-sm rounded-3xl border border-theme shadow-2xl overflow-hidden scale-in">
-                                <div class="bg-zinc-900/50 p-6 border-b border-theme relative">
-                                    <button onclick="App.toggleDateRangeModal()" class="absolute top-4 right-4 p-2 input-bg rounded-full text-muted-theme hover:text-red-500 transition-colors">
+                                <div class="input-bg p-6 border-b border-theme relative">
+                                    <button onclick="App.toggleDateRangeModal()" class="absolute top-4 right-4 p-2 card-bg rounded-full text-muted-theme hover:text-red-500 transition-colors border border-theme">
                                         <i data-lucide="x" class="w-4 h-4"></i>
                                     </button>
                                     <div class="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center mb-4">
@@ -1567,7 +1567,7 @@ Object.assign(App, {
                                 <span class="bg-amber-500/10 text-amber-500 px-3 py-1 rounded-full text-sm font-medium">
                                     ${filteredApts.length} serviço(s)
                                 </span>
-                                <button onclick="App.setAgendaViewMode('table')" class="text-xs text-muted-theme bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg font-bold uppercase transition-colors flex items-center gap-1.5 border border-zinc-700">
+                                <button onclick="App.setAgendaViewMode('table')" class="text-xs text-muted-theme input-bg hover-bg px-3 py-1.5 rounded-lg font-bold uppercase transition-colors flex items-center gap-1.5 border border-theme">
                                     <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Tabela
                                 </button>
                             </div>
@@ -2010,7 +2010,7 @@ Object.assign(App, {
                 <div class="w-full max-w-sm card-bg rounded-3xl border border-theme shadow-2xl overflow-hidden scale-in">
 
                     <!-- Cabeçalho -->
-                    <div class="bg-zinc-900/50 p-5 border-b border-theme">
+                    <div class="input-bg p-5 border-b border-theme">
                         <div class="flex items-start justify-between gap-3">
                             <div class="flex items-center gap-3 min-w-0">
                                 <div class="${pay.bg} w-11 h-11 rounded-2xl flex items-center justify-center shrink-0">
@@ -2081,7 +2081,7 @@ Object.assign(App, {
                     </div>
 
                     <!-- Rodapé / Total -->
-                    <div class="p-5 border-t border-theme bg-zinc-900/30 flex items-center justify-between">
+                    <div class="p-5 border-t border-theme input-bg flex items-center justify-between">
                         <span class="text-sm font-bold text-muted-theme uppercase tracking-wider">Total</span>
                         <span class="text-2xl font-black text-theme">R$ ${tx.numericValue.toFixed(2).replace('.', ',')}</span>
                     </div>
@@ -3659,8 +3659,8 @@ Object.assign(App, {
                     <p class="text-xs text-muted-theme mt-0.5">Benefícios exclusivos para você</p>
                 </div>
                 <div class="flex flex-col items-center justify-center py-16 text-center space-y-4">
-                    <div class="w-20 h-20 bg-zinc-800/60 rounded-full flex items-center justify-center">
-                        <i data-lucide="tag" class="w-10 h-10 text-zinc-600"></i>
+                    <div class="w-20 h-20 input-bg border border-theme rounded-full flex items-center justify-center">
+                        <i data-lucide="tag" class="w-10 h-10 text-muted-theme"></i>
                     </div>
                     <div>
                         <h3 class="font-bold text-theme">Nenhum plano ativo</h3>
@@ -3834,8 +3834,8 @@ Object.assign(App, {
             <!-- Lista de Planos -->
             ${plans.length === 0 ? `
                 <div class="flex flex-col items-center justify-center py-12 text-center space-y-3">
-                    <div class="w-16 h-16 bg-zinc-800/60 rounded-full flex items-center justify-center">
-                        <i data-lucide="package-open" class="w-8 h-8 text-zinc-600"></i>
+                    <div class="w-16 h-16 input-bg border border-theme rounded-full flex items-center justify-center">
+                        <i data-lucide="package-open" class="w-8 h-8 text-muted-theme"></i>
                     </div>
                     <div>
                         <h3 class="font-bold text-theme">Nenhum plano criado</h3>
@@ -4425,8 +4425,8 @@ Object.assign(App, {
             const catProducts = PRODUCTS.filter(p => p.category_id === cat.id && (p.stock_quantity == null || p.stock_quantity > 0));
             if (catProducts.length === 0) return '';
             return `
-                                        <div class="border border-theme rounded-[2.5rem] overflow-hidden bg-zinc-900/40 mb-3 last:mb-0 shadow-sm">
-                                            <button 
+                                        <div class="border border-theme rounded-[2.5rem] overflow-hidden card-bg mb-3 last:mb-0 shadow-sm">
+                                            <button
                                                 onclick="
                                                     const content = this.nextElementSibling;
                                                     const icon = this.querySelector('.chevron-icon');
@@ -4441,7 +4441,7 @@ Object.assign(App, {
                                                         icon.style.transform = 'rotate(0deg)';
                                                     }
                                                 "
-                                                class="w-full flex items-center justify-between p-6 hover:bg-zinc-800/40 transition-all duration-300 active:scale-[0.99]"
+                                                class="w-full flex items-center justify-between p-6 hover-bg transition-all duration-300 active:scale-[0.99]"
                                             >
                                                 <div class="flex items-center gap-3">
                                                     <div class="w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
@@ -4453,7 +4453,7 @@ Object.assign(App, {
                                             <div class="accordion-content transition-all duration-500 ease-in-out" style="max-height: 0px; opacity: 0; overflow: hidden;">
                                                 <div class="p-6 pt-0 space-y-3">
                                                     ${catProducts.map(p => `
-                                                        <div class="flex flex-col p-4 rounded-2xl border border-theme bg-zinc-950/40 hover:border-amber-500/30 transition-all duration-300 group">
+                                                        <div class="flex flex-col p-4 rounded-2xl border border-theme input-bg hover:border-amber-500/30 transition-all duration-300 group">
                                                             <div class="flex items-start justify-between gap-2">
                                                                 <div>
                                                                     <p class="text-sm font-bold text-theme group-hover:text-amber-500 transition-colors leading-tight">${p.name}</p>
@@ -4462,12 +4462,12 @@ Object.assign(App, {
                                                                 ${p.stock_quantity != null ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${p.stock_quantity <= 3 ? 'bg-rose-500/15 text-rose-400' : 'bg-amber-500/10 text-amber-500'}">${p.stock_quantity} restante${p.stock_quantity !== 1 ? 's' : ''}</span>` : ''}
                                                             </div>
                                                             <div class="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-theme/40">
-                                                                <div class="flex items-center bg-zinc-900 border border-theme rounded-lg h-10 px-1 shadow-inner shrink-0">
-                                                                    <button onclick="event.stopPropagation(); const q=this.nextElementSibling; let v=parseInt(q.innerText); if(v>1) { q.innerText=v-1; const pel = document.getElementById('price-${p.id}'); pel.innerText = 'R$ ' + (parseFloat(pel.dataset.price)*(v-1)).toFixed(2).replace('.',','); }" class="w-9 h-9 flex items-center justify-center text-muted-theme hover:text-white active:scale-95 transition-all">
+                                                                <div class="flex items-center app-bg border border-theme rounded-lg h-10 px-1 shadow-inner shrink-0">
+                                                                    <button onclick="event.stopPropagation(); const q=this.nextElementSibling; let v=parseInt(q.innerText); if(v>1) { q.innerText=v-1; const pel = document.getElementById('price-${p.id}'); pel.innerText = 'R$ ' + (parseFloat(pel.dataset.price)*(v-1)).toFixed(2).replace('.',','); }" class="w-9 h-9 flex items-center justify-center text-muted-theme hover:text-theme active:scale-95 transition-all">
                                                                         <i data-lucide="minus" class="w-4 h-4"></i>
                                                                     </button>
                                                                     <span class="w-6 text-center text-xs font-bold text-theme select-none" id="qty-${p.id}">1</span>
-                                                                    <button onclick="event.stopPropagation(); const max=${p.stock_quantity != null ? p.stock_quantity : 999}; const q=this.previousElementSibling; let v=parseInt(q.innerText); if(v>=max) return; v++; q.innerText=v; const pel=document.getElementById('price-${p.id}'); pel.innerText='R$ '+(parseFloat(pel.dataset.price)*v).toFixed(2).replace('.',',');" class="w-9 h-9 flex items-center justify-center text-muted-theme hover:text-white active:scale-95 transition-all">
+                                                                    <button onclick="event.stopPropagation(); const max=${p.stock_quantity != null ? p.stock_quantity : 999}; const q=this.previousElementSibling; let v=parseInt(q.innerText); if(v>=max) return; v++; q.innerText=v; const pel=document.getElementById('price-${p.id}'); pel.innerText='R$ '+(parseFloat(pel.dataset.price)*v).toFixed(2).replace('.',',');" class="w-9 h-9 flex items-center justify-center text-muted-theme hover:text-theme active:scale-95 transition-all">
                                                                         <i data-lucide="plus" class="w-4 h-4"></i>
                                                                     </button>
                                                                 </div>
