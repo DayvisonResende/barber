@@ -1066,7 +1066,7 @@ Object.assign(App, {
                 <div class="accordion-content ${isExpanded ? 'open' : ''}">
                     <!-- Ações Rápidas -->
                     <div class="flex gap-2 mt-4 pt-4 border-t border-theme overflow-x-auto scrollbar-hide">
-                        <a href="https://wa.me/${App.formatWA(apt.clientPhone)}?text=Olá%20${encodeURIComponent(apt.clientName)},%20seu%20horário%20de%20${encodeURIComponent(apt.time)}%20no%20dia%20${encodeURIComponent(apt.date?.split('-').reverse().join('/') || '')}%20com%20o%20barbeiro%20${encodeURIComponent(apt.barberName || 'Profissional')}%20está%20chegando!%20Aguardamos%20você." target="_blank" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-semibold">
+                        <a href="${'https://wa.me/' + App.formatWA(apt.clientPhone) + '?text=' + encodeURIComponent('Olá ' + (apt.clientName || '') + ', passando para lembrar do seu horário às ' + (apt.time || '') + ' no dia ' + (apt.date?.split('-').reverse().join('/') || '') + ' na ' + (App.state.shopSettings?.name || 'Finno Trato Barbearia') + ' com ' + (apt.barberName || 'Profissional') + '. Aguardamos você.')}" target="_blank" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-semibold">
                             <i data-lucide="bell-ring" class="w-3.5 h-3.5"></i> Lembrete
                         </a>
                         <a href="https://wa.me/${App.formatWA(apt.clientPhone)}" target="_blank" class="flex-shrink-0 flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 input-bg text-muted-theme hover:text-theme border border-theme transition-colors text-xs font-semibold">
@@ -1278,7 +1278,7 @@ Object.assign(App, {
                     </div>
                 </div>
 
-                <div class="flex-1 overflow-y-auto custom-scrollbar rounded-2xl border border-theme shadow-md relative pb-20" style="background: var(--bg-app)">
+                <div id="grid-scroll-container" data-grid-start="${gridStart}" class="flex-1 overflow-y-auto custom-scrollbar rounded-2xl border border-theme shadow-md relative pb-20" style="background: var(--bg-app)">
                     ${(() => {
                         const blockedOnDate = new Set(
                             (this.state.blockedTimesFull || [])
@@ -1295,6 +1295,11 @@ Object.assign(App, {
                             </div>
 
                             <div class="flex-1 relative">
+                                ${isBlocked && isHour ? `
+                                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                                        <i data-lucide="lock" class="w-3 h-3 text-orange-500/50"></i>
+                                    </div>
+                                ` : ''}
                                 ${!slot.isCovered && !isBlocked ? `
                                     <button onclick="App.state.appointmentsFilterStart = '${dateStr}'; App.state.appointmentsFilterEnd = '${dateStr}'; App.startStaffBooking('${dateStr}', '${slot.time}')" class="absolute inset-0 w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-amber-500/10 transition-all text-amber-500 z-0">
                                         <i data-lucide="plus" class="w-5 h-5"></i>
@@ -1310,11 +1315,11 @@ Object.assign(App, {
                                     
                                     if (apt.isLunch) {
                                         return `
-                                            <div class="absolute top-[2px] input-bg border border-dashed border-theme rounded-lg p-2 shadow-inner z-0 overflow-hidden flex flex-col items-center justify-center gap-1 opacity-70 cursor-default"
+                                            <div class="absolute top-[2px] bg-amber-500/25 border border-dashed border-amber-500/60 rounded-lg p-2 z-0 overflow-hidden flex flex-col items-center justify-center gap-1 cursor-default"
                                                  style="height: calc(${spans * 20}px - 4px); left: calc(${left}% + 4px); width: calc(${width}% - 8px);">
-                                                <i data-lucide="coffee" class="w-4 h-4 text-muted-theme"></i>
-                                                <p class="text-[9px] font-black text-muted-theme uppercase">${apt.clientName}</p>
-                                                <p class="text-[8px] font-bold text-muted-theme">${apt.barberName}</p>
+                                                <i data-lucide="coffee" class="w-4 h-4 text-amber-500/70"></i>
+                                                <p class="text-[9px] font-black text-amber-500/80 uppercase">${apt.clientName}</p>
+                                                <p class="text-[8px] font-bold text-amber-500/60">${apt.barberName}</p>
                                             </div>
                                         `;
                                     }
@@ -1496,6 +1501,21 @@ Object.assign(App, {
                     } else if (mc && !this.state.isDateRangeModalOpen && !this.state.comandaModalOpen && !this.state.showingSplitPaymentId && !this.state.isQuickBlockOpen && !this.state.transactionDetailId) {
                         mc.innerHTML = '';
                     }
+                    const gc = document.getElementById('grid-scroll-container');
+                    if (gc) {
+                        const viewDate = this.state.agendaSelectedDate;
+                        if (this.state._gridLastScrolledDate !== viewDate) {
+                            const gs = gc.dataset.gridStart || '09:00';
+                            const [startH, startM] = gs.split(':').map(Number);
+                            const now = new Date();
+                            const viewingToday = viewDate === todayFormatted;
+                            const targetMin = viewingToday
+                                ? now.getHours() * 60 + now.getMinutes()
+                                : startH * 60 + startM;
+                            gc.scrollTop = Math.max(0, (targetMin - (startH * 60 + startM)) * 4 - 80);
+                            this.state._gridLastScrolledDate = viewDate;
+                        }
+                    }
                 }, 0);
                 return this.renderDailyTable(this.state.appointments.filter(a => a.date === this.state.agendaSelectedDate), this.state.agendaSelectedDate);
             }
@@ -1615,7 +1635,7 @@ Object.assign(App, {
                                     <div class="flex-1">
                                         <h4 class="font-semibold text-theme">${apt.service.name} <span class="font-normal text-xs text-muted-theme">com ${apt.barberName || 'Marcos Barbeiro'}</span></h4>
                                         <p class="text-xs text-muted-theme flex items-center gap-1 mt-1">
-                                            <i data-lucide="calendar" class="w-3 h-3"></i> ${apt.date} às ${apt.time}
+                                            <i data-lucide="calendar" class="w-3 h-3"></i> ${apt.date.split('-').reverse().map((p, i) => i === 2 ? p.slice(-2) : p).join('/')} às ${apt.time}
                                         </p>
                                     </div>
                                     <div class="text-right flex-shrink-0 flex flex-col items-end gap-2">
@@ -1634,6 +1654,21 @@ Object.assign(App, {
                                                     return `<button onclick="App.editAppointment('${apt.id}')" class="p-2 input-bg text-amber-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Alterar Horário">
                                                         <i data-lucide="edit-3" class="w-4 h-4"></i>
                                                     </button>`;
+                                                })()}
+                                                ${(() => {
+                                                    const d = apt.date.replace(/-/g, '');
+                                                    const parts = apt.time.split(':');
+                                                    const startDt = d + 'T' + parts[0] + parts[1] + '00';
+                                                    const dur = parseInt(apt.total_duration) || 30;
+                                                    const endDate = new Date(new Date(apt.date + 'T' + apt.time + ':00').getTime() + dur * 60000);
+                                                    const endDt = endDate.getFullYear() + '' + String(endDate.getMonth()+1).padStart(2,'0') + String(endDate.getDate()).padStart(2,'0') + 'T' + String(endDate.getHours()).padStart(2,'0') + String(endDate.getMinutes()).padStart(2,'0') + '00';
+                                                    const shopName = (App.state.shopSettings && App.state.shopSettings.name) || 'Barbearia';
+                                                    const svcName = (apt.services && apt.services.length > 0) ? apt.services.map(function(s){return s.name;}).join(', ') : (apt.service ? apt.service.name : 'Agendamento');
+                                                    const title = encodeURIComponent(svcName + ' na ' + shopName);
+                                                    const details = encodeURIComponent('Profissional: ' + (apt.barberName || '') + '\nEstabelecimento: ' + shopName);
+                                                    const addr = (App.state.shopSettings && App.state.shopSettings.address_street) ? App.state.shopSettings.address_street + ', ' + (App.state.shopSettings.address_city || '') : '';
+                                                    const url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + title + '&dates=' + startDt + '/' + endDt + '&details=' + details + '&location=' + encodeURIComponent(addr) + '&ctz=America%2FSao_Paulo';
+                                                    return '<a href="' + url + '" target="_blank" class="p-2 input-bg text-indigo-400 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Adicionar ao Google Calendar"><i data-lucide="calendar-plus" class="w-4 h-4"></i></a>';
                                                 })()}
                                                 <button onclick="App.cancelAppointment('${apt.id}')" class="p-2 input-bg text-rose-500 rounded-lg hover:bg-zinc-700 transition-colors border border-theme active:scale-95" title="Cancelar">
                                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
