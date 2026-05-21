@@ -1323,21 +1323,23 @@ Object.assign(App, {
                                             </div>
                                         `;
                                     }
+                                    const isDone = apt.status === 'completed';
                                     return `
-                                        <div onclick="App.openAppointmentModal('${apt.id}')" 
-                                             class="absolute top-[2px] card-bg border ${apt.status === 'completed' ? 'border-emerald-500/50 border-l-emerald-500' : 'border-amber-500/50 border-l-amber-500'} border-l-[3px] rounded-lg p-2 shadow-lg cursor-pointer hover:border-amber-500 transition-colors z-10 overflow-hidden flex flex-col gap-1 hover:-translate-y-0.5"
+                                        <div onclick="App.openAppointmentModal('${apt.id}')"
+                                             class="absolute top-[2px] ${isDone ? 'bg-emerald-500/5 border border-emerald-500/30 border-l-emerald-500 opacity-60' : 'card-bg border border-amber-500/50 border-l-amber-500 hover:border-amber-500 hover:-translate-y-0.5'} border-l-[3px] rounded-lg p-2 shadow-sm cursor-pointer transition-colors z-10 overflow-hidden flex flex-col gap-1"
                                              style="height: calc(${spans * 20}px - 4px); left: calc(${left}% + 4px); width: calc(${width}% - 8px);">
-                                            
-                                            <div class="flex items-center gap-2">
-                                                <div class="w-6 h-6 rounded-full overflow-hidden shrink-0 input-bg border border-theme flex items-center justify-center">
-                                                    ${apt.clientAvatar ? `<img src="${apt.clientAvatar}" class="w-full h-full object-cover">` : `<span class="w-full h-full flex items-center justify-center text-amber-500 text-[9px] font-black">${clientInitial}</span>`}
+
+                                            <div class="flex items-center gap-1.5">
+                                                <div class="w-6 h-6 rounded-full overflow-hidden shrink-0 ${isDone ? 'bg-emerald-500/10 border border-emerald-500/20' : 'input-bg border border-theme'} flex items-center justify-center">
+                                                    ${apt.clientAvatar ? `<img src="${apt.clientAvatar}" class="w-full h-full object-cover">` : `<span class="w-full h-full flex items-center justify-center ${isDone ? 'text-emerald-500' : 'text-amber-500'} text-[9px] font-black">${clientInitial}</span>`}
                                                 </div>
                                                 <div class="flex-1 min-w-0">
-                                                    <p class="text-xs font-black text-theme truncate leading-none">${App.escapeHTML(apt.clientName)}</p>
+                                                    <p class="text-xs font-black ${isDone ? 'text-muted-theme' : 'text-theme'} truncate leading-none">${App.escapeHTML(apt.clientName)}</p>
                                                     <p class="text-[9px] text-muted-theme truncate leading-tight mt-0.5">${apt.services?.map(s => s.name).join(', ') || apt.service?.name || 'Serviço'}</p>
                                                 </div>
+                                                ${isDone ? '<i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-500 flex-shrink-0"></i>' : ''}
                                             </div>
-                                            
+
                                             ${spans > 2 ? `
                                             <div class="mt-auto flex items-center justify-between text-[8px] font-bold text-muted-theme">
                                                 <span>${apt.time}</span>
@@ -1618,9 +1620,26 @@ Object.assign(App, {
                         <h2 class="text-2xl font-bold text-theme">Meu(s) Serviço(s)</h2>
                     </div>
 
-                    <button onclick="App.startBooking()" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-md shadow-amber-500/20">
-                        <i data-lucide="calendar" class="w-5 h-5"></i> Novo Agendamento
-                    </button>
+                    ${this.state.userProfile?.is_paused ? `
+                        <div class="card-bg border border-rose-500/30 rounded-2xl p-5 flex flex-col gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="pause-circle" class="w-5 h-5 text-rose-400"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-theme text-sm">Conta temporariamente pausada</p>
+                                    <p class="text-xs text-muted-theme mt-0.5">Novos agendamentos estão desabilitados. Entre em contato com a barbearia.</p>
+                                </div>
+                            </div>
+                            <a href="https://wa.me/${(this.state.shopSettings?.whatsapp || '').replace(/\D/g, '')}" target="_blank" class="w-full py-3 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/20 hover:bg-[#25D366]/20">
+                                <i data-lucide="message-circle" class="w-5 h-5"></i> Falar com a Barbearia
+                            </a>
+                        </div>
+                    ` : `
+                        <button onclick="App.startBooking()" class="w-full py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-md shadow-amber-500/20">
+                            <i data-lucide="calendar" class="w-5 h-5"></i> Novo Agendamento
+                        </button>
+                    `}
 
                     <div class="space-y-4 mt-8">
                         <h3 class="text-sm font-medium text-muted-theme uppercase tracking-wider">Próximos Agendamentos</h3>
@@ -3076,13 +3095,16 @@ Object.assign(App, {
                                 <p class="text-[10px] font-bold tracking-widest uppercase opacity-40">Nenhum cliente...</p>
                             </div>
                         ` : sortedClients.map(client => `
-                            <div class="client-gestao-card card-bg rounded-2xl border border-theme/50 p-4 shadow-sm flex flex-col gap-4 hover:border-zinc-600 transition-colors" data-search="${App.escapeHTML(client.name)} ${client.phone} ${client.email}">
+                            <div class="client-gestao-card card-bg rounded-2xl border ${client.is_paused ? 'border-rose-500/40' : 'border-theme/50'} p-4 shadow-sm flex flex-col gap-4 hover:border-zinc-600 transition-colors" data-search="${App.escapeHTML(client.name)} ${client.phone} ${client.email}">
                                 <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 rounded-full input-bg border border-theme flex items-center justify-center font-bold text-amber-500 text-lg">
+                                    <div class="w-12 h-12 rounded-full ${client.is_paused ? 'bg-rose-500/10 border border-rose-500/30' : 'input-bg border border-theme'} flex items-center justify-center font-bold ${client.is_paused ? 'text-rose-400' : 'text-amber-500'} text-lg">
                                         ${(client.name || 'U')[0].toUpperCase()}
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <h3 class="font-bold text-theme text-base truncate">${client.name || 'Usuário'}</h3>
+                                        <div class="flex items-center gap-2">
+                                            <h3 class="font-bold text-theme text-base truncate">${client.name || 'Usuário'}</h3>
+                                            ${client.is_paused ? '<span class="text-[9px] font-black uppercase tracking-widest bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-full flex-shrink-0">Pausado</span>' : ''}
+                                        </div>
                                         <p class="text-muted-theme text-[10px] flex items-center gap-1.5 mt-0.5 truncate uppercase tracking-tighter">
                                             <i data-lucide="phone" class="w-3 h-3 text-muted-theme"></i> ${client.phone || client.email || 'Sem contato'}
                                         </p>
@@ -3094,7 +3116,7 @@ Object.assign(App, {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div class="flex gap-2 pt-3 border-t border-theme">
                                     <a href="https://wa.me/${App.formatWA(client.phone || client.email)}" target="_blank" class="flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-bold border border-[#25D366]/10">
                                         <i data-lucide="message-square" class="w-4 h-4"></i> Whats
@@ -3102,6 +3124,9 @@ Object.assign(App, {
                                     <a href="tel:+${App.formatWA(client.phone || client.email)}" class="flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme transition-colors text-xs font-bold">
                                         <i data-lucide="phone" class="w-4 h-4"></i> Ligar
                                     </a>
+                                    <button onclick="App.toggleClientPause('${client.id}', ${!!client.is_paused}, '${App.escapeHTML(client.name)}')" class="flex-none py-2 px-3 ${client.is_paused ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20'} rounded-lg flex items-center justify-center transition-colors" title="${client.is_paused ? 'Reativar cliente' : 'Pausar cliente'}">
+                                        <i data-lucide="${client.is_paused ? 'play-circle' : 'pause-circle'}" class="w-4 h-4"></i>
+                                    </button>
                                     ${this.state.role === 'admin' ? `
                                     <button onclick="App.adminDeleteUser('${client.id}', '${App.escapeHTML(client.name)}')" class="flex-none py-2 px-3 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg flex items-center justify-center border border-red-500/20 transition-colors" title="Excluir Cliente">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>

@@ -180,16 +180,23 @@ Object.assign(App, {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) return;
 
-        // Limpando a consulta para ser direto ao ponto (sem Joins/relacionamentos)
-        let query = supabaseClient.from('appointments').select('*').eq('status', 'pending');
+        const isStaffUser = ['admin', 'manager', 'barber'].includes(this.state.role);
+
+        let query = supabaseClient.from('appointments').select('*');
 
         if (this.state.role === 'client') {
-            query = query.eq('client_id', user.id);
-        } else if (this.state.role === 'barber') {
-            // Barbeiro vê apenas sua própria agenda
-            query = query.eq('barber_id', user.id);
+            query = query.eq('status', 'pending').eq('client_id', user.id);
+        } else {
+            // Staff: pending (todos) + completed (últimos 30 dias) para manter na grade
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const dateFilter = thirtyDaysAgo.toISOString().split('T')[0];
+            query = query.in('status', ['pending', 'completed']).gte('date', dateFilter);
+            if (this.state.role === 'barber') {
+                query = query.eq('barber_id', user.id);
+            }
         }
-        // Admin e Gerente não aplicam filtros, vendo a agenda completa.
+        // Admin e Gerente não aplicam filtros de barbeiro, vendo a agenda completa.
 
         const { data: apts, error } = await query.order('date', { ascending: true }).order('time', { ascending: true });
 
@@ -1851,6 +1858,38 @@ Object.assign(App, {
                     console.error("Falha ao destruir a conta do cliente via Admin:", err);
                     this.showNotification("Falha", err.message || "Não foi possível excluir o usuário agora.");
                 }
+            }
+        });
+    },
+
+    async toggleClientPause(clientId, currentlyPaused, clientName) {
+        const willPause = !currentlyPaused;
+        const actionLabel = willPause ? 'Pausar' : 'Reativar';
+        const message = willPause
+            ? `${clientName} não conseguirá fazer novos agendamentos enquanto estiver pausado.`
+            : `${clientName} voltará a conseguir fazer agendamentos normalmente.`;
+
+        this.showConfirmModal({
+            title: `${actionLabel} conta de ${clientName}?`,
+            message,
+            icon: willPause ? 'pause-circle' : 'play-circle',
+            isDestructive: willPause,
+            onConfirm: async () => {
+                const { error } = await supabaseClient
+                    .from('profiles')
+                    .update({ is_paused: willPause })
+                    .eq('id', clientId);
+
+                if (error) {
+                    this.showNotification('Erro', 'Não foi possível alterar o status do cliente.');
+                    return;
+                }
+
+                this.showNotification(
+                    willPause ? 'Conta Pausada' : 'Conta Reativada',
+                    willPause ? `${clientName} não pode mais agendar.` : `${clientName} pode agendar novamente.`
+                );
+                await this.fetchFullUpdate();
             }
         });
     },
