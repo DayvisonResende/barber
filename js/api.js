@@ -1132,6 +1132,8 @@ Object.assign(App, {
 
         this.state.confirmingPaymentId = null;
         this.state.confirmingPaymentMethod = null;
+        this.state.expandedAppointmentId = null;
+        this.state.openAppointmentModalId = null;
         this.render();
     },
 
@@ -1185,6 +1187,8 @@ Object.assign(App, {
             await supabaseClient.from('appointments').update({ status: 'completed' }).eq('id', apt.id);
 
             this.state.showingSplitPaymentId = null;
+            this.state.expandedAppointmentId = null;
+            this.state.openAppointmentModalId = null;
             this.showNotification("Corte Finalizado!", "Pagamento dividido registrado com sucesso.");
             
             await this.loadAppointments();

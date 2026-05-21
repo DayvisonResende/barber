@@ -959,9 +959,10 @@ Object.assign(App, {
         if (!apt) return '';
         const clientInitial = (apt.clientName?.[0] || 'C').toUpperCase();
         const isExpanded = this.state.expandedAppointmentId === apt.id || this.state.openAppointmentModalId === apt.id;
-        
+        const isDone = apt.status === 'completed';
+
         return `
-            <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm border-l-4 border-l-amber-500">
+            <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm border-l-4 ${isDone ? 'border-l-emerald-500 opacity-80' : 'border-l-amber-500'}">
                 <div class="flex justify-between items-start gap-3 cursor-pointer" onclick="if(event.target.closest('button') || event.target.closest('input') || event.target.closest('select')) return; App.toggleAppointmentAccordion('${apt.id}')">
                     <!-- Avatar do Cliente -->
                     <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-theme flex items-center justify-center input-bg shadow-inner">
@@ -1113,6 +1114,12 @@ Object.assign(App, {
                     </div>
 
                     <div class="mt-4 pt-4 border-t border-theme">
+                        ${isDone ? `
+                        <div class="flex items-center justify-center gap-2 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+                            <p class="text-sm font-bold text-emerald-400">Atendimento Concluído</p>
+                        </div>
+                        ` : `
                         <p class="text-xs font-semibold text-muted-theme mb-2 uppercase tracking-wide">Como o cliente pagou?</p>
                         ${this.state.confirmingPaymentId === apt.id ? `
                             <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex flex-col items-center gap-3 fade-in">
@@ -1144,6 +1151,7 @@ Object.assign(App, {
                         <button onclick="App.initSplitPayment('${apt.id}')" class="w-full mt-2 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 input-bg text-muted-theme hover-bg border border-theme text-xs active:scale-[0.98]">
                             <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i> Pagamento Dividido
                         </button>
+                        `}
                         `}
                     </div>
                 </div>
