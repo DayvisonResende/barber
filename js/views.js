@@ -962,7 +962,7 @@ Object.assign(App, {
         const isDone = apt.status === 'completed';
 
         return `
-            <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm border-l-4 ${isDone ? 'border-l-emerald-500 opacity-80' : 'border-l-amber-500'}">
+            <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm border-l-4 ${isDone ? 'border-l-zinc-500 opacity-75' : 'border-l-amber-500'}">
                 <div class="flex justify-between items-start gap-3 cursor-pointer" onclick="if(event.target.closest('button') || event.target.closest('input') || event.target.closest('select')) return; App.toggleAppointmentAccordion('${apt.id}')">
                     <!-- Avatar do Cliente -->
                     <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-theme flex items-center justify-center input-bg shadow-inner">
@@ -1115,9 +1115,9 @@ Object.assign(App, {
 
                     <div class="mt-4 pt-4 border-t border-theme">
                         ${isDone ? `
-                        <div class="flex items-center justify-center gap-2 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
-                            <p class="text-sm font-bold text-emerald-400">Atendimento Concluído</p>
+                        <div class="flex items-center justify-center gap-2 py-3 bg-zinc-500/10 border border-zinc-500/20 rounded-xl">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 text-zinc-400"></i>
+                            <p class="text-sm font-bold text-zinc-400">Atendimento Concluído</p>
                         </div>
                         ` : `
                         <p class="text-xs font-semibold text-muted-theme mb-2 uppercase tracking-wide">Como o cliente pagou?</p>
@@ -1334,18 +1334,18 @@ Object.assign(App, {
                                     const isDone = apt.status === 'completed';
                                     return `
                                         <div onclick="App.openAppointmentModal('${apt.id}')"
-                                             class="absolute top-[2px] ${isDone ? 'bg-emerald-500/5 border border-emerald-500/30 border-l-emerald-500 opacity-60' : 'card-bg border border-amber-500/50 border-l-amber-500 hover:border-amber-500 hover:-translate-y-0.5'} border-l-[3px] rounded-lg p-2 shadow-sm cursor-pointer transition-colors z-10 overflow-hidden flex flex-col gap-1"
+                                             class="absolute top-[2px] ${isDone ? 'bg-zinc-500/5 border border-zinc-500/30 border-l-zinc-500 opacity-75' : 'card-bg border border-amber-500/50 border-l-amber-500 hover:border-amber-500 hover:-translate-y-0.5'} border-l-[3px] rounded-lg p-2 shadow-sm cursor-pointer transition-colors z-10 overflow-hidden flex flex-col gap-1"
                                              style="height: calc(${spans * 20}px - 4px); left: calc(${left}% + 4px); width: calc(${width}% - 8px);">
 
                                             <div class="flex items-center gap-1.5">
-                                                <div class="w-6 h-6 rounded-full overflow-hidden shrink-0 ${isDone ? 'bg-emerald-500/10 border border-emerald-500/20' : 'input-bg border border-theme'} flex items-center justify-center">
-                                                    ${apt.clientAvatar ? `<img src="${apt.clientAvatar}" class="w-full h-full object-cover">` : `<span class="w-full h-full flex items-center justify-center ${isDone ? 'text-emerald-500' : 'text-amber-500'} text-[9px] font-black">${clientInitial}</span>`}
+                                                <div class="w-6 h-6 rounded-full overflow-hidden shrink-0 ${isDone ? 'bg-zinc-500/10 border border-zinc-500/20' : 'input-bg border border-theme'} flex items-center justify-center">
+                                                    ${apt.clientAvatar ? `<img src="${apt.clientAvatar}" class="w-full h-full object-cover">` : `<span class="w-full h-full flex items-center justify-center ${isDone ? 'text-zinc-400' : 'text-amber-500'} text-[9px] font-black">${clientInitial}</span>`}
                                                 </div>
                                                 <div class="flex-1 min-w-0">
                                                     <p class="text-xs font-black ${isDone ? 'text-muted-theme' : 'text-theme'} truncate leading-none">${App.escapeHTML(apt.clientName)}</p>
                                                     <p class="text-[9px] text-muted-theme truncate leading-tight mt-0.5">${apt.services?.map(s => s.name).join(', ') || apt.service?.name || 'Serviço'}</p>
                                                 </div>
-                                                ${isDone ? '<i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-500 flex-shrink-0"></i>' : ''}
+                                                ${isDone ? '<i data-lucide="check-circle-2" class="w-3 h-3 text-zinc-400 flex-shrink-0"></i>' : ''}
                                             </div>
 
                                             ${spans > 2 ? `
