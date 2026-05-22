@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS plans (
     duration_type           TEXT NOT NULL DEFAULT 'months'
                                 CHECK (duration_type IN ('days', 'months')),
     duration_value          INTEGER NOT NULL DEFAULT 1,
+    max_discount_uses       INTEGER DEFAULT NULL,
     is_active               BOOLEAN DEFAULT TRUE,
     created_at              TIMESTAMPTZ DEFAULT NOW()
 );

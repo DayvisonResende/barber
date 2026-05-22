@@ -40,3 +40,7 @@ FROM barber_config;
 SELECT id, name, booking_window_days FROM shop_settings;
 
 SELECT barber_id, date, blocked_time FROM blocked_times LIMIT 10;
+
+-- [NOVO] Limite total de usos do desconto por plano
+ALTER TABLE plans
+  ADD COLUMN IF NOT EXISTS max_discount_uses INTEGER DEFAULT NULL;

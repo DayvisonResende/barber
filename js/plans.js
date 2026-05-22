@@ -69,19 +69,11 @@ Object.assign(App, {
         const activeClientPlan = this.getActiveClientPlan();
         if (!activeClientPlan) { this.state.planUsage = []; return; }
 
-        // Início da semana (segunda-feira)
-        const now = new Date();
-        const day = now.getDay();
-        const diff = day === 0 ? -6 : 1 - day;
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() + diff);
-        weekStart.setHours(0, 0, 0, 0);
-
         const { data: usage } = await supabaseClient
             .from('plan_usage')
             .select('*')
             .eq('client_plan_id', activeClientPlan.id)
-            .gte('used_at', weekStart.toISOString());
+            .order('used_at', { ascending: true });
 
         this.state.planUsage = usage || [];
     },
@@ -106,6 +98,10 @@ Object.assign(App, {
     },
 
     getPlanWeekUsageCount() {
+        return this.getUsageCountForDate(new Date().toISOString().split('T')[0]);
+    },
+
+    getTotalPlanUsageCount() {
         return (this.state.planUsage || []).length;
     },
 
@@ -168,6 +164,10 @@ Object.assign(App, {
             if (this.state.role !== 'client') return null;
             clientPlan = this.getActiveClientPlan();
             if (!clientPlan) return null;
+            // Limite total de usos do plano inteiro
+            if (clientPlan.plan?.max_discount_uses != null) {
+                if (this.getTotalPlanUsageCount() >= clientPlan.plan.max_discount_uses) return null;
+            }
             // Limite por semana da DATA do agendamento, não da semana atual
             const usedInBookingWeek = this.getUsageCountForDate(this.state.selectedDate);
             if (usedInBookingWeek >= (clientPlan.plan?.usage_per_week || 1)) return null;
@@ -201,6 +201,8 @@ Object.assign(App, {
         const durationType = document.querySelector('input[name="plan-duration-type"]:checked')?.value || 'months';
         const durationValue = parseInt(document.getElementById('plan-duration-value')?.value) || 1;
         const description = document.getElementById('plan-description')?.value?.trim() || null;
+        const maxUsesVal = document.getElementById('plan-max-uses')?.value?.trim();
+        const maxDiscountUses = maxUsesVal ? (parseInt(maxUsesVal) || null) : null;
 
         const activeDays = [0, 1, 2, 3, 4, 5, 6].filter(d =>
             document.getElementById(`plan-day-${d}`)?.checked
@@ -237,6 +239,7 @@ Object.assign(App, {
             active_days: activeDays,
             duration_type: durationType,
             duration_value: durationValue,
+            max_discount_uses: maxDiscountUses,
             is_active: true
         };
 

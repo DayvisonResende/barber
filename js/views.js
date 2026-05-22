@@ -3706,6 +3706,8 @@ Object.assign(App, {
         const plan = clientPlan.plan;
         const usedThisWeek = this.getPlanWeekUsageCount();
         const remainingUses = Math.max(0, plan.usage_per_week - usedThisWeek);
+        const totalUsed = this.getTotalPlanUsageCount();
+        const totalRemaining = plan.max_discount_uses != null ? Math.max(0, plan.max_discount_uses - totalUsed) : null;
         const daysLeft = this.getDaysUntilPlanExpiry(clientPlan);
         const isActiveToday = this.isPlanActiveToday(clientPlan);
         const [sy, sm, sd] = clientPlan.start_date.split('-');
@@ -3776,6 +3778,24 @@ Object.assign(App, {
                         ${remainingUses > 0 ? `${remainingUses} uso${remainingUses !== 1 ? 's' : ''} disponível${remainingUses !== 1 ? 'is' : ''} esta semana` : 'Limite semanal atingido'}
                     </p>
                 </div>
+
+                ${plan.max_discount_uses != null ? `
+                <!-- Total de usos do plano -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-[10px] text-muted-theme uppercase font-bold tracking-widest flex items-center gap-1.5">
+                            <i data-lucide="ticket" class="w-3 h-3"></i> Usos do plano (total)
+                        </p>
+                        <p class="text-sm font-black text-theme">${totalUsed} / ${plan.max_discount_uses}</p>
+                    </div>
+                    <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-500 ${totalRemaining > 0 ? 'bg-emerald-500' : 'bg-red-500'}"
+                            style="width: ${Math.min(100, (totalUsed / plan.max_discount_uses) * 100)}%"></div>
+                    </div>
+                    <p class="text-[11px] mt-1.5 ${totalRemaining > 0 ? 'text-emerald-400' : 'text-red-400'} font-semibold">
+                        ${totalRemaining > 0 ? `${totalRemaining} uso${totalRemaining !== 1 ? 's' : ''} restante${totalRemaining !== 1 ? 's' : ''} no plano` : 'Todos os usos do plano foram utilizados'}
+                    </p>
+                </div>` : ''}
 
                 <!-- Dias ativos -->
                 <div>
@@ -3897,11 +3917,16 @@ Object.assign(App, {
                         </span>
                     </div>
 
-                    <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="grid grid-cols-${plan.max_discount_uses != null ? '4' : '3'} gap-2 text-center">
                         <div class="input-bg rounded-xl p-2">
                             <p class="text-[10px] text-muted-theme uppercase font-bold">Usos/sem</p>
                             <p class="font-black text-theme">${plan.usage_per_week}×</p>
                         </div>
+                        ${plan.max_discount_uses != null ? `
+                        <div class="input-bg rounded-xl p-2">
+                            <p class="text-[10px] text-muted-theme uppercase font-bold">Total</p>
+                            <p class="font-black text-amber-400">${plan.max_discount_uses}×</p>
+                        </div>` : ''}
                         <div class="input-bg rounded-xl p-2">
                             <p class="text-[10px] text-muted-theme uppercase font-bold">Duração</p>
                             <p class="font-black text-theme text-xs">${durationLabel}</p>
@@ -4011,6 +4036,7 @@ Object.assign(App, {
         const defaultUsage = plan?.usage_per_week || 1;
         const defaultDurationType = plan?.duration_type || 'months';
         const defaultDurationValue = plan?.duration_value || 1;
+        const defaultMaxUses = plan?.max_discount_uses ?? '';
 
         return `
         <div class="space-y-5 fade-in-fast slide-in-up">
@@ -4185,6 +4211,15 @@ Object.assign(App, {
                         Meses
                     </div>
                 </label>
+            </div>
+
+            <!-- Usos totais do desconto -->
+            <div class="space-y-1.5">
+                <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Usos do Desconto (Total)</label>
+                <input type="number" id="plan-max-uses" value="${defaultMaxUses}" min="1"
+                    placeholder="Ilimitado"
+                    class="w-full card-bg border border-theme rounded-xl p-3 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
+                <p class="text-[10px] text-zinc-500">Deixe vazio para não limitar o total de usos do plano</p>
             </div>
 
             <!-- Botão salvar -->
