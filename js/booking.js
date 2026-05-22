@@ -482,15 +482,15 @@ Object.assign(App, {
                         <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-600 ml-auto group-hover:text-amber-500 transition-colors"></i>
                     </button>
 
-                    <button onclick="App.setStaffBookingMode('walkin')" class="w-full flex items-center gap-4 p-4 input-bg hover:bg-zinc-700 border border-theme hover:border-theme rounded-2xl transition-all duration-200 active:scale-[0.98] text-left group">
-                        <div class="w-10 h-10 bg-zinc-700 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-zinc-600 transition-colors">
-                            <i data-lucide="user-plus" class="w-5 h-5 text-muted-theme"></i>
+                    <button onclick="App.setStaffBookingMode('walkin')" class="w-full flex items-center gap-4 p-4 input-bg hover:bg-zinc-700/30 border border-theme hover:border-emerald-500/40 rounded-2xl transition-all duration-200 active:scale-[0.98] text-left group">
+                        <div class="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-500/20 transition-colors">
+                            <i data-lucide="user-plus" class="w-5 h-5 text-emerald-500"></i>
                         </div>
                         <div>
                             <p class="font-bold text-theme text-sm">Cliente Avulso</p>
                             <p class="text-[11px] text-muted-theme mt-0.5">Walk-in sem conta no sistema</p>
                         </div>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-600 ml-auto group-hover:text-zinc-400 transition-colors"></i>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-600 ml-auto group-hover:text-emerald-500 transition-colors"></i>
                     </button>
                 </div>
 

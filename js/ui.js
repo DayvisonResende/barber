@@ -961,15 +961,34 @@ Object.assign(App, {
         this.render();
     },
 
-    showEarlyCancelModal(apt) {
+    async showEarlyCancelModal(apt) {
         const mc = document.getElementById('modal-container');
         if (!mc) return;
 
         const barberFirst = (apt.barberName || 'Barbeiro').split(' ')[0];
-        const shopPhone = (this.state.shopSettings?.phone || '').replace(/\D/g, '');
         const dateFmt = apt.date.split('-').reverse().join('/');
-        const waMsg = encodeURIComponent(`Olá! Preciso cancelar meu agendamento com ${apt.barberName || 'o barbeiro'} no dia ${dateFmt} às ${apt.time}. Pode me ajudar?`);
-        const waLink = shopPhone ? `https://wa.me/55${shopPhone}?text=${waMsg}` : null;
+
+        // Buscar telefone do barbeiro pelo profile (barber_id é o UUID do profile)
+        let barberWaLink = null;
+        if (apt.barber_id) {
+            const { data: barberProfile } = await supabaseClient
+                .from('profiles')
+                .select('phone')
+                .eq('id', apt.barber_id)
+                .maybeSingle();
+            const barberPhone = (barberProfile?.phone || '').replace(/\D/g, '');
+            if (barberPhone) {
+                const barberMsg = encodeURIComponent(`Olá ${barberFirst}! Preciso cancelar meu agendamento no dia ${dateFmt} às ${apt.time}. Pode me ajudar?`);
+                barberWaLink = `https://wa.me/55${barberPhone}?text=${barberMsg}`;
+            }
+        }
+
+        // Fallback: WhatsApp da loja
+        const shopPhone = (this.state.shopSettings?.phone || '').replace(/\D/g, '');
+        const shopMsg = encodeURIComponent(`Olá! Preciso cancelar meu agendamento com ${apt.barberName || 'o barbeiro'} no dia ${dateFmt} às ${apt.time}. Pode me ajudar?`);
+        const shopWaLink = shopPhone ? `https://wa.me/55${shopPhone}?text=${shopMsg}` : null;
+
+        const contactLink = barberWaLink || shopWaLink;
 
         mc.innerHTML = `
             <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm px-4 fade-in" onclick="if(event.target===this) App.closeEarlyCancelModal()">
@@ -1002,8 +1021,8 @@ Object.assign(App, {
                         </div>
                     </div>
                     <div class="p-4 pt-0 flex flex-col gap-2">
-                        ${waLink ? `
-                            <a href="${waLink}" target="_blank" onclick="App.closeEarlyCancelModal()"
+                        ${contactLink ? `
+                            <a href="${contactLink}" target="_blank" onclick="App.closeEarlyCancelModal()"
                                class="w-full py-3.5 rounded-2xl font-bold bg-[#25D366] text-white flex items-center justify-center gap-2 text-sm active:scale-95 transition-all shadow-lg shadow-green-500/20">
                                 <i data-lucide="message-circle" class="w-4 h-4"></i>
                                 Falar com ${App.escapeHTML(barberFirst)} no WhatsApp

@@ -57,7 +57,7 @@ Object.assign(App, {
                             </p>
                         </div>
 
-                        <div class="w-full pt-4 border-t border-white/5 flex gap-2">
+                        <div class="w-full pt-4 border-t border-theme flex gap-2">
                              <a href="https://wa.me/${App.formatWA(this.state.shopSettings?.whatsapp)}?text=Ol%C3%A1,%20estou%20a%20caminho%20do%20meu%20hor%C3%A1rio%20das%20${reminder.apt.time}" target="_blank" class="flex-1 py-2 bg-[#25D366]/10 text-[#25D366] rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1.5">
                                 <i data-lucide="message-circle" class="w-3 h-3"></i> WhatsApp
                             </a>
