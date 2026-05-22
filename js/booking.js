@@ -419,7 +419,7 @@ Object.assign(App, {
 
         if (this.state.role === 'client') {
             const diffMs = new Date(`${apt.date}T${apt.time}:00`) - new Date();
-            if (diffMs > 0 && diffMs < 2 * 60 * 60 * 1000) {
+            if (diffMs < 2 * 60 * 60 * 1000) {
                 this.showEarlyCancelModal(apt);
                 return;
             }
