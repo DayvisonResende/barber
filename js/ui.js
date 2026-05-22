@@ -339,7 +339,7 @@ Object.assign(App, {
         modal.className = 'fixed inset-0 z-[150] flex items-center justify-center px-6 fade-in';
         modal.innerHTML = `
             <div class="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm" onclick="document.getElementById('info-modal').remove()"></div>
-            <div class="relative bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl w-full max-w-sm scale-in">
+            <div class="relative card-bg border border-theme rounded-3xl p-6 shadow-2xl w-full max-w-sm scale-in">
                 <div class="flex flex-col items-center text-center gap-4">
                     <div class="${iconBg} p-4 rounded-2xl">
                         <i data-lucide="${icon}" class="w-8 h-8 ${iconColor}"></i>
@@ -351,7 +351,7 @@ Object.assign(App, {
                 </div>
                 <div class="mt-6">
                     <button onclick="document.getElementById('info-modal').remove()"
-                        class="w-full py-3 rounded-xl font-bold transition-all duration-200 bg-zinc-800 text-theme border border-zinc-700 hover:bg-zinc-700">
+                        class="w-full py-3 rounded-xl font-bold transition-all duration-200 input-bg text-theme border border-theme hover:border-amber-500/40 active:scale-[0.98]">
                         Entendi
                     </button>
                 </div>
@@ -961,34 +961,16 @@ Object.assign(App, {
         this.render();
     },
 
-    async showEarlyCancelModal(apt) {
+    showEarlyCancelModal(apt) {
         const mc = document.getElementById('modal-container');
         if (!mc) return;
 
         const barberFirst = (apt.barberName || 'Barbeiro').split(' ')[0];
         const dateFmt = apt.date.split('-').reverse().join('/');
 
-        // Buscar telefone do barbeiro pelo profile (barber_id é o UUID do profile)
-        let barberWaLink = null;
-        if (apt.barber_id) {
-            const { data: barberProfile } = await supabaseClient
-                .from('profiles')
-                .select('phone')
-                .eq('id', apt.barber_id)
-                .maybeSingle();
-            const barberPhone = (barberProfile?.phone || '').replace(/\D/g, '');
-            if (barberPhone) {
-                const barberMsg = encodeURIComponent(`Olá ${barberFirst}! Preciso cancelar meu agendamento no dia ${dateFmt} às ${apt.time}. Pode me ajudar?`);
-                barberWaLink = `https://wa.me/55${barberPhone}?text=${barberMsg}`;
-            }
-        }
-
-        // Fallback: WhatsApp da loja
-        const shopPhone = (this.state.shopSettings?.phone || '').replace(/\D/g, '');
-        const shopMsg = encodeURIComponent(`Olá! Preciso cancelar meu agendamento com ${apt.barberName || 'o barbeiro'} no dia ${dateFmt} às ${apt.time}. Pode me ajudar?`);
-        const shopWaLink = shopPhone ? `https://wa.me/55${shopPhone}?text=${shopMsg}` : null;
-
-        const contactLink = barberWaLink || shopWaLink;
+        const shopPhone = this.formatWA(this.state.shopSettings?.whatsapp || this.state.shopSettings?.phone || '');
+        const waMsg = encodeURIComponent(`Olá! Preciso cancelar meu agendamento com ${apt.barberName || 'o barbeiro'} no dia ${dateFmt} às ${apt.time}. Pode me ajudar?`);
+        const contactLink = shopPhone ? `https://wa.me/${shopPhone}?text=${waMsg}` : null;
 
         mc.innerHTML = `
             <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm px-4 fade-in" onclick="if(event.target===this) App.closeEarlyCancelModal()">

@@ -15,7 +15,6 @@ Object.assign(App, {
         const { data: plans } = await supabaseClient
             .from('plans')
             .select('*')
-            .eq('created_by', user.id)
             .order('created_at', { ascending: false });
 
         if (!plans) return;

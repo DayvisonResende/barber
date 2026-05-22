@@ -2858,7 +2858,7 @@ Object.assign(App, {
                                             const dayLunchStart = dayCfg.lunch_start || barberConfig.lunch_start || '12:00';
                                             const dayLunchEnd = dayCfg.lunch_end || barberConfig.lunch_end || '13:00';
                                             return `
-                                            <div class="rounded-xl border ${isClosed ? 'border-theme/30 opacity-50' : 'border-theme'} bg-zinc-900/40 transition-all overflow-hidden" id="day-row-${selectedBarberId}-${idx}">
+                                            <div class="rounded-xl border ${isClosed ? 'border-theme/30 opacity-50' : 'border-theme'} input-bg transition-all overflow-hidden" id="day-row-${selectedBarberId}-${idx}">
                                                 <div class="flex items-center gap-2 p-3">
                                                     <div class="w-9 text-center flex-shrink-0">
                                                         <span class="text-[10px] font-black uppercase ${isClosed ? 'text-muted-theme' : 'text-amber-500'}">${label}</span>
@@ -2869,7 +2869,7 @@ Object.assign(App, {
                                                     </div>
                                                     <label class="flex items-center gap-1.5 cursor-pointer flex-shrink-0">
                                                         <input type="checkbox" ${isClosed ? 'checked' : ''} onchange="App.toggleDayClosed('${selectedBarberId}', ${idx}, this.checked)" class="sr-only peer" />
-                                                        <div class="relative w-9 h-5 bg-zinc-700 rounded-full transition-all peer-checked:bg-red-500/70">
+                                                        <div class="relative w-9 h-5 input-bg rounded-full transition-all peer-checked:bg-red-500/70">
                                                             <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-4 ${isClosed ? 'translate-x-4' : ''}"></div>
                                                         </div>
                                                         <span class="text-[9px] font-black uppercase ${isClosed ? 'text-red-400' : 'text-muted-theme'}">Fechado</span>
@@ -2907,15 +2907,15 @@ Object.assign(App, {
                                     </div>
 
                                     ${selectedDate ? `
-                                        <div class="pt-4 border-t border-white/5 space-y-4">
-                                            <div class="flex items-center justify-between p-4 bg-zinc-900/50 rounded-xl border border-theme">
+                                        <div class="pt-4 border-t border-theme space-y-4">
+                                            <div class="flex items-center justify-between p-4 input-bg rounded-xl border border-theme">
                                                 <div>
                                                     <h4 class="text-sm font-bold text-theme">Marcar como Fechado?</h4>
                                                     <p class="text-[10px] text-muted-theme">O barbeiro não aparecerá para agendamentos neste dia.</p>
                                                 </div>
                                                 <div class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" ${this.state.barberExceptions.find(ex => ex.barber_id === selectedBarberId && ex.specific_date === selectedDate)?.is_closed ? 'checked' : ''} onchange="App.toggleBarberException('${selectedBarberId}', '${selectedDate}', this.checked)" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                                                    <div class="w-11 h-6 input-bg border border-theme peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
                                                 </div>
                                             </div>
 
@@ -3170,7 +3170,7 @@ Object.assign(App, {
                     ` : ''}
 
                     <!-- Resumo Global de Dívida -->
-                    <div class="card-bg border border-theme p-5 rounded-3xl shadow-xl bg-gradient-to-br from-zinc-900 to-zinc-950 relative overflow-hidden">
+                    <div class="card-bg border border-theme p-5 rounded-3xl shadow-xl relative overflow-hidden">
                         <div class="flex justify-between items-start z-10 relative">
                             <div>
                                 <p class="text-[10px] uppercase font-black text-muted-theme tracking-widest mb-1">Total Pendente de Repasse</p>
@@ -3271,7 +3271,7 @@ Object.assign(App, {
                         </div>
                         <div class="space-y-2">
                             ${CATEGORIES.length === 0 ? '<p class="text-xs text-muted-theme italic">Nenhuma categoria cadastrada.</p>' : CATEGORIES.map(c => `
-                                <div class="flex justify-between items-center bg-zinc-900/50 p-3 rounded-xl border border-theme/50 hover:border-amber-500/30 transition-colors">
+                                <div class="flex justify-between items-center input-bg p-3 rounded-xl border border-theme/50 hover:border-amber-500/30 transition-colors">
                                     <span class="font-bold text-theme text-sm">${c.name}</span>
                                     <button onclick="App.deleteCategory('${c.id}')" class="text-rose-500 hover:bg-rose-500/10 p-2 rounded-lg transition-colors">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -3325,7 +3325,7 @@ Object.assign(App, {
                                         <div class="space-y-2">
                                             ${catProducts.map(p => `
                                                 ${this.state.editingProductId === p.id ? `
-                                                    <div class="flex flex-col gap-2 bg-zinc-900/50 p-3 rounded-xl border border-amber-500/50 w-full fade-in">
+                                                    <div class="flex flex-col gap-2 input-bg p-3 rounded-xl border border-amber-500/50 w-full fade-in">
                                                         <div class="flex gap-2">
                                                             <input type="text" id="edit-prod-name-${p.id}" value="${App.escapeHTML(p.name)}" placeholder="Nome" class="flex-1 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
                                                             <input type="number" id="edit-prod-price-${p.id}" value="${p.price.toFixed(2)}" step="0.01" class="w-20 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
@@ -3339,20 +3339,20 @@ Object.assign(App, {
                                                                 <button onclick="App.updateProduct('${p.id}', document.getElementById('edit-prod-name-${p.id}').value, document.getElementById('edit-prod-price-${p.id}').value, document.getElementById('edit-prod-cat-${p.id}').value, document.getElementById('edit-prod-stock-${p.id}').value)" class="p-1.5 bg-emerald-500 text-zinc-950 rounded hover:bg-emerald-400">
                                                                     <i data-lucide="check" class="w-3.5 h-3.5"></i>
                                                                 </button>
-                                                                <button onclick="App.cancelEditProduct()" class="p-1.5 bg-zinc-700 text-muted-theme rounded hover:bg-zinc-600">
+                                                                <button onclick="App.cancelEditProduct()" class="p-1.5 input-bg border border-theme text-muted-theme rounded hover:border-amber-500/40 transition-colors">
                                                                     <i data-lucide="x" class="w-3.5 h-3.5"></i>
                                                                 </button>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 ` : `
-                                                <div class="flex justify-between items-center bg-zinc-900/50 p-3 rounded-xl border border-theme/50 hover:border-amber-500/30 transition-colors w-full">
+                                                <div class="flex justify-between items-center input-bg p-3 rounded-xl border border-theme/50 hover:border-amber-500/30 transition-colors w-full">
                                                     <div class="flex flex-col">
                                                         <span class="font-bold text-theme text-sm">${App.escapeHTML(p.name)}</span>
                                                         <span class="text-xs text-emerald-500 font-bold">R$ ${p.price.toFixed(2).replace('.', ',')}</span>
                                                     </div>
                                                     <div class="flex items-center gap-2">
-                                                        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${p.stock_quantity === 0 ? 'bg-rose-500/15 text-rose-400' : p.stock_quantity != null && p.stock_quantity <= 3 ? 'bg-amber-500/15 text-amber-400' : 'bg-zinc-700/50 text-muted-theme'}">
+                                                        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${p.stock_quantity === 0 ? 'bg-rose-500/15 text-rose-400' : p.stock_quantity != null && p.stock_quantity <= 3 ? 'bg-amber-500/15 text-amber-400' : 'border border-theme text-muted-theme'}">
                                                             ${p.stock_quantity != null ? p.stock_quantity + ' un' : '∞'}
                                                         </span>
                                                         <button onclick="App.initEditProduct('${p.id}')" class="text-amber-500 hover:bg-amber-500/10 p-2 rounded-lg transition-colors">
