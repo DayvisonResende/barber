@@ -361,6 +361,150 @@ Object.assign(App, {
         if (window.lucide) window.lucide.createIcons();
     },
 
+    showCreateClientModal() {
+        const existing = document.getElementById('create-client-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'create-client-modal';
+        modal.className = 'fixed inset-0 z-[150] flex items-center justify-center px-6 fade-in';
+        modal.innerHTML = `
+            <div class="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm" onclick="document.getElementById('create-client-modal').remove()"></div>
+            <div class="relative card-bg border border-theme rounded-3xl p-6 shadow-2xl w-full max-w-sm scale-in">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="bg-amber-500/10 p-3 rounded-2xl">
+                        <i data-lucide="user-plus" class="w-6 h-6 text-amber-500"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-theme">Criar Conta</h3>
+                        <p class="text-[10px] text-muted-theme uppercase tracking-widest">Novo cliente no sistema</p>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] font-black text-muted-theme uppercase tracking-widest block mb-1.5">Nome</label>
+                            <input id="create-client-first-name" type="text" placeholder="João" autocomplete="off"
+                                class="w-full input-bg border border-theme rounded-xl p-3 text-theme text-sm focus:border-amber-500 outline-none transition-colors" />
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-muted-theme uppercase tracking-widest block mb-1.5">Sobrenome</label>
+                            <input id="create-client-last-name" type="text" placeholder="da Silva" autocomplete="off"
+                                class="w-full input-bg border border-theme rounded-xl p-3 text-theme text-sm focus:border-amber-500 outline-none transition-colors" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-muted-theme uppercase tracking-widest block mb-1.5">Telefone / WhatsApp</label>
+                        <input id="create-client-phone" type="tel" placeholder="(XX) XXXXX-XXXX" autocomplete="off"
+                            oninput="App.applyPhoneMask(this)"
+                            class="w-full input-bg border border-theme rounded-xl p-3 text-theme text-sm focus:border-amber-500 outline-none transition-colors" />
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-muted-theme uppercase tracking-widest block mb-1.5">Senha Temporária</label>
+                        <div class="relative">
+                            <input id="create-client-password" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"
+                                class="w-full input-bg border border-theme rounded-xl p-3 pr-20 text-theme text-sm focus:border-amber-500 outline-none transition-colors" />
+                            <button type="button" onclick="App.generateClientPassword()"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-black text-amber-500 uppercase tracking-wider hover:text-amber-400 transition-colors px-1">
+                                Gerar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-5">
+                    <button onclick="document.getElementById('create-client-modal').remove()"
+                        class="flex-1 py-3 rounded-xl font-bold input-bg text-theme border border-theme hover:border-amber-500/40 active:scale-[0.98] transition-all">
+                        Cancelar
+                    </button>
+                    <button onclick="App.adminCreateClient()"
+                        class="flex-1 py-3 rounded-xl font-bold bg-amber-500 text-zinc-950 hover:bg-amber-400 active:scale-[0.98] transition-all shadow-md shadow-amber-500/20">
+                        Criar Conta
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        if (window.lucide) window.lucide.createIcons();
+        setTimeout(() => document.getElementById('create-client-first-name')?.focus(), 100);
+    },
+
+    applyPhoneMask(input) {
+        let v = input.value.replace(/\D/g, '').slice(0, 11);
+        if (v.length > 10) {
+            v = v.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+        } else if (v.length > 6) {
+            v = v.replace(/^(\d{2})(\d{4})(\d*)$/, '($1) $2-$3');
+        } else if (v.length > 2) {
+            v = v.replace(/^(\d{2})(\d*)$/, '($1) $2');
+        } else if (v.length > 0) {
+            v = v.replace(/^(\d*)$/, '($1');
+        }
+        input.value = v;
+    },
+
+    generateClientPassword() {
+        const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+        const pwd = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        const input = document.getElementById('create-client-password');
+        if (input) {
+            input.value = pwd;
+            input.type = 'text';
+            input.focus();
+        }
+    },
+
+    showEditClientModal(clientId, currentName, currentPhone) {
+        const existing = document.getElementById('edit-client-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'edit-client-modal';
+        modal.className = 'fixed inset-0 z-[150] flex items-center justify-center px-6 fade-in';
+        modal.innerHTML = `
+            <div class="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm" onclick="document.getElementById('edit-client-modal').remove()"></div>
+            <div class="relative card-bg border border-theme rounded-3xl p-6 shadow-2xl w-full max-w-sm scale-in">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="bg-amber-500/10 p-3 rounded-2xl">
+                        <i data-lucide="user-pen" class="w-6 h-6 text-amber-500"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-theme">Editar Cliente</h3>
+                        <p class="text-[10px] text-muted-theme uppercase tracking-widest">Ajuste nome e telefone</p>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-[10px] font-black text-muted-theme uppercase tracking-widest block mb-1.5">Nome Completo</label>
+                        <input id="edit-client-name" type="text" value="${currentName}" placeholder="Nome do cliente"
+                            class="w-full input-bg border border-theme rounded-xl p-3 text-theme text-sm focus:border-amber-500 outline-none transition-colors" />
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-muted-theme uppercase tracking-widest block mb-1.5">Telefone / WhatsApp</label>
+                        <input id="edit-client-phone" type="tel" value="${currentPhone}" placeholder="(XX) XXXXX-XXXX"
+                            class="w-full input-bg border border-theme rounded-xl p-3 text-theme text-sm focus:border-amber-500 outline-none transition-colors" />
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-5">
+                    <button onclick="document.getElementById('edit-client-modal').remove()"
+                        class="flex-1 py-3 rounded-xl font-bold input-bg text-theme border border-theme hover:border-amber-500/40 active:scale-[0.98] transition-all">
+                        Cancelar
+                    </button>
+                    <button onclick="App.saveClientEdit('${clientId}')"
+                        class="flex-1 py-3 rounded-xl font-bold bg-amber-500 text-zinc-950 hover:bg-amber-400 active:scale-[0.98] transition-all shadow-md shadow-amber-500/20">
+                        Salvar
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        if (window.lucide) window.lucide.createIcons();
+        setTimeout(() => document.getElementById('edit-client-name')?.focus(), 100);
+    },
+
     clearNotifications() {
         this.state.unreadCount = 0;
         this.updateHeaderUI();

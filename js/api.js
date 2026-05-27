@@ -1866,6 +1866,84 @@ Object.assign(App, {
         });
     },
 
+    async adminCreateClient() {
+        const firstName = document.getElementById('create-client-first-name')?.value.trim();
+        const lastName = document.getElementById('create-client-last-name')?.value.trim();
+        const rawPhone = document.getElementById('create-client-phone')?.value.trim();
+        const password = document.getElementById('create-client-password')?.value;
+
+        if (!firstName || !lastName || !rawPhone || !password) {
+            this.showNotification('Erro', 'Preencha todos os campos.');
+            return;
+        }
+        if (password.length < 6) {
+            this.showNotification('Erro', 'A senha precisa ter no mínimo 6 caracteres.');
+            return;
+        }
+
+        const name = `${firstName} ${lastName}`;
+        let cleanPhone = rawPhone.replace(/\D/g, '');
+        if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+        const email = `${cleanPhone}@finotrata.com`;
+
+        // Cliente temporário sem persistência de sessão para não deslogar o admin
+        const tempClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+        });
+
+        const { data, error } = await tempClient.auth.signUp({
+            email,
+            password,
+            options: { data: { name, phone: cleanPhone } }
+        });
+
+        if (error) {
+            this.showNotification('Erro', error.message);
+            return;
+        }
+
+        if (data?.user) {
+            await supabaseClient.from('profiles').update({ phone: cleanPhone }).eq('id', data.user.id);
+        }
+
+        document.getElementById('create-client-modal')?.remove();
+        this.showNotification('Conta Criada!', `${name} já pode fazer login no app.`);
+        await this.fetchFullUpdate();
+        this.state.adminShopTab = 'clients';
+        this.render();
+    },
+
+    async saveClientEdit(clientId) {
+        const nameInput = document.getElementById('edit-client-name');
+        const phoneInput = document.getElementById('edit-client-phone');
+        if (!nameInput || !phoneInput) return;
+
+        const name = nameInput.value.trim();
+        const phone = phoneInput.value.trim();
+
+        if (!name) {
+            nameInput.focus();
+            nameInput.classList.add('border-rose-500');
+            return;
+        }
+
+        const { error } = await supabaseClient
+            .from('profiles')
+            .update({ name, phone })
+            .eq('id', clientId);
+
+        if (error) {
+            this.showNotification('Erro', 'Não foi possível salvar os dados do cliente.');
+            return;
+        }
+
+        document.getElementById('edit-client-modal')?.remove();
+        this.showNotification('Dados Salvos', `O perfil foi atualizado com sucesso.`);
+        await this.fetchFullUpdate();
+        this.state.adminShopTab = 'clients';
+        this.render();
+    },
+
     async toggleClientPause(clientId, currentlyPaused, clientName) {
         const willPause = !currentlyPaused;
         const actionLabel = willPause ? 'Pausar' : 'Reativar';

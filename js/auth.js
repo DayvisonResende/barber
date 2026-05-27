@@ -53,14 +53,17 @@ Object.assign(App, {
         const phone = document.getElementById('reg-phone')?.value;
         const password = document.getElementById('reg-password')?.value;
         const confirmPassword = document.getElementById('reg-confirm-password')?.value;
-        const name = document.getElementById('reg-name')?.value;
+        const firstName = document.getElementById('reg-first-name')?.value.trim();
+        const lastName = document.getElementById('reg-last-name')?.value.trim();
         const cpf = document.getElementById('reg-cpf')?.value;
         const birthDate = document.getElementById('reg-birth')?.value;
 
-        if (!phone || !password || !name || !cpf || !birthDate) {
-            this.showNotification("Erro", "Preencha todos os campos.");
+        if (!phone || !password || !firstName || !lastName || !cpf || !birthDate) {
+            this.showNotification("Erro", "Preencha todos os campos, incluindo nome e sobrenome.");
             return;
         }
+
+        const name = `${firstName} ${lastName}`;
 
         if (password !== confirmPassword) {
             this.showNotification("Erro", "As senhas não coincidem.");

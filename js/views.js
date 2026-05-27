@@ -1,6 +1,7 @@
 Object.assign(App, {
     renderSplash() {
-        const name = this.state.shopSettings?.name || 'FinnoTrato';
+        const rawName = this.state.shopSettings?.name || 'FinnoTrato';
+        const name = rawName.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
         const highlightRegex = /(barber|barbearia)/i;
         let formattedName = name;
 
@@ -24,7 +25,7 @@ Object.assign(App, {
                         <i data-lucide="scissors" class="w-12 h-12 text-amber-500 animate-pulse"></i>
                     </div>
                 </div>
-                <h1 class="text-3xl font-black text-theme italic uppercase tracking-widest animate-pulse logo-font">${formattedName}</h1>
+                <h1 class="text-3xl font-black text-theme italic tracking-widest animate-pulse logo-font">${formattedName}</h1>
                 <p class="text-[10px] text-muted-theme font-bold uppercase tracking-[0.3em] mt-2">${this.state.shopSettings?.slogan || 'Personal Grooming'}</p>
             </div>
         `;
@@ -180,11 +181,17 @@ Object.assign(App, {
                 </div>
 
                 <div class="space-y-4">
-                    <div class="space-y-2">
-                        <label class="text-sm font-medium text-muted-theme">Nome Completo</label>
-                        <input type="text" id="reg-name" placeholder="João da Silva" class="w-full card-bg border border-theme rounded-xl p-3 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium text-muted-theme">Nome</label>
+                            <input type="text" id="reg-first-name" placeholder="João" autocomplete="given-name" class="w-full card-bg border border-theme rounded-xl p-3 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium text-muted-theme">Sobrenome</label>
+                            <input type="text" id="reg-last-name" placeholder="da Silva" autocomplete="family-name" class="w-full card-bg border border-theme rounded-xl p-3 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
+                        </div>
                     </div>
-                    
+
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-2">
                             <label class="text-sm font-medium text-muted-theme">CPF</label>
@@ -2208,8 +2215,8 @@ Object.assign(App, {
                         <i data-lucide="sparkles" class="w-5 h-5"></i>
                     </div>
                     <div class="space-y-1">
-                        <p class="text-xs font-bold text-amber-500 uppercase tracking-tight">Análise BarberBI</p>
-                        <p class="text-xs text-amber-200/80 leading-relaxed italic">
+                        <p class="text-xs font-bold text-amber-500 uppercase tracking-tight">Análise do Estabelecimento</p>
+                        <p class="text-xs text-muted-theme leading-relaxed italic">
                             ${stats.growth < 0 ? 'Atenção: Seu faturamento caiu este mês. Considere uma promoção para dias úteis (terça e quarta).' : 'Bom trabalho! O faturamento está em alta. Que tal oferecer um programa de fidelidade para os clientes mais frequentes?'}
                         </p>
                     </div>
@@ -3092,6 +3099,9 @@ Object.assign(App, {
 
             contentHtml = `
                     <div class="space-y-4 pb-4">
+                        <button onclick="App.showCreateClientModal()" class="w-full flex items-center justify-center gap-2 py-3 px-4 bg-amber-500 text-zinc-950 font-bold rounded-xl hover:bg-amber-400 active:scale-[0.98] transition-all shadow-md shadow-amber-500/20">
+                            <i data-lucide="user-plus" class="w-4 h-4"></i> Criar Nova Conta
+                        </button>
                         <div class="relative w-full">
                             <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-theme"></i>
                             <input oninput="App.filterGestaoClients(this.value)" type="text" placeholder="Buscar por cliente, telefone..." class="w-full card-bg border border-theme rounded-xl py-3 pl-10 pr-4 text-theme text-sm focus:border-amber-500 outline-none transition-colors shadow-inner" />
@@ -3132,6 +3142,9 @@ Object.assign(App, {
                                     <a href="tel:+${App.formatWA(client.phone || client.email)}" class="flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme transition-colors text-xs font-bold">
                                         <i data-lucide="phone" class="w-4 h-4"></i> Ligar
                                     </a>
+                                    <button onclick="App.showEditClientModal('${client.id}', '${App.escapeHTML(client.name)}', '${App.escapeHTML(client.phone || '')}')" class="flex-none py-2 px-3 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-lg flex items-center justify-center border border-amber-500/20 transition-colors" title="Editar dados do cliente">
+                                        <i data-lucide="pencil" class="w-4 h-4"></i>
+                                    </button>
                                     <button onclick="App.toggleClientPause('${client.id}', ${!!client.is_paused}, '${App.escapeHTML(client.name)}')" class="flex-none py-2 px-3 ${client.is_paused ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20'} rounded-lg flex items-center justify-center transition-colors" title="${client.is_paused ? 'Reativar cliente' : 'Pausar cliente'}">
                                         <i data-lucide="${client.is_paused ? 'play-circle' : 'pause-circle'}" class="w-4 h-4"></i>
                                     </button>
@@ -3630,6 +3643,7 @@ Object.assign(App, {
 
     renderSplash() {
         const s = this.state.shopSettings;
+        const splashName = (s?.name || 'Carregando...').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
         return `
             <div class="fixed inset-0 bg-zinc-950 flex flex-col items-center justify-center z-[300] fade-in-fast">
                 <div class="relative">
@@ -3644,7 +3658,7 @@ Object.assign(App, {
                 </div>
                 
                 <div class="mt-8 text-center space-y-2">
-                    <h2 class="text-xl font-bold text-theme tracking-widest uppercase italic logo-font">${s?.name || 'Carregando...'}</h2>
+                    <h2 class="text-xl font-bold text-theme tracking-widest italic logo-font">${splashName}</h2>
                     <div class="flex items-center justify-center gap-1.5">
                         <div class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                         <div class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
