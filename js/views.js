@@ -3668,7 +3668,7 @@ Object.assign(App, {
                 </div>
                 
                 <div class="mt-8 text-center space-y-2">
-                    <h2 class="text-xl font-bold text-theme tracking-widest italic logo-font">${splashName}</h2>
+                    <h2 class="text-3xl font-bold text-theme tracking-widest italic logo-font">${splashName}</h2>
                     <div class="flex items-center justify-center gap-1.5">
                         <div class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                         <div class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
