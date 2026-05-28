@@ -218,6 +218,7 @@ Object.assign(App, {
                     id: a.id,
                     clientName: a.client_name,
                     clientPhone: phone,
+                    client_id: a.client_id,
                     barberName: BARBERS.find(b => String(b.user_id) === String(a.barber_id))?.name || a.barber_name,
                     service: { name: a.service_names, price: a.service_price },
                     numericValue: a.service_numeric_value,

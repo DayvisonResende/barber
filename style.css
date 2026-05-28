@@ -198,6 +198,16 @@ body {
     animation: pulseAlert 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+@keyframes spinPulse {
+    0%   { transform: rotate(0deg);   opacity: 1; }
+    50%  { transform: rotate(180deg); opacity: 0.5; }
+    100% { transform: rotate(360deg); opacity: 1; }
+}
+
+.animate-spin-pulse {
+    animation: spinPulse 2s linear infinite;
+}
+
 
 
 /* Animações de Destaque */
