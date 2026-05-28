@@ -1,6 +1,6 @@
 {
   "name": "Finno Trato Barbearia",
-  "short_name": "FinnoTrato",
+  "short_name": "Finno Trato",
   "description": "Sistema de Agendamento Profissional para Barbearias",
   "start_url": "./index.html",
   "display": "standalone",
