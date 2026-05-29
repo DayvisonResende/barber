@@ -21,14 +21,11 @@ Object.assign(App, {
                 : globalCommissionRate;
         });
 
-        // Helper para pegar a comissão de uma transação
-        const getRateForTx = (tx) => {
-            // Se for barbeiro visualizando, ele só vê a dele
-            if (isBarber) return globalCommissionRate; // Se for barbeiro, o globalContext já é filtrado
-            
-            // Caso contrário (admin), pega a do barbeiro específico
-            return commissionMap[tx.barber_id] || globalCommissionRate;
-        };
+        // Helper para pegar a comissão de uma transação (usa taxa individual do barbeiro)
+        const getRateForTx = (tx) => commissionMap[tx.barberId] || globalCommissionRate;
+
+        // Helper para obter o valor somente de serviços (excluindo comanda) de uma transação
+        const serviceValueOf = (tx) => tx.numericValue - (tx.comandaTotal || 0);
 
         // 2. Filtros de Tempo (Desempenho)
         const currentMonthTxs = txs.filter(t => {
@@ -45,12 +42,12 @@ Object.assign(App, {
 
         let currentRevenue = 0;
         currentMonthTxs.forEach(t => {
-            currentRevenue += isBarber ? (t.numericValue * globalCommissionRate) : t.numericValue;
+            currentRevenue += isBarber ? (serviceValueOf(t) * getRateForTx(t)) + (t.productCommission || 0) : t.numericValue;
         });
 
         let lastRevenue = 0;
         lastMonthTxs.forEach(t => {
-            lastRevenue += isBarber ? (t.numericValue * globalCommissionRate) : t.numericValue;
+            lastRevenue += isBarber ? (serviceValueOf(t) * getRateForTx(t)) + (t.productCommission || 0) : t.numericValue;
         });
 
         // 3. Cálculos de Crescimento e Ticket
@@ -62,7 +59,7 @@ Object.assign(App, {
 
         // 4. Saldo Pendente (Apenas o que NÃO foi quitado)
         const pendingTxs = txs.filter(t => !t.isSettled);
-        const totalPendingEarnings = pendingTxs.reduce((s, t) => s + (t.numericValue * getRateForTx(t)), 0);
+        const totalPendingEarnings = pendingTxs.reduce((s, t) => s + (serviceValueOf(t) * getRateForTx(t)) + (t.productCommission || 0), 0);
         
         let totalAdvances = 0;
         if (isBarber) {
@@ -93,7 +90,8 @@ Object.assign(App, {
         let totalShopShare = 0;
         txs.forEach(t => {
             const currentRate = getRateForTx(t);
-            const bPart = t.numericValue * currentRate;
+            const svcValue = serviceValueOf(t);
+            const bPart = (svcValue * currentRate) + (t.productCommission || 0);
             totalBarberShare += bPart;
             totalShopShare += (t.numericValue - bPart);
         });

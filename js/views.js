@@ -1810,10 +1810,16 @@ Object.assign(App, {
             return true;
         });
 
-        const commissionRate = (this.state.shopSettings?.commission_rate || 100) / 100;
         const isBarber = this.state.role === 'barber';
+        const shopCommissionRate = (this.state.shopSettings?.commission_rate || 100) / 100;
+        const myBarberRecord = isBarber ? BARBERS.find(b => String(b.user_id) === String(this.state.userProfile?.id)) : null;
+        const commissionRate = myBarberRecord?.commission_rate != null
+            ? myBarberRecord.commission_rate / 100
+            : shopCommissionRate;
         const periodTotalRaw = filteredTxs.reduce((sum, tx) => sum + tx.numericValue, 0);
-        let periodTotal = isBarber ? (periodTotalRaw * commissionRate) : periodTotalRaw;
+        const periodProductCommission = isBarber ? filteredTxs.reduce((sum, tx) => sum + (tx.productCommission || 0), 0) : 0;
+        const periodServiceValue = isBarber ? filteredTxs.reduce((sum, tx) => sum + (tx.numericValue - (tx.comandaTotal || 0)), 0) : periodTotalRaw;
+        let periodTotal = isBarber ? (periodServiceValue * commissionRate) + periodProductCommission : periodTotalRaw;
 
         let myAdvancesList = [];
         let myAdvancesTotal = 0;
@@ -2020,7 +2026,7 @@ Object.assign(App, {
                                         </div>
                                     </div>
                                     <div class="text-right flex-shrink-0 flex flex-col items-end min-w-[75px] mt-0.5">
-                                        <p class="font-black text-theme leading-none text-base">R$ ${(this.state.role === 'barber' ? tx.numericValue * commissionRate : tx.numericValue).toFixed(2).replace('.', ',')}</p>
+                                        <p class="font-black text-theme leading-none text-base">R$ ${(this.state.role === 'barber' ? ((tx.numericValue - (tx.comandaTotal || 0)) * commissionRate) + (tx.productCommission || 0) : tx.numericValue).toFixed(2).replace('.', ',')}</p>
                                         <p class="text-[9px] text-muted-theme font-mono mt-1.5 opacity-60">${tx.date} • ${tx.time}</p>
                                     </div>
                                 </div>
@@ -2236,10 +2242,12 @@ Object.assign(App, {
     },
 
     renderProductsReport() {
-        const { aggregatedItems, totalRevenue, totalQty } = this.getFilteredProductItems();
+        const { saleItems, totalRevenue, totalQty, isBarber, distinctCount } = this.getFilteredProductItems();
+        const aggregatedItems = saleItems; // alias for template compat
         const isLoading = this.state.isLoadingProductSales;
         const dateFilter = this.state.productDateFilter;
         const catFilter = this.state.productCategoryFilter;
+        const statusFilter = this.state.productStatusFilter || 'pending';
 
         const dateFilterLabels = {
             'day': 'Hoje', 'week': 'Esta Semana', 'month': 'Este Mês', 'year': 'Este Ano', 'custom': 'No Período'
@@ -2259,6 +2267,13 @@ Object.assign(App, {
                     <button onclick="App.exportProductsToCSV()" class="p-2 rounded-lg card-bg border border-theme text-muted-theme hover:text-amber-500 hover:border-amber-500/30 transition-all active:scale-95" title="Exportar CSV">
                         <i data-lucide="download" class="w-4 h-4"></i>
                     </button>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="flex items-center gap-2">
+                    <span class="text-[9px] font-black text-muted-theme uppercase tracking-widest mr-1 opacity-50">Status:</span>
+                    <button onclick="App.setProductStatusFilter('pending')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${statusFilter === 'pending' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' : 'input-bg text-muted-theme'}">Pendentes</button>
+                    <button onclick="App.setProductStatusFilter('all')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${statusFilter === 'all' ? 'bg-zinc-200 text-zinc-950 shadow-lg' : 'input-bg text-muted-theme'}">Arquivados</button>
                 </div>
 
                 <!-- Filtros de Data -->
@@ -2301,11 +2316,11 @@ Object.assign(App, {
                     <div class="absolute right-[-20px] top-[-20px] opacity-20">
                         <i data-lucide="package" class="w-32 h-32 text-zinc-950"></i>
                     </div>
-                    <p class="text-zinc-900 font-medium text-sm">Receita de Produtos — ${dateFilterLabels[dateFilter] || ''}</p>
+                    <p class="text-zinc-900 font-medium text-sm">${isBarber ? 'Comissão de Produtos' : 'Receita de Produtos'} — ${dateFilterLabels[dateFilter] || ''}</p>
                     <h3 class="text-4xl font-bold text-zinc-950 mt-1 mb-4">R$ ${isLoading ? '...' : totalRevenue.toFixed(2).replace('.', ',')}</h3>
                     <div class="flex justify-between items-center text-zinc-900 text-sm font-medium pt-3 border-t border-zinc-950/20">
                         <span>${isLoading ? '—' : totalQty + ' itens vendidos'}</span>
-                        <span class="text-[10px] uppercase font-black opacity-60">${isLoading ? '' : aggregatedItems.length + ' produtos distintos'}</span>
+                        <span class="text-[10px] uppercase font-black opacity-60">${isLoading ? '' : (distinctCount || 0) + ' produtos distintos'}</span>
                     </div>
                 </div>
 
@@ -2325,7 +2340,10 @@ Object.assign(App, {
                         </div>
                     ` : `
                         <div class="space-y-3">
-                            ${aggregatedItems.map(item => `
+                            ${aggregatedItems.map(item => {
+                                const [y, m, d] = (item.date || '').split('-');
+                                const dateLabel = d && m ? `${d}/${m}` : '';
+                                return `
                                 <div class="card-bg rounded-xl border border-theme p-3 shadow-sm flex items-center justify-between gap-3">
                                     <div class="flex items-center gap-3 min-w-0 flex-1">
                                         <div class="input-bg p-2 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -2335,17 +2353,18 @@ Object.assign(App, {
                                             <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(item.name)}</p>
                                             <div class="text-[10px] text-muted-theme flex items-center gap-1.5 mt-0.5 flex-wrap">
                                                 <span class="input-bg px-1.5 py-0.5 rounded border border-theme font-bold text-amber-500 uppercase tracking-tighter">${App.escapeHTML(item.categoryName)}</span>
-                                                <span class="opacity-30">•</span>
-                                                <span>${item.totalQty}x vendido${item.totalQty > 1 ? 's' : ''}</span>
+                                                ${dateLabel ? `<span class="opacity-30">•</span><span>${dateLabel}</span>` : ''}
+                                                ${item.qty > 1 ? `<span class="opacity-30">·</span><span class="font-bold text-amber-500">${item.qty}x</span>` : ''}
+                                                ${item.clientName ? `<span class="opacity-30">•</span><span class="truncate max-w-[80px]">${App.escapeHTML(item.clientName)}</span>` : ''}
                                             </div>
                                         </div>
                                     </div>
                                     <div class="text-right flex-shrink-0 flex flex-col items-end min-w-[80px]">
-                                        <p class="font-black text-theme leading-none text-base">R$ ${item.totalRevenue.toFixed(2).replace('.', ',')}</p>
-                                        <p class="text-[9px] text-muted-theme font-mono mt-1 opacity-60">R$ ${item.price.toFixed(2).replace('.', ',')} / un</p>
+                                        <p class="font-black text-theme leading-none text-base">R$ ${item.earnedValue.toFixed(2).replace('.', ',')}</p>
+                                        <p class="text-[9px] text-muted-theme font-mono mt-1 opacity-60">${isBarber ? `${item.commissionRate != null ? item.commissionRate : 0}% comissão` : `R$ ${item.price.toFixed(2).replace('.', ',')} / un`}</p>
                                     </div>
-                                </div>
-                            `).join('')}
+                                </div>`;
+                            }).join('')}
                         </div>
                     `}
                 </div>
@@ -3215,7 +3234,10 @@ Object.assign(App, {
                         <div class="space-y-3">
                             ${BARBERS.map(b => {
                 const bTxs = txs.filter(t => String(t.barberId) === String(b.user_id) && !t.isSettled);
-                const bEarnings = bTxs.reduce((s, t) => s + (t.numericValue * commissionRate), 0);
+                const bRate = b.commission_rate != null ? b.commission_rate / 100 : (this.state.shopSettings?.commission_rate || 100) / 100;
+                const bServiceEarnings = bTxs.reduce((s, t) => s + ((t.numericValue - (t.comandaTotal || 0)) * bRate), 0);
+                const bProductEarnings = bTxs.reduce((s, t) => s + (t.productCommission || 0), 0);
+                const bEarnings = bServiceEarnings + bProductEarnings;
 
                 const bPayouts = payouts.filter(p => String(p.barber_id) === String(b.user_id));
                 const lastBFull = bPayouts.find(p => p.type === 'full');
@@ -3229,6 +3251,7 @@ Object.assign(App, {
                                         <div class="min-w-0">
                                             <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(b.name)}</p>
                                             <p class="text-[10px] text-muted-theme uppercase font-black tracking-tighter mt-0.5">Saldo: <span class="text-amber-500">R$ ${bFinalBalance.toFixed(2).replace('.', ',')}</span></p>
+                                            ${bProductEarnings > 0 ? `<p class="text-[10px] text-muted-theme tracking-tighter mt-0.5">Serviços: <span class="text-amber-500">R$ ${bServiceEarnings.toFixed(2).replace('.', ',')}</span> + Produtos: <span class="text-violet-400">R$ ${bProductEarnings.toFixed(2).replace('.', ',')}</span></p>` : ''}
                                         </div>
                                         <div class="flex gap-2">
                                             <button onclick="App.openPayoutModal('${b.user_id}', '${App.escapeHTML(b.name)}', ${bFinalBalance})" class="px-3 py-2 bg-amber-500 text-zinc-950 text-[10px] font-black uppercase rounded-lg shadow-theme active:scale-95 transition-all">
@@ -3332,67 +3355,104 @@ Object.assign(App, {
                                     <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Estoque inicial</label>
                                     <input type="number" id="new-product-stock" placeholder="∞ ilimitado" min="0" step="1" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors text-sm" />
                                 </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Comissão (%)</label>
+                                    <input type="number" id="new-product-commission" placeholder="Sem comissão" min="0" max="100" step="1" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors text-sm" />
+                                </div>
                             </div>
-                            <button onclick="App.addProduct(document.getElementById('new-product-name').value, document.getElementById('new-product-price').value, document.getElementById('new-product-category').value, document.getElementById('new-product-stock').value)" class="w-full bg-amber-500 text-zinc-950 py-3 rounded-xl font-black uppercase tracking-wider hover:bg-amber-400 active:scale-[0.98] transition-all shadow-theme mb-6">
+                            <button onclick="App.addProduct(document.getElementById('new-product-name').value, document.getElementById('new-product-price').value, document.getElementById('new-product-category').value, document.getElementById('new-product-stock').value, document.getElementById('new-product-commission').value)" class="w-full bg-amber-500 text-zinc-950 py-3 rounded-xl font-black uppercase tracking-wider hover:bg-amber-400 active:scale-[0.98] transition-all shadow-theme mb-6">
                                 + Adicionar Produto
                             </button>
                         `}
 
                         <div class="space-y-3">
-                            ${CATEGORIES.map(cat => {
-                const catProducts = PRODUCTS.filter(p => p.category_id === cat.id);
-                if (catProducts.length === 0) return '';
-                return `
-                                    <div class="mb-4 last:mb-0">
-                                        <h4 class="text-[11px] text-muted-theme uppercase font-black tracking-widest mb-2 px-1 border-b border-theme/50 pb-1">${cat.name}</h4>
-                                        <div class="space-y-2">
-                                            ${catProducts.map(p => `
-                                                ${this.state.editingProductId === p.id ? `
-                                                    <div class="flex flex-col gap-2 input-bg p-3 rounded-xl border border-amber-500/50 w-full fade-in">
-                                                        <div class="flex gap-2">
-                                                            <input type="text" id="edit-prod-name-${p.id}" value="${App.escapeHTML(p.name)}" placeholder="Nome" class="flex-1 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
-                                                            <input type="number" id="edit-prod-price-${p.id}" value="${p.price.toFixed(2)}" step="0.01" class="w-20 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
-                                                            <input type="number" id="edit-prod-stock-${p.id}" value="${p.stock_quantity != null ? p.stock_quantity : ''}" placeholder="∞" min="0" step="1" title="Estoque (vazio = ilimitado)" class="w-16 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
-                                                        </div>
-                                                        <div class="flex justify-between items-center mt-1">
-                                                            <select id="edit-prod-cat-${p.id}" class="input-bg border border-theme rounded p-1.5 text-xs text-theme max-w-[150px] focus:border-amber-500 outline-none">
-                                                                ${CATEGORIES.map(c => `<option value="${c.id}" ${c.id === p.category_id ? 'selected' : ''}>${c.name}</option>`).join('')}
-                                                            </select>
-                                                            <div class="flex gap-1">
-                                                                <button onclick="App.updateProduct('${p.id}', document.getElementById('edit-prod-name-${p.id}').value, document.getElementById('edit-prod-price-${p.id}').value, document.getElementById('edit-prod-cat-${p.id}').value, document.getElementById('edit-prod-stock-${p.id}').value)" class="p-1.5 bg-emerald-500 text-zinc-950 rounded hover:bg-emerald-400">
-                                                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                                                                </button>
-                                                                <button onclick="App.cancelEditProduct()" class="p-1.5 input-bg border border-theme text-muted-theme rounded hover:border-amber-500/40 transition-colors">
-                                                                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : `
-                                                <div class="flex justify-between items-center input-bg p-3 rounded-xl border border-theme/50 hover:border-amber-500/30 transition-colors w-full">
-                                                    <div class="flex flex-col">
-                                                        <span class="font-bold text-theme text-sm">${App.escapeHTML(p.name)}</span>
-                                                        <span class="text-xs text-emerald-500 font-bold">R$ ${p.price.toFixed(2).replace('.', ',')}</span>
-                                                    </div>
-                                                    <div class="flex items-center gap-2">
-                                                        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${p.stock_quantity === 0 ? 'bg-rose-500/15 text-rose-400' : p.stock_quantity != null && p.stock_quantity <= 3 ? 'bg-amber-500/15 text-amber-400' : 'border border-theme text-muted-theme'}">
-                                                            ${p.stock_quantity != null ? p.stock_quantity + ' un' : '∞'}
-                                                        </span>
-                                                        <button onclick="App.initEditProduct('${p.id}')" class="text-amber-500 hover:bg-amber-500/10 p-2 rounded-lg transition-colors">
-                                                            <i data-lucide="edit-2" class="w-4 h-4"></i>
-                                                        </button>
-                                                        <button onclick="App.deleteProduct('${p.id}')" class="text-rose-500 hover:bg-rose-500/10 p-2 rounded-lg transition-colors">
-                                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                                        </button>
-                                                    </div>
+                            ${(() => {
+                                const activeProducts = PRODUCTS.filter(p => p.is_active !== false).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+                                const archivedProducts = PRODUCTS.filter(p => p.is_active === false).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+                                const renderProductRow = (p) => `
+                                    ${this.state.editingProductId === p.id ? `
+                                        <div class="flex flex-col gap-2 input-bg p-3 rounded-xl border border-amber-500/50 w-full fade-in">
+                                            <div class="flex gap-2">
+                                                <input type="text" id="edit-prod-name-${p.id}" value="${App.escapeHTML(p.name)}" placeholder="Nome" class="flex-1 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
+                                                <input type="number" id="edit-prod-price-${p.id}" value="${p.price.toFixed(2)}" step="0.01" class="w-20 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
+                                                <input type="number" id="edit-prod-stock-${p.id}" value="${p.stock_quantity != null ? p.stock_quantity : ''}" placeholder="∞" min="0" step="1" title="Estoque (vazio = ilimitado)" class="w-16 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
+                                                <input type="number" id="edit-prod-commission-${p.id}" value="${p.commission_rate != null ? p.commission_rate : ''}" placeholder="% com." min="0" max="100" step="1" title="Comissão % (vazio = sem comissão)" class="w-16 input-bg border border-violet-500/40 rounded p-1.5 text-xs text-violet-400 focus:border-violet-500 outline-none" />
+                                            </div>
+                                            <div class="flex justify-between items-center mt-1">
+                                                <select id="edit-prod-cat-${p.id}" class="input-bg border border-theme rounded p-1.5 text-xs text-theme max-w-[150px] focus:border-amber-500 outline-none">
+                                                    ${CATEGORIES.map(c => `<option value="${c.id}" ${c.id === p.category_id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                                                </select>
+                                                <div class="flex gap-1">
+                                                    <button onclick="App.updateProduct('${p.id}', document.getElementById('edit-prod-name-${p.id}').value, document.getElementById('edit-prod-price-${p.id}').value, document.getElementById('edit-prod-cat-${p.id}').value, document.getElementById('edit-prod-stock-${p.id}').value, document.getElementById('edit-prod-commission-${p.id}').value)" class="p-1.5 bg-emerald-500 text-zinc-950 rounded hover:bg-emerald-400">
+                                                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                                    </button>
+                                                    <button onclick="App.cancelEditProduct()" class="p-1.5 input-bg border border-theme text-muted-theme rounded hover:border-amber-500/40 transition-colors">
+                                                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                                    </button>
                                                 </div>
-                                                `}
+                                            </div>
+                                        </div>
+                                    ` : `
+                                    <div class="flex justify-between items-center input-bg p-3 rounded-xl border border-theme/50 hover:border-amber-500/30 transition-colors w-full">
+                                        <div class="flex flex-col">
+                                            <span class="font-bold text-theme text-sm">${App.escapeHTML(p.name)}</span>
+                                            <span class="text-xs text-emerald-500 font-bold">R$ ${p.price.toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${p.stock_quantity === 0 ? 'bg-rose-500/15 text-rose-400' : p.stock_quantity != null && p.stock_quantity <= 3 ? 'bg-amber-500/15 text-amber-400' : 'border border-theme text-muted-theme'}">
+                                                ${p.stock_quantity != null ? p.stock_quantity + ' un' : '∞'}
+                                            </span>
+                                            <button onclick="App.initEditProduct('${p.id}')" class="text-amber-500 hover:bg-amber-500/10 p-2 rounded-lg transition-colors" title="Editar">
+                                                <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                            </button>
+                                            <button onclick="App.archiveProduct('${p.id}')" class="text-zinc-500 hover:bg-zinc-500/10 p-2 rounded-lg transition-colors" title="${p.is_active === false ? 'Reativar' : 'Arquivar'}">
+                                                <i data-lucide="${p.is_active === false ? 'archive-restore' : 'archive'}" class="w-4 h-4"></i>
+                                            </button>
+                                            <button onclick="App.deleteProduct('${p.id}')" class="text-rose-500 hover:bg-rose-500/10 p-2 rounded-lg transition-colors" title="Excluir">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    `}
+                                `;
+
+                                const activeCatsHtml = CATEGORIES.map(cat => {
+                                    const catProducts = activeProducts.filter(p => p.category_id === cat.id);
+                                    if (catProducts.length === 0) return '';
+                                    return `
+                                        <div class="mb-4 last:mb-0">
+                                            <h4 class="text-[11px] text-muted-theme uppercase font-black tracking-widest mb-2 px-1 border-b border-theme/50 pb-1">${cat.name}</h4>
+                                            <div class="space-y-2">${catProducts.map(renderProductRow).join('')}</div>
+                                        </div>
+                                    `;
+                                }).join('');
+
+                                const archivedHtml = archivedProducts.length === 0 ? '' : `
+                                    <div class="mt-4">
+                                        <button onclick="this.nextElementSibling.classList.toggle('hidden')" class="w-full flex items-center justify-between px-2 py-2 text-[11px] font-black text-muted-theme uppercase tracking-widest border-t border-theme/50 pt-3 hover:text-theme transition-colors">
+                                            <span class="flex items-center gap-2"><i data-lucide="archive" class="w-3.5 h-3.5"></i> Arquivados (${archivedProducts.length})</span>
+                                            <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                        <div class="hidden space-y-2 mt-2">
+                                            ${archivedProducts.map(p => `
+                                                <div class="flex justify-between items-center input-bg p-3 rounded-xl border border-theme/30 opacity-50 w-full">
+                                                    <div class="flex flex-col">
+                                                        <span class="font-bold text-theme text-sm line-through">${App.escapeHTML(p.name)}</span>
+                                                        <span class="text-xs text-muted-theme">R$ ${p.price.toFixed(2).replace('.', ',')}</span>
+                                                    </div>
+                                                    <button onclick="App.archiveProduct('${p.id}')" class="text-emerald-500 hover:bg-emerald-500/10 p-2 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold" title="Reativar">
+                                                        <i data-lucide="archive-restore" class="w-4 h-4"></i>
+                                                    </button>
+                                                </div>
                                             `).join('')}
                                         </div>
                                     </div>
                                 `;
-            }).join('')}
-                            ${PRODUCTS.length === 0 ? '<p class="text-xs text-muted-theme italic text-center py-4">Nenhum produto cadastrado.</p>' : ''}
+
+                                if (PRODUCTS.length === 0) return '<p class="text-xs text-muted-theme italic text-center py-4">Nenhum produto cadastrado.</p>';
+                                return activeCatsHtml + archivedHtml;
+                            })()}
                         </div>
                     </div>
                 </div>
@@ -4514,7 +4574,7 @@ Object.assign(App, {
                         ` : `
                             <div class="overflow-y-auto pr-2 space-y-4 mb-6 flex-1 min-h-0 custom-scrollbar">
                                 ${CATEGORIES.map((cat, idx) => {
-            const catProducts = PRODUCTS.filter(p => p.category_id === cat.id && (p.stock_quantity == null || p.stock_quantity > 0));
+            const catProducts = PRODUCTS.filter(p => p.category_id === cat.id && p.is_active !== false && (p.stock_quantity == null || p.stock_quantity > 0));
             if (catProducts.length === 0) return '';
             return `
                                         <div class="border border-theme rounded-[2.5rem] overflow-hidden card-bg mb-3 last:mb-0 shadow-sm">

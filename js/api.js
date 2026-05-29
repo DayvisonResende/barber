@@ -262,6 +262,8 @@ Object.assign(App, {
                     service: { name: t.service_name },
                     paymentMethod: t.payment_method,
                     numericValue: t.numeric_value,
+                    comandaTotal: t.comanda_total || 0,
+                    productCommission: t.product_commission || 0,
                     barberName: barber ? barber.name : (t.barber_name || 'Profissional'),
                     barberId: t.barber_id,
                     date: t.date,
@@ -1106,6 +1108,14 @@ Object.assign(App, {
 
         const apt = this.state.appointments.find(a => a.id === id);
         if (apt) {
+            const comandaTotal = (apt.comanda_items || []).reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const productCommission = (apt.comanda_items || []).reduce((sum, item) => {
+                if (item.commission_rate != null && item.commission_rate > 0) {
+                    return sum + (item.price * item.qty * item.commission_rate / 100);
+                }
+                return sum;
+            }, 0);
+
             // 1. Inserir na tabela de transações
             const { error: txError } = await supabaseClient.from('transactions').insert({
                 appointment_id: apt.id,
@@ -1113,9 +1123,11 @@ Object.assign(App, {
                 service_name: apt.service.name,
                 payment_method: paymentMethod,
                 numeric_value: apt.numericValue,
+                comanda_total: comandaTotal,
+                product_commission: productCommission,
                 date: apt.date,
                 time: apt.time,
-                barber_id: apt.barber_id // Vincula a transação ao barbeiro (UUID)
+                barber_id: apt.barber_id
             });
 
             if (txError) {
@@ -1169,18 +1181,27 @@ Object.assign(App, {
             this.state.isLoading = true;
             this.render();
 
-            const transactionsToInsert = Object.entries(this.state.splitPaymentAmounts)
-                .filter(([_, amount]) => amount > 0)
-                .map(([method, amount]) => ({
-                    appointment_id: apt.id,
-                    client_name: apt.clientName,
-                    service_name: apt.service.name,
-                    payment_method: method,
-                    numeric_value: amount,
-                    date: apt.date,
-                    time: apt.time,
-                    barber_id: apt.barber_id
-                }));
+            const comandaTotal = (apt.comanda_items || []).reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const productCommission = (apt.comanda_items || []).reduce((sum, item) => {
+                if (item.commission_rate != null && item.commission_rate > 0) {
+                    return sum + (item.price * item.qty * item.commission_rate / 100);
+                }
+                return sum;
+            }, 0);
+
+            const splitEntries = Object.entries(this.state.splitPaymentAmounts).filter(([_, amount]) => amount > 0);
+            const transactionsToInsert = splitEntries.map(([method, amount], index) => ({
+                appointment_id: apt.id,
+                client_name: apt.clientName,
+                service_name: apt.service.name,
+                payment_method: method,
+                numeric_value: amount,
+                comanda_total: index === 0 ? comandaTotal : 0,
+                product_commission: index === 0 ? productCommission : 0,
+                date: apt.date,
+                time: apt.time,
+                barber_id: apt.barber_id
+            }));
 
             const { error: txError } = await supabaseClient.from('transactions').insert(transactionsToInsert);
             if (txError) throw txError;
@@ -2787,7 +2808,8 @@ Object.assign(App, {
                         id: product.id,
                         name: product.name,
                         price: product.price,
-                        qty: qty
+                        qty: qty,
+                        commission_rate: product.commission_rate ?? null
                     });
                 }
 
@@ -2910,15 +2932,17 @@ Object.assign(App, {
         }
     },
 
-    async addProduct(name, priceStr, categoryId, stockStr = '') {
+    async addProduct(name, priceStr, categoryId, stockStr = '', commissionStr = '') {
         if (!name || !priceStr || !categoryId) {
             this.showNotification("Erro", "Preencha todos os campos do produto.");
             return;
         }
         const numericValue = parseFloat(priceStr.replace(',', '.'));
         const stockQty = stockStr !== '' && stockStr !== null ? parseInt(stockStr, 10) : null;
+        const commissionRate = commissionStr !== '' && commissionStr !== null ? parseFloat(commissionStr) : null;
         const insertData = { name, price: numericValue, category_id: categoryId };
         if (stockQty !== null && !isNaN(stockQty)) insertData.stock_quantity = stockQty;
+        if (commissionRate !== null && !isNaN(commissionRate)) insertData.commission_rate = commissionRate;
         try {
             const { error } = await supabaseClient.from('products').insert(insertData);
             if (error) throw error;
@@ -2941,7 +2965,7 @@ Object.assign(App, {
         this.render();
     },
 
-    async updateProduct(id, newName, newPriceStr, newCategoryId, stockStr = '') {
+    async updateProduct(id, newName, newPriceStr, newCategoryId, stockStr = '', commissionStr = '') {
         if (!newName || !newPriceStr || !newCategoryId) {
             this.showNotification("Erro", "Preencha todos os campos do produto.");
             return;
@@ -2952,11 +2976,13 @@ Object.assign(App, {
             return;
         }
         const stockQty = (stockStr !== '' && stockStr != null) ? parseInt(stockStr, 10) : null;
+        const commissionRate = (commissionStr !== '' && commissionStr != null) ? parseFloat(commissionStr) : null;
         const updateData = {
             name: newName,
             price: numericValue,
             category_id: newCategoryId,
-            stock_quantity: (stockQty !== null && !isNaN(stockQty)) ? stockQty : null
+            stock_quantity: (stockQty !== null && !isNaN(stockQty)) ? stockQty : null,
+            commission_rate: (commissionRate !== null && !isNaN(commissionRate)) ? commissionRate : null
         };
         try {
             const { error } = await supabaseClient.from('products').update(updateData).eq('id', id);
@@ -2984,6 +3010,21 @@ Object.assign(App, {
         } catch(e) {
             console.error("Erro ao excluir produto:", e);
             this.showNotification("Erro", "Falha ao excluir.");
+        }
+    },
+
+    async archiveProduct(id) {
+        const product = PRODUCTS.find(p => p.id === id);
+        if (!product) return;
+        const newStatus = product.is_active === false ? true : false;
+        try {
+            const { error } = await supabaseClient.from('products').update({ is_active: newStatus }).eq('id', id);
+            if (error) throw error;
+            await this.loadInitialData();
+            this.render();
+            this.showNotification("Sucesso", newStatus ? "Produto reativado." : "Produto arquivado.");
+        } catch(e) {
+            this.showNotification("Erro", "Falha ao arquivar produto.");
         }
     },
 
@@ -3023,15 +3064,33 @@ Object.assign(App, {
         }
 
         try {
-            const { data, error } = await supabaseClient
+            let query = supabaseClient
                 .from('appointments')
-                .select('id, date, client_name, comanda_items, barber_name')
+                .select('id, date, client_name, comanda_items, barber_name, barber_id')
                 .eq('status', 'completed')
                 .gte('date', startDate)
                 .lte('date', endDate);
 
+            if (this.state.role === 'barber') {
+                query = query.eq('barber_id', this.state.userProfile?.id);
+            }
+
+            const { data, error } = await query;
+
             if (!error && data) {
-                this.state.productSales = data.filter(a => a.comanda_items && a.comanda_items.length > 0);
+                const aptIds = data.map(a => a.id).filter(Boolean);
+                let settledMap = {};
+                if (aptIds.length > 0) {
+                    const { data: txData } = await supabaseClient
+                        .from('transactions')
+                        .select('appointment_id, is_settled')
+                        .in('appointment_id', aptIds);
+                    (txData || []).forEach(t => {
+                        if (t.is_settled) settledMap[t.appointment_id] = true;
+                    });
+                }
+                const withComanda = data.filter(a => a.comanda_items && a.comanda_items.length > 0);
+                this.state.productSales = withComanda.map(a => ({ ...a, is_settled: settledMap[a.id] || false }));
             }
         } catch (e) {
             console.error('Erro ao carregar vendas de produtos:', e);

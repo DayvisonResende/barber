@@ -194,9 +194,19 @@ Object.assign(App, {
         }
     },
 
+    setProductStatusFilter(status) {
+        this.state.productStatusFilter = status;
+        this.render();
+    },
+
     getFilteredProductItems() {
         const catFilter = this.state.productCategoryFilter;
-        const sales = this.state.productSales || [];
+        const statusFilter = this.state.productStatusFilter || 'pending';
+        const rawSales = this.state.productSales || [];
+        const sales = statusFilter === 'pending'
+            ? rawSales.filter(a => !a.is_settled)
+            : rawSales.filter(a => a.is_settled);
+        const isBarber = this.state.role === 'barber';
 
         const allItems = [];
         sales.forEach(apt => {
@@ -208,56 +218,52 @@ Object.assign(App, {
 
                 if (catFilter !== 'all' && categoryId !== catFilter) return;
 
+                const qty = item.qty || 1;
+                const commissionRate = item.commission_rate != null ? item.commission_rate / 100 : 0;
+                const earnedValue = isBarber
+                    ? item.price * qty * commissionRate
+                    : item.price * qty;
+
                 allItems.push({
                     id: item.id,
                     name: item.name,
                     price: item.price,
-                    qty: item.qty || 1,
+                    qty,
+                    commissionRate: item.commission_rate,
+                    earnedValue,
                     categoryId,
-                    categoryName
+                    categoryName,
+                    date: apt.date,
+                    clientName: apt.client_name
                 });
             });
         });
 
-        const aggregated = {};
-        allItems.forEach(item => {
-            const key = item.id || item.name;
-            if (!aggregated[key]) {
-                aggregated[key] = {
-                    id: item.id,
-                    name: item.name,
-                    price: item.price,
-                    categoryId: item.categoryId,
-                    categoryName: item.categoryName,
-                    totalQty: 0,
-                    totalRevenue: 0
-                };
-            }
-            aggregated[key].totalQty += item.qty;
-            aggregated[key].totalRevenue += item.price * item.qty;
-        });
+        allItems.sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0));
 
-        const aggregatedItems = Object.values(aggregated).sort((a, b) => b.totalRevenue - a.totalRevenue);
-        const totalRevenue = aggregatedItems.reduce((sum, i) => sum + i.totalRevenue, 0);
-        const totalQty = aggregatedItems.reduce((sum, i) => sum + i.totalQty, 0);
+        const totalRevenue = allItems.reduce((sum, i) => sum + i.earnedValue, 0);
+        const totalQty = allItems.reduce((sum, i) => sum + i.qty, 0);
+        const distinctCount = new Set(allItems.map(i => i.id || i.name)).size;
 
-        return { aggregatedItems, totalRevenue, totalQty };
+        return { saleItems: allItems, totalRevenue, totalQty, isBarber, distinctCount };
     },
 
     exportProductsToCSV() {
-        const { aggregatedItems } = this.getFilteredProductItems();
-        if (!aggregatedItems || aggregatedItems.length === 0) {
+        const { saleItems } = this.getFilteredProductItems();
+        if (!saleItems || saleItems.length === 0) {
             this.showNotification("Aviso", "Não há produtos para exportar no período.");
             return;
         }
 
-        const headers = ["Produto", "Categoria", "Qtd Vendida", "Valor Unit (R$)", "Total (R$)"];
-        const rows = aggregatedItems.map(item => [
+        const headers = ["Data", "Cliente", "Produto", "Categoria", "Qtd", "Valor Unit (R$)", "Total (R$)"];
+        const rows = saleItems.map(item => [
+            item.date || '',
+            item.clientName || '',
             item.name,
             item.categoryName,
-            item.totalQty,
+            item.qty,
             item.price.toFixed(2).replace('.', ','),
-            item.totalRevenue.toFixed(2).replace('.', ',')
+            item.earnedValue.toFixed(2).replace('.', ',')
         ]);
 
         const csvContent = [

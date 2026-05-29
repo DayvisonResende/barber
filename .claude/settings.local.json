@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(\\(Get-Content \"c:\\\\Users\\\\Dayvison Resende\\\\Documents\\\\Workspace\\\\barber\\\\js\\\\views.js\" | Measure-Object -Line\\).Lines)"
+      "PowerShell(\\(Get-Content \"c:\\\\Users\\\\Dayvison Resende\\\\Documents\\\\Workspace\\\\barber\\\\js\\\\views.js\" | Measure-Object -Line\\).Lines)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Dayvison Resende\\\\Documents\\\\Workspace\\\\barber\\\\js\\\\\" -Recurse | Select-Object Name, FullName | Head -30)"
     ]
   }
 }

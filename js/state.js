@@ -95,6 +95,7 @@ const App = {
         productDateEnd: '',
         productSales: [],
         isLoadingProductSales: false,
+        productStatusFilter: 'pending', // 'pending' | 'all'
 
         // --- Bloqueio Rápido ---
         isQuickBlockOpen: false,
