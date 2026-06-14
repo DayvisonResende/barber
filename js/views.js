@@ -1774,11 +1774,8 @@ Object.assign(App, {
         startOfWeek.setHours(0, 0, 0, 0);
 
         let filteredTxs = this.state.completedTransactions.filter(tx => {
-            const txDateObj = new Date(tx.completedAt);
-            const _y = txDateObj.getFullYear();
-            const _m = String(txDateObj.getMonth() + 1).padStart(2, '0');
-            const _d = String(txDateObj.getDate()).padStart(2, '0');
-            const txDateStr = `${_y}-${_m}-${_d}`;
+            const txDateStr = tx.date; // YYYY-MM-DD — usa data do agendamento, não do pagamento
+            const txDateObj = new Date(tx.date + 'T12:00:00'); // meio-dia evita problema de timezone no filtro de semana
 
             // 1. Filtro de Data
             let dateMatch = false;
@@ -1886,10 +1883,13 @@ Object.assign(App, {
 
         return `
             <div class="space-y-6 fade-in">
-                <!-- Tab: Financeiro | Produtos -->
-                <div class="flex card-bg p-1 rounded-xl border border-theme">
+                <!-- Tab: Financeiro | Produtos | Gerencial -->
+                <div class="flex card-bg p-1 rounded-xl border border-theme gap-1">
                     <button onclick="App.setProductReportTab('financial')" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all bg-amber-500 text-zinc-950">Financeiro</button>
                     <button onclick="App.setProductReportTab('products')" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all text-muted-theme hover:text-theme">Produtos</button>
+                    <a href="relatorios.html" target="_blank" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-amber-500 hover:bg-amber-500/10 transition-all active:scale-95 whitespace-nowrap">
+                        <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>Gerencial
+                    </a>
                 </div>
 
                 <!-- Header & View Toggle -->
@@ -2255,10 +2255,13 @@ Object.assign(App, {
 
         return `
             <div class="space-y-6 fade-in pb-12">
-                <!-- Tab: Financeiro | Produtos -->
-                <div class="flex card-bg p-1 rounded-xl border border-theme">
+                <!-- Tab: Financeiro | Produtos | Gerencial -->
+                <div class="flex card-bg p-1 rounded-xl border border-theme gap-1">
                     <button onclick="App.setProductReportTab('financial')" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all text-muted-theme hover:text-theme">Financeiro</button>
                     <button onclick="App.setProductReportTab('products')" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all bg-amber-500 text-zinc-950">Produtos</button>
+                    <a href="relatorios.html" target="_blank" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-amber-500 hover:bg-amber-500/10 transition-all active:scale-95 whitespace-nowrap">
+                        <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>Gerencial
+                    </a>
                 </div>
 
                 <!-- Header -->

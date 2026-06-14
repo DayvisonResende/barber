@@ -1891,10 +1891,12 @@ Object.assign(App, {
     async adminCreateClient() {
         const firstName = document.getElementById('create-client-first-name')?.value.trim();
         const lastName = document.getElementById('create-client-last-name')?.value.trim();
+        const rawCpf = document.getElementById('create-client-cpf')?.value.trim();
+        const birthDate = document.getElementById('create-client-birth')?.value;
         const rawPhone = document.getElementById('create-client-phone')?.value.trim();
         const password = document.getElementById('create-client-password')?.value;
 
-        if (!firstName || !lastName || !rawPhone || !password) {
+        if (!firstName || !lastName || !rawCpf || !birthDate || !rawPhone || !password) {
             this.showNotification('Erro', 'Preencha todos os campos.');
             return;
         }
@@ -1904,6 +1906,8 @@ Object.assign(App, {
         }
 
         const name = `${firstName} ${lastName}`;
+        const cleanCpf = rawCpf.replace(/\D/g, '');
+        const birthForDb = this.inputToDbDate(birthDate);
         let cleanPhone = rawPhone.replace(/\D/g, '');
         if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
         const email = `${cleanPhone}@finotrata.com`;
@@ -1916,7 +1920,7 @@ Object.assign(App, {
         const { data, error } = await tempClient.auth.signUp({
             email,
             password,
-            options: { data: { name, phone: cleanPhone } }
+            options: { data: { name, phone: cleanPhone, cpf: cleanCpf, birth_date: birthForDb } }
         });
 
         if (error) {
@@ -1925,7 +1929,11 @@ Object.assign(App, {
         }
 
         if (data?.user) {
-            await supabaseClient.from('profiles').update({ phone: cleanPhone }).eq('id', data.user.id);
+            await supabaseClient.from('profiles').update({
+                phone: cleanPhone,
+                cpf: cleanCpf,
+                birth_date: birthForDb
+            }).eq('id', data.user.id);
         }
 
         document.getElementById('create-client-modal')?.remove();

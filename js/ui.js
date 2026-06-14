@@ -394,6 +394,19 @@ Object.assign(App, {
                                 class="w-full input-bg border border-theme rounded-xl p-3 text-theme text-sm focus:border-amber-500 outline-none transition-colors" />
                         </div>
                     </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] font-black text-muted-theme uppercase tracking-widest block mb-1.5">CPF</label>
+                            <input id="create-client-cpf" type="text" placeholder="000.000.000-00" autocomplete="off" inputmode="numeric"
+                                oninput="App.applyCpfMask(this)"
+                                class="w-full input-bg border border-theme rounded-xl p-3 text-theme text-sm focus:border-amber-500 outline-none transition-colors" />
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-muted-theme uppercase tracking-widest block mb-1.5">Nascimento</label>
+                            <input id="create-client-birth" type="date" autocomplete="off"
+                                class="w-full input-bg border border-theme rounded-xl p-3 text-theme text-sm focus:border-amber-500 outline-none transition-colors" />
+                        </div>
+                    </div>
                     <div>
                         <label class="text-[10px] font-black text-muted-theme uppercase tracking-widest block mb-1.5">Telefone / WhatsApp</label>
                         <input id="create-client-phone" type="tel" placeholder="(XX) XXXXX-XXXX" autocomplete="off"
@@ -428,6 +441,11 @@ Object.assign(App, {
         document.body.appendChild(modal);
         if (window.lucide) window.lucide.createIcons();
         setTimeout(() => document.getElementById('create-client-first-name')?.focus(), 100);
+    },
+
+    applyCpfMask(input) {
+        let x = input.value.replace(/\D/g, '').slice(0, 11).match(/(\d{0,3})(\d{0,3})(\d{0,3})(\d{0,2})/);
+        input.value = !x[2] ? x[1] : x[1] + '.' + x[2] + (x[3] ? '.' + x[3] : '') + (x[4] ? '-' + x[4] : '');
     },
 
     applyPhoneMask(input) {
