@@ -99,6 +99,7 @@ const App = {
 
         // --- Bloqueio Rápido ---
         isQuickBlockOpen: false,
+        quickBlockEditing: null, // { barberId, start, end } quando está editando um bloqueio existente
 
         // --- Detalhe de Transação ---
         transactionDetailId: null,

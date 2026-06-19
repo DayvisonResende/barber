@@ -1445,6 +1445,7 @@ Object.assign(App, {
                             acc[b.barber_id].push(b.blocked_time);
                             return acc;
                         }, {});
+                        const editing = this.state.quickBlockEditing;
                         const activeBlocksHtml = Object.keys(blocksByBarber).length === 0
                             ? '<p class="text-[11px] text-muted-theme italic text-center py-1">Nenhum bloqueio neste dia.</p>'
                             : Object.entries(blocksByBarber).map(([bid, times]) => {
@@ -1464,9 +1465,14 @@ Object.assign(App, {
                                                 <p class="text-[10px] text-orange-400/80 font-bold">${first} – ${endTime}</p>
                                             </div>
                                         </div>
-                                        <button onclick="App.removeTimeBlockWindow('${bid}', '${qbDate}')" class="w-8 h-8 flex items-center justify-center rounded-lg text-muted-theme hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0">
-                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                        </button>
+                                        <div class="flex gap-1 shrink-0">
+                                            <button onclick="App.startEditQuickBlock('${bid}', '${first}', '${endTime}')" class="w-8 h-8 flex items-center justify-center rounded-lg text-muted-theme hover:text-orange-400 hover:bg-orange-500/10 transition-colors" title="Editar bloqueio">
+                                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                            <button onclick="App.removeTimeBlockWindow('${bid}', '${qbDate}')" class="w-8 h-8 flex items-center justify-center rounded-lg text-muted-theme hover:text-red-400 hover:bg-red-500/10 transition-colors" title="Remover bloqueio">
+                                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 `;
                             }).join('');
@@ -1498,27 +1504,30 @@ Object.assign(App, {
                                         <div class="border-t border-theme/50"></div>
                                         ` : ''}
 
-                                        <!-- Criar novo bloqueio -->
-                                        <p class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Novo Bloqueio</p>
+                                        <!-- Criar / Editar bloqueio -->
+                                        <div class="flex items-center justify-between">
+                                            <p class="text-[10px] ${editing ? 'text-orange-400' : 'text-muted-theme'} uppercase font-black tracking-widest">${editing ? 'Editando Bloqueio' : 'Novo Bloqueio'}</p>
+                                            ${editing ? `<button onclick="App.cancelEditQuickBlock()" class="text-[10px] text-muted-theme hover:text-red-400 font-bold uppercase tracking-widest transition-colors">Cancelar</button>` : ''}
+                                        </div>
                                         <div class="space-y-1.5">
                                             <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Barbeiro</label>
                                             <select id="qb-barber" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-orange-400 outline-none text-sm">
-                                                <option value="all">Todos os Barbeiros</option>
-                                                ${BARBERS.map(b => `<option value="${b.user_id}">${App.escapeHTML(b.name)}</option>`).join('')}
+                                                <option value="all" ${editing ? '' : ''}>Todos os Barbeiros</option>
+                                                ${BARBERS.map(b => `<option value="${b.user_id}" ${editing && editing.barberId === b.user_id ? 'selected' : ''}>${App.escapeHTML(b.name)}</option>`).join('')}
                                             </select>
                                         </div>
                                         <div class="grid grid-cols-2 gap-3">
                                             <div class="space-y-1.5">
                                                 <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">De</label>
-                                                <input type="time" id="qb-start" value="12:00" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-orange-400 outline-none text-sm font-bold" />
+                                                <input type="time" id="qb-start" value="${editing ? editing.start : '12:00'}" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-orange-400 outline-none text-sm font-bold" />
                                             </div>
                                             <div class="space-y-1.5">
                                                 <label class="text-[10px] text-muted-theme uppercase font-black tracking-widest">Até</label>
-                                                <input type="time" id="qb-end" value="14:00" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-orange-400 outline-none text-sm font-bold" />
+                                                <input type="time" id="qb-end" value="${editing ? editing.end : '14:00'}" class="w-full input-bg border border-theme rounded-xl p-3 text-theme focus:border-orange-400 outline-none text-sm font-bold" />
                                             </div>
                                         </div>
                                         <button onclick="App.quickBlockTimeWindow()" class="w-full py-3.5 rounded-xl bg-orange-500 text-zinc-950 font-black text-sm uppercase tracking-widest hover:bg-orange-400 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20">
-                                            <i data-lucide="lock" class="w-4 h-4"></i> Bloquear Horário
+                                            <i data-lucide="${editing ? 'pencil' : 'lock'}" class="w-4 h-4"></i> ${editing ? 'Atualizar Bloqueio' : 'Bloquear Horário'}
                                         </button>
                                     </div>
                                 </div>
@@ -4090,6 +4099,10 @@ Object.assign(App, {
                     </div>
                     <div class="flex flex-col items-end gap-2">
                         <span class="text-[10px] font-black uppercase ${statusColor}">${statusLabel}</span>
+                        <button onclick="App.renewClientPlan('${cp.id}')"
+                            class="text-[11px] font-bold text-amber-400 hover:text-amber-300 transition-colors px-2 py-1 input-bg rounded-lg border border-amber-500/20 flex items-center gap-1">
+                            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Renovar
+                        </button>
                         ${effectiveStatus === 'active' ? `
                         <button onclick="App.confirmRevokePlan('${cp.id}')"
                             class="text-[11px] font-bold text-red-400 hover:text-red-300 transition-colors px-2 py-1 input-bg rounded-lg border border-red-500/20">
