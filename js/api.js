@@ -104,7 +104,11 @@ Object.assign(App, {
         }
 
         if (catsRes && catsRes.data) CATEGORIES = catsRes.data;
-        if (prodsRes && prodsRes.data) PRODUCTS = prodsRes.data;
+        if (prodsRes && prodsRes.data) {
+            PRODUCTS = prodsRes.data
+                .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999))
+                .map((p, idx) => ({ ...p, sort_order: p.sort_order ?? idx }));
+        }
 
         // Processar Barbeiros
         if (brbsRes.data) BARBERS = brbsRes.data;
@@ -2948,7 +2952,8 @@ Object.assign(App, {
         const numericValue = parseFloat(priceStr.replace(',', '.'));
         const stockQty = stockStr !== '' && stockStr !== null ? parseInt(stockStr, 10) : null;
         const commissionRate = commissionStr !== '' && commissionStr !== null ? parseFloat(commissionStr) : null;
-        const insertData = { name, price: numericValue, category_id: categoryId };
+        const maxOrder = PRODUCTS.length ? Math.max(...PRODUCTS.map(p => p.sort_order ?? 0)) : -1;
+        const insertData = { name, price: numericValue, category_id: categoryId, sort_order: maxOrder + 1 };
         if (stockQty !== null && !isNaN(stockQty)) insertData.stock_quantity = stockQty;
         if (commissionRate !== null && !isNaN(commissionRate)) insertData.commission_rate = commissionRate;
         try {
@@ -3004,6 +3009,31 @@ Object.assign(App, {
         } catch(e) {
             console.error("Erro ao atualizar produto:", e);
             this.showNotification("Erro", "Falha ao atualizar produto.");
+        }
+    },
+
+    async updateProductOrder(newOrderIds) {
+        if (!newOrderIds || newOrderIds.length === 0) return;
+
+        // 1. Reordenar o array local PRODUCTS baseada na nova ordem de IDs (apenas os itens reordenados, da mesma categoria)
+        const reordered = newOrderIds.map(id => PRODUCTS.find(p => String(p.id) === String(id))).filter(Boolean);
+        if (reordered.length === 0) return;
+
+        // 2. Atualizar indices de sort_order localmente, mantendo o restante dos produtos intacto
+        reordered.forEach((p, i) => { p.sort_order = i; });
+
+        // 3. Renderizar com a nova ordem imediatamente
+        this.render();
+
+        // 4. Salvar no Supabase (em lote)
+        try {
+            await Promise.all(reordered.map((p, i) =>
+                supabaseClient.from('products').update({ sort_order: i }).eq('id', p.id)
+            ));
+            console.log('✅ Ordem dos produtos salva no banco.');
+        } catch (e) {
+            console.error('Erro ao salvar ordem dos produtos:', e);
+            this.showNotification('Erro', 'Não foi possível salvar a nova ordem no servidor.');
         }
     },
 

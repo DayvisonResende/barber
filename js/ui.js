@@ -871,6 +871,11 @@ Object.assign(App, {
             setTimeout(() => this.initServicesSortable(), 50);
         }
 
+        // Se estivermos na aba de estoque, inicializar Sortable dos produtos
+        if (this.state.activeTab === 'barbearia' && this.state.adminShopTab === 'estoque') {
+            setTimeout(() => this.initProductsSortable(), 50);
+        }
+
         // --- Renderizar Modais Globais ---
         const modalContainer = document.getElementById('modal-container');
         if (modalContainer) {
@@ -1292,9 +1297,36 @@ Object.assign(App, {
             onEnd: () => {
                 const newOrderIds = Array.from(el.querySelectorAll('[data-service-id]'))
                     .map(item => item.dataset.serviceId);
-                
+
                 this.updateServiceOrder(newOrderIds);
             }
+        });
+    },
+
+    initProductsSortable() {
+        const lists = document.querySelectorAll('.products-sortable-list');
+        if (!lists.length || !window.Sortable) return;
+
+        // Limpar instâncias anteriores para evitar bugs de duplicidade
+        if (this.productsSortables) {
+            this.productsSortables.forEach(s => s.destroy());
+        }
+        this.productsSortables = [];
+
+        lists.forEach(el => {
+            const sortable = new Sortable(el, {
+                animation: 150,
+                handle: '.sortable-handle',
+                ghostClass: 'opacity-50',
+                dragClass: 'shadow-2xl',
+                onEnd: () => {
+                    const newOrderIds = Array.from(el.querySelectorAll('[data-product-id]'))
+                        .map(item => item.dataset.productId);
+
+                    this.updateProductOrder(newOrderIds);
+                }
+            });
+            this.productsSortables.push(sortable);
         });
     }
 });

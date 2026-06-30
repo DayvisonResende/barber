@@ -3334,6 +3334,7 @@ Object.assign(App, {
                     <div class="card-bg border border-theme p-5 rounded-3xl shadow-xl">
                         <h3 class="text-sm font-bold text-theme uppercase tracking-wider mb-4 flex items-center gap-2">
                             <i data-lucide="package" class="w-4 h-4 text-amber-500"></i> Produtos
+                            <span class="text-[9px] text-zinc-600 normal-case font-normal">— arraste para reordenar</span>
                         </h3>
                         ${CATEGORIES.length === 0 ? `
                             <p class="text-xs text-amber-500 italic">Crie uma categoria primeiro para adicionar produtos.</p>
@@ -3370,12 +3371,12 @@ Object.assign(App, {
 
                         <div class="space-y-3">
                             ${(() => {
-                                const activeProducts = PRODUCTS.filter(p => p.is_active !== false).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+                                const activeProducts = PRODUCTS.filter(p => p.is_active !== false).sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999));
                                 const archivedProducts = PRODUCTS.filter(p => p.is_active === false).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
                                 const renderProductRow = (p) => `
                                     ${this.state.editingProductId === p.id ? `
-                                        <div class="flex flex-col gap-2 input-bg p-3 rounded-xl border border-amber-500/50 w-full fade-in">
+                                        <div data-product-id="${p.id}" class="flex flex-col gap-2 input-bg p-3 rounded-xl border border-amber-500/50 w-full fade-in">
                                             <div class="flex gap-2">
                                                 <input type="text" id="edit-prod-name-${p.id}" value="${App.escapeHTML(p.name)}" placeholder="Nome" class="flex-1 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
                                                 <input type="number" id="edit-prod-price-${p.id}" value="${p.price.toFixed(2)}" step="0.01" class="w-20 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
@@ -3397,12 +3398,15 @@ Object.assign(App, {
                                             </div>
                                         </div>
                                     ` : `
-                                    <div class="flex justify-between items-center input-bg p-3 rounded-xl border border-theme/50 hover:border-amber-500/30 transition-colors w-full">
-                                        <div class="flex flex-col">
-                                            <span class="font-bold text-theme text-sm">${App.escapeHTML(p.name)}</span>
+                                    <div data-product-id="${p.id}" class="flex items-center gap-2 input-bg p-3 rounded-xl border border-theme/50 hover:border-amber-500/30 transition-colors w-full">
+                                        <div class="sortable-handle cursor-grab active:cursor-grabbing p-1 -ml-1 text-zinc-600 hover:text-amber-500 transition-colors flex-shrink-0">
+                                            <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+                                        </div>
+                                        <div class="flex flex-col flex-1 min-w-0">
+                                            <span class="font-bold text-theme text-sm truncate">${App.escapeHTML(p.name)}</span>
                                             <span class="text-xs text-emerald-500 font-bold">R$ ${p.price.toFixed(2).replace('.', ',')}</span>
                                         </div>
-                                        <div class="flex items-center gap-2">
+                                        <div class="flex items-center gap-2 flex-shrink-0">
                                             <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${p.stock_quantity === 0 ? 'bg-rose-500/15 text-rose-400' : p.stock_quantity != null && p.stock_quantity <= 3 ? 'bg-amber-500/15 text-amber-400' : 'border border-theme text-muted-theme'}">
                                                 ${p.stock_quantity != null ? p.stock_quantity + ' un' : '∞'}
                                             </span>
@@ -3426,7 +3430,7 @@ Object.assign(App, {
                                     return `
                                         <div class="mb-4 last:mb-0">
                                             <h4 class="text-[11px] text-muted-theme uppercase font-black tracking-widest mb-2 px-1 border-b border-theme/50 pb-1">${cat.name}</h4>
-                                            <div class="space-y-2">${catProducts.map(renderProductRow).join('')}</div>
+                                            <div class="space-y-2 products-sortable-list" data-category-id="${cat.id}">${catProducts.map(renderProductRow).join('')}</div>
                                         </div>
                                     `;
                                 }).join('');
