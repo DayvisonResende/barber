@@ -3144,6 +3144,17 @@ Object.assign(App, {
 
     toggleQuickBlock() {
         this.state.isQuickBlockOpen = !this.state.isQuickBlockOpen;
+        if (!this.state.isQuickBlockOpen) this.state.quickBlockEditing = null;
+        this.render();
+    },
+
+    startEditQuickBlock(barberId, start, end) {
+        this.state.quickBlockEditing = { barberId, start, end };
+        this.render();
+    },
+
+    cancelEditQuickBlock() {
+        this.state.quickBlockEditing = null;
         this.render();
     },
 
@@ -3152,6 +3163,7 @@ Object.assign(App, {
         const start    = document.getElementById('qb-start')?.value;
         const end      = document.getElementById('qb-end')?.value;
         const date     = this.state.agendaSelectedDate;
+        const editing  = this.state.quickBlockEditing;
 
         if (!start || !end) {
             this.showNotification('Campos incompletos', 'Preencha início e fim do bloqueio.');
@@ -3173,6 +3185,25 @@ Object.assign(App, {
         if (targetIds.length === 0) {
             this.showNotification('Nenhum barbeiro', 'Nenhum barbeiro encontrado.');
             return;
+        }
+
+        // Se está editando, remove o bloqueio original do barbeiro antes de criar o novo
+        if (editing) {
+            const { error: delError } = await supabaseClient
+                .from('blocked_times')
+                .delete()
+                .eq('barber_id', editing.barberId)
+                .eq('date', date);
+
+            if (delError) {
+                this.showNotification('Erro ao atualizar', delError.message);
+                return;
+            }
+
+            this.state.blockedTimesFull = (this.state.blockedTimesFull || []).filter(b =>
+                !(b.barber_id === editing.barberId && b.date === date)
+            );
+            this.state.quickBlockEditing = null;
         }
 
         const slots = [];
@@ -3201,7 +3232,8 @@ Object.assign(App, {
         const label = barberId === 'all'
             ? 'todos os barbeiros'
             : (BARBERS.find(b => b.user_id === barberId)?.name || 'barbeiro');
-        this.showNotification('Bloqueado ✓', `${start} – ${end} bloqueado para ${label}.`);
+        const verb = editing ? 'atualizado' : 'bloqueado';
+        this.showNotification('Bloqueio ✓', `${start} – ${end} ${verb} para ${label}.`);
         this.render();
     }
 });

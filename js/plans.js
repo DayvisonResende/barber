@@ -387,6 +387,54 @@ Object.assign(App, {
         });
     },
 
+    async renewClientPlan(clientPlanId) {
+        const cp = (this.state.clientPlans || []).find(c => c.id === clientPlanId);
+        if (!cp) return;
+
+        const plan = cp.plan;
+        if (!plan) { this.showNotification('Erro', 'Dados do plano não encontrados.'); return; }
+
+        const client = CLIENTES.find(c => c.id === cp.client_id);
+        const clientName = client?.name || 'Cliente';
+
+        const today = new Date().toISOString().split('T')[0];
+        const newEndDate = this.calcPlanEndDate(today, plan.duration_value, plan.duration_type);
+        const [ey, em, ed] = newEndDate.split('-');
+        const [ty, tm, td] = today.split('-');
+        const durationLabel = `${plan.duration_value} ${plan.duration_type === 'days' ? 'dia' : 'mês'}${plan.duration_value > 1 ? 's' : ''}`;
+
+        this.showConfirmModal({
+            title: 'Renovar Plano?',
+            message: `${clientName} receberá o plano "${plan.name}" por mais ${durationLabel}. Período: ${td}/${tm}/${ty} → ${ed}/${em}/${ey}`,
+            icon: 'refresh-cw',
+            isDestructive: false,
+            onConfirm: async () => {
+                const { data: { user } } = await supabaseClient.auth.getUser();
+
+                // Remove o registro anterior para não acumular histórico
+                await supabaseClient.from('client_plans')
+                    .delete()
+                    .eq('id', clientPlanId);
+
+                // Cria novo período a partir de hoje
+                const { error } = await supabaseClient.from('client_plans').insert({
+                    client_id: cp.client_id,
+                    plan_id: cp.plan_id,
+                    assigned_by: user.id,
+                    start_date: today,
+                    end_date: newEndDate,
+                    status: 'active'
+                });
+
+                if (error) { this.showNotification('Erro', error.message); return; }
+
+                this.showNotification('Plano Renovado ✓', `${plan.name} renovado para ${clientName} até ${ed}/${em}/${ey}.`);
+                await this.loadClientPlans();
+                this.render();
+            }
+        });
+    },
+
     async recordPlanUsage(clientPlanId, appointmentId, appointmentDate) {
         if (!clientPlanId) return;
         const usedAt = appointmentDate
