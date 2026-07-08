@@ -4007,14 +4007,14 @@ Object.assign(App, {
             const durationLabel = `${plan.duration_value} ${plan.duration_type === 'days' ? 'dia' : 'mês'}${plan.duration_value > 1 ? 's' : ''}`;
             return `
                 <div class="card-bg border border-theme rounded-2xl p-4 space-y-3 shadow-sm hover:border-amber-500/20 transition-colors">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="flex-1 min-w-0">
-                            <h3 class="font-black text-theme text-lg truncate">${App.escapeHTML(plan.name)}</h3>
-                            ${plan.description ? `<p class="text-xs text-muted-theme truncate">${App.escapeHTML(plan.description)}</p>` : ''}
+                    <div class="space-y-1.5">
+                        <h3 class="font-black text-theme text-lg leading-tight">${App.escapeHTML(plan.name)}</h3>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                ${discountLabel}
+                            </span>
+                            ${plan.description ? `<p class="text-xs text-muted-theme">${App.escapeHTML(plan.description)}</p>` : ''}
                         </div>
-                        <span class="shrink-0 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            ${discountLabel}
-                        </span>
                     </div>
 
                     <div class="grid grid-cols-${plan.max_discount_uses != null ? '4' : '3'} gap-2 text-center">
