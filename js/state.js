@@ -103,6 +103,17 @@ const App = {
 
         // --- Detalhe de Transação ---
         transactionDetailId: null,
-        transactionDetailApt: null
+        transactionDetailApt: null,
+
+        // --- Perfil Cliente 360° ---
+        viewingClientId: null,
+        clientInsights: null,
+        isLoadingClientInsights: false,
+        editingClientPreferences: false,
+
+        // --- Painel de Clientes (visão geral / retenção) ---
+        clientsPanelData: null,
+        isLoadingClientsPanel: false,
+        clientsPanelFilter: 'atencao' // 'all' | 'atencao' | 'ativos' | 'novos' | 'aniversariantes'
     }
 };

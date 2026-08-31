@@ -3183,6 +3183,9 @@ Object.assign(App, {
                                     <a href="tel:+${App.formatWA(client.phone || client.email)}" class="flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme transition-colors text-xs font-bold">
                                         <i data-lucide="phone" class="w-4 h-4"></i> Ligar
                                     </a>
+                                    <button onclick="App.openClientInsights('${client.id}')" class="flex-none py-2 px-3 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 rounded-lg flex items-center justify-center border border-violet-500/20 transition-colors" title="Ver Perfil 360°">
+                                        <i data-lucide="user-round-search" class="w-4 h-4"></i>
+                                    </button>
                                     <button onclick="App.showEditClientModal('${client.id}', '${App.escapeHTML(client.name)}', '${App.escapeHTML(client.phone || '')}')" class="flex-none py-2 px-3 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-lg flex items-center justify-center border border-amber-500/20 transition-colors" title="Editar dados do cliente">
                                         <i data-lucide="pencil" class="w-4 h-4"></i>
                                     </button>
@@ -3473,6 +3476,8 @@ Object.assign(App, {
                     </div>
                 </div>
             `;
+        } else if (tab === 'painel') {
+            contentHtml = this.renderClientsPanelTab();
         }
 
 
@@ -3511,6 +3516,9 @@ Object.assign(App, {
                     </button>
                     <button onclick="App.setAdminShopTab('estoque')" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'estoque' ? 'input-bg text-amber-500 shadow-sm' : 'text-muted-theme hover:text-theme'}">
                         <i data-lucide="package" class="w-3.5 h-3.5"></i> Estoque
+                    </button>
+                    <button onclick="App.openClientsPanel()" class="flex-1 min-w-[90px] text-[11px] font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === 'painel' ? 'input-bg text-violet-400 shadow-sm' : 'text-muted-theme hover:text-theme'}">
+                        <i data-lucide="radar" class="w-3.5 h-3.5"></i> Painel
                     </button>
                 </div>
 

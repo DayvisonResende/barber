@@ -891,6 +891,9 @@ Object.assign(App, {
                     this.triggerConfetti();
                     modalContainer.setAttribute('data-active', 'true');
                 }
+            } else if (this.state.viewingClientId) {
+                modalContainer.innerHTML = this.renderClientInsightsModal();
+                if (window.lucide) lucide.createIcons({ root: modalContainer });
             } else {
                 modalContainer.innerHTML = '';
                 modalContainer.removeAttribute('data-active');
