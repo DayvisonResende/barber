@@ -1068,7 +1068,21 @@ Object.assign(App, {
                                 ${apt.time}
                             </button>
                         `}
-                        <span class="text-[9px] text-muted-theme font-bold uppercase tracking-tighter mt-1 block">${apt.date?.split('-').reverse().join('/') || ''}</span>
+                        ${this.state.editingDateId === apt.id ? `
+                            <div class="flex items-center gap-1 fade-in mt-1 justify-end">
+                                <input type="date" id="adj-date-${apt.id}" value="${apt.date}" class="input-bg border border-amber-500 rounded px-1 py-0.5 text-[10px] text-amber-500 font-bold outline-none leading-none" />
+                                <button onclick="App.updateAppointmentDate('${apt.id}', document.getElementById('adj-date-${apt.id}').value)" class="p-1 bg-amber-500 text-zinc-950 rounded hover:bg-amber-400">
+                                    <i data-lucide="check" class="w-3 h-3"></i>
+                                </button>
+                                <button onclick="App.cancelEditDate()" class="p-1 input-bg text-muted-theme rounded border border-theme">
+                                    <i data-lucide="x" class="w-3 h-3"></i>
+                                </button>
+                            </div>
+                        ` : `
+                            <button onclick="App.initEditDate('${apt.id}')" class="text-[9px] text-muted-theme font-bold uppercase tracking-tighter mt-1 flex items-center gap-1 justify-end hover:text-amber-500 transition-colors ml-auto" title="Alterar Data">
+                                <i data-lucide="calendar" class="w-2.5 h-2.5"></i> ${apt.date?.split('-').reverse().join('/') || ''}
+                            </button>
+                        `}
                     </div>
                 </div>
                 <div class="accordion-content ${isExpanded ? 'open' : ''}">

@@ -43,7 +43,8 @@ const App = {
         adminScheduleBarberId: null,
         adminScheduleDayOfWeek: new Date().getDay(),
         adminScheduleViewMode: 'fixed', // 'fixed' ou 'exceptions'
-        editingDurationId: null, 
+        editingDurationId: null,
+        editingDateId: null, // id do agendamento com a data em edição inline no card
         isStaffBooking: false, // Indica se o barbeiro está agendando manualmente
         staffBookingMode: null, // null | 'registered' | 'walkin'
         staffSelectedClient: null, // objeto { id, name, phone, avatar } do cliente cadastrado selecionado

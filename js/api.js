@@ -402,6 +402,7 @@ Object.assign(App, {
             this.state.editingServicesId ||
             this.state.editingDurationId ||
             this.state.editingTimeId ||
+            this.state.editingDateId ||
 
             // --- Modais de pagamento ---
             this.state.showingSplitPaymentId ||
@@ -839,6 +840,39 @@ Object.assign(App, {
         } catch (err) {
             console.error("Erro ao alterar horário:", err);
             this.showNotification("Erro", "Não foi possível alterar o horário.");
+        }
+    },
+
+    initEditDate(id) {
+        this.state.editingDateId = id;
+        this.render();
+    },
+
+    cancelEditDate() {
+        this.state.editingDateId = null;
+        this.render();
+    },
+
+    async updateAppointmentDate(id, newDate) {
+        if (!newDate) {
+            this.showNotification("Erro", "Escolha uma data válida.");
+            return;
+        }
+        try {
+            const { error } = await supabaseClient
+                .from('appointments')
+                .update({ date: newDate })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            this.state.editingDateId = null;
+            this.showNotification("Sucesso", "Data alterada com sucesso!");
+            await this.loadAppointments();
+            this.render();
+        } catch (err) {
+            console.error("Erro ao alterar data:", err);
+            this.showNotification("Erro", "Não foi possível alterar a data.");
         }
     },
 
