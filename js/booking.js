@@ -492,6 +492,17 @@ Object.assign(App, {
                         </div>
                         <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-600 ml-auto group-hover:text-emerald-500 transition-colors"></i>
                     </button>
+
+                    <button onclick="App.openCustomBookingFromChooser()" class="w-full flex items-center gap-4 p-4 input-bg hover:bg-zinc-700/30 border border-theme hover:border-violet-500/40 rounded-2xl transition-all duration-200 active:scale-[0.98] text-left group">
+                        <div class="w-10 h-10 bg-violet-500/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-violet-500/20 transition-colors">
+                            <i data-lucide="calendar-cog" class="w-5 h-5 text-violet-400"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-theme text-sm">Horário Personalizado</p>
+                            <p class="text-[11px] text-muted-theme mt-0.5">Digitar hora livre, fora da grade</p>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-600 ml-auto group-hover:text-violet-400 transition-colors"></i>
+                    </button>
                 </div>
 
                 <button onclick="document.getElementById('staff-booking-mode-modal').remove()" class="w-full mt-4 py-3 text-sm text-muted-theme hover:text-theme transition-colors">

@@ -1101,7 +1101,50 @@ Object.assign(App, {
                             <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Cancelar
                         </button>
                     </div>
-                    
+
+                    <!-- Trocar Cliente (ex: cliente desistiu, outro quer o mesmo horário) -->
+                    ${!isDone ? `
+                        <div class="mt-4 pt-4 border-t border-theme">
+                            ${this.state.swappingClientId === apt.id ? `
+                                <div class="input-bg border border-amber-500/30 rounded-2xl p-4 space-y-3 fade-in">
+                                    <div class="flex justify-between items-center">
+                                        <p class="text-xs font-bold text-theme flex items-center gap-2">
+                                            <i data-lucide="repeat" class="w-3.5 h-3.5 text-amber-500"></i> Trocar cliente deste horário
+                                        </p>
+                                        <button onclick="App.cancelSwapClient()" class="text-[10px] text-red-500 font-bold uppercase tracking-wider hover:underline">Cancelar</button>
+                                    </div>
+                                    ${this.state.swapClientSelected ? `
+                                        <div class="flex items-center justify-between gap-3 card-bg border border-theme rounded-xl p-3">
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 input-bg flex items-center justify-center border border-theme">
+                                                    ${this.state.swapClientSelected.avatar
+                    ? `<img src="${this.state.swapClientSelected.avatar}" class="w-full h-full object-cover" />`
+                    : `<span class="text-xs font-black text-amber-500/70">${(this.state.swapClientSelected.name?.[0] || 'C').toUpperCase()}</span>`
+                }
+                                                </div>
+                                                <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(this.state.swapClientSelected.name)}</p>
+                                            </div>
+                                            <button onclick="App.clearSwapClient()" class="text-[10px] text-amber-500 font-bold uppercase tracking-wider hover:underline flex-shrink-0">Buscar outro</button>
+                                        </div>
+                                        <button onclick="App.confirmSwapClient('${apt.id}')" class="w-full py-3 bg-amber-500 text-zinc-950 font-black rounded-xl uppercase tracking-wider text-sm active:scale-95 transition-all shadow-theme">
+                                            Confirmar troca
+                                        </button>
+                                    ` : `
+                                        <div class="relative">
+                                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-theme"></i>
+                                            <input type="text" id="swap-client-search-input" oninput="App.searchSwapClient(this.value)" placeholder="Buscar cliente por nome ou telefone..." class="w-full input-bg border border-theme rounded-xl py-2.5 pl-10 pr-3 text-sm text-theme focus:border-amber-500 outline-none transition-colors" />
+                                        </div>
+                                        <div id="swap-client-search-results" class="max-h-52 overflow-y-auto rounded-xl input-bg border border-theme/50 divide-y divide-theme/30"></div>
+                                    `}
+                                </div>
+                            ` : `
+                                <button onclick="App.initSwapClient('${apt.id}')" class="w-full py-2.5 rounded-xl flex items-center justify-center gap-2 input-bg text-muted-theme hover:text-amber-500 hover:border-amber-500/30 border border-theme transition-colors text-xs font-bold">
+                                    <i data-lucide="repeat" class="w-4 h-4"></i> Trocar cliente deste horário
+                                </button>
+                            `}
+                        </div>
+                    ` : ''}
+
                     <!-- Comanda (Barbeiro) -->
                     <div class="mt-4 pt-4 border-t border-theme">
                         <div class="flex justify-between items-center mb-3">
@@ -1247,8 +1290,9 @@ Object.assign(App, {
             const aptMin = h * 60 + m;
             let dur = parseInt(apt.total_duration) || 30;
             if (aptMin < minMin) minMin = Math.floor(aptMin/60)*60;
-            if (aptMin + dur > maxMin) maxMin = Math.ceil((aptMin + dur)/60)*60 + 60;
+            if (aptMin + dur > maxMin) maxMin = Math.min(1440, Math.ceil((aptMin + dur)/60)*60 + 60);
         });
+        maxMin = Math.min(maxMin, 1440); // nunca gerar linhas tipo "24:xx"/"25:xx" — o dia acaba na meia-noite
 
         const slots = [];
         for (let m = minMin; m < maxMin; m += 5) {
@@ -1398,6 +1442,17 @@ Object.assign(App, {
         `;
     },
 
+    // Botões flutuantes de agendamento (staff). Compartilhado pelos dois modos da Agenda
+    // (Tabela e Lista) pra não precisar duplicar o HTML nos dois lugares.
+    renderStaffFabButtons() {
+        if (!['admin', 'manager', 'barber'].includes(this.state.role)) return '';
+        return `
+            <button onclick="App.startStaffBooking()" class="fixed bottom-24 right-6 w-14 h-14 bg-amber-500 text-zinc-950 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 z-40 border-4 border-zinc-950/20 group">
+                <i data-lucide="plus" class="w-8 h-8 group-hover:rotate-90 transition-transform duration-300"></i>
+            </button>
+        `;
+    },
+
     renderAgendamentos() {
         if (this.state.isBooking) {
             return this.renderBookingFlow();
@@ -1428,6 +1483,7 @@ Object.assign(App, {
 
             if (this.state.agendaViewMode === 'table') {
                 setTimeout(() => {
+                    if (this.state.viewingClientId || this.state.isNotificationsPanelOpen || this.state.isCustomBookingOpen) return;
                     const mc = document.getElementById('modal-container');
                     if (mc && this.state.openAppointmentModalId && !this.state.showingSplitPaymentId && !this.state.comandaModalOpen) {
                         const apt = this.state.appointments.find(a => a.id === this.state.openAppointmentModalId);
@@ -1571,6 +1627,7 @@ Object.assign(App, {
             }
 
             setTimeout(() => {
+                if (this.state.viewingClientId || this.state.isNotificationsPanelOpen || this.state.isCustomBookingOpen) return;
                 const mc = document.getElementById('modal-container');
                 if (mc) {
                     mc.innerHTML = this.state.isDateRangeModalOpen ? `
@@ -1651,12 +1708,8 @@ Object.assign(App, {
                     <!-- Modal de pagamento dividido gerenciado via #modal-container em ui.js -->
                 </div>
 
-                <!-- Botão Flutuante de Agendamento Rápido (Apenas para Staff) -->
-                ${['admin', 'manager', 'barber'].includes(this.state.role) ? `
-                    <button onclick="App.startStaffBooking()" class="fixed bottom-24 right-6 w-14 h-14 bg-amber-500 text-zinc-950 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 z-40 border-4 border-zinc-950/20 group">
-                        <i data-lucide="plus" class="w-8 h-8 group-hover:rotate-90 transition-transform duration-300"></i>
-                    </button>
-                ` : ''}
+                <!-- Botões Flutuantes de Agendamento (Apenas para Staff) -->
+                ${this.renderStaffFabButtons()}
             `;
         }
 
@@ -1879,7 +1932,7 @@ Object.assign(App, {
                             </div>
                         </div>
                         <div class="text-right flex-shrink-0 flex flex-col items-end min-w-[75px] mt-0.5">
-                            <p class="font-black text-rose-500 leading-none text-base">R$ ${Math.abs(Number(p.amount)).toFixed(2).replace('.', ',')}</p>
+                            <p class="font-black text-rose-500 leading-none text-base">R$ ${Math.abs(Number(p.amount)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                     </div>
                 `).join('');
@@ -1891,6 +1944,7 @@ Object.assign(App, {
         const revenueLabel = isManagement ? 'Faturamento Total da Casa' : 'Minhas Entradas Totais';
 
         setTimeout(() => {
+            if (this.state.viewingClientId || this.state.isNotificationsPanelOpen || this.state.isCustomBookingOpen) return;
             const mc = document.getElementById('modal-container');
             if (!mc) return;
             if (this.state.transactionDetailId) {
@@ -1986,11 +2040,11 @@ Object.assign(App, {
                         <i data-lucide="trending-up" class="w-32 h-32 text-zinc-950"></i>
                     </div>
                     <p class="text-zinc-900 font-medium text-sm">${isManagement ? 'Faturamento Bruto' : 'Meus Ganhos Líquidos'} ${activeLabel}</p>
-                    <h3 class="text-4xl font-bold text-zinc-950 mt-1 mb-4">R$ ${periodTotal.toFixed(2).replace('.', ',')}</h3>
-                    
+                    <h3 class="text-4xl font-bold text-zinc-950 mt-1 mb-4">R$ ${periodTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+
                     ${myAdvancesTotal > 0 ? `
                         <div class="mb-4 text-[10px] font-bold text-amber-900 uppercase tracking-tighter bg-amber-500/20 inline-block px-3 py-1.5 rounded-lg border border-amber-900/10">
-                            <i data-lucide="info" class="w-3 h-3 inline-block -mt-0.5"></i> ${periodTotalRaw === 0 ? `Lembrete: R$ ${myAdvancesTotal.toFixed(2).replace('.', ',')} em vales/dívidas ativas.` : `Deduzido R$ ${myAdvancesTotal.toFixed(2).replace('.', ',')} em adiantamentos.`}
+                            <i data-lucide="info" class="w-3 h-3 inline-block -mt-0.5"></i> ${periodTotalRaw === 0 ? `Lembrete: R$ ${myAdvancesTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} em vales/dívidas ativas.` : `Deduzido R$ ${myAdvancesTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} em adiantamentos.`}
                         </div>
                     ` : ''}
                     
@@ -2003,11 +2057,11 @@ Object.assign(App, {
                         <div class="mt-4 pt-3 border-t border-zinc-950/10 flex flex-col gap-1">
                             <div class="flex justify-between text-[11px] font-bold text-zinc-900/70 lowercase italic">
                                 <span>Repasse Equipe (${this.state.shopSettings.commission_rate}%):</span>
-                                <span>R$ ${(periodTotal * (this.state.shopSettings.commission_rate / 100)).toFixed(2).replace('.', ',')}</span>
+                                <span>R$ ${(periodTotal * (this.state.shopSettings.commission_rate / 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                             <div class="flex justify-between text-[11px] font-bold text-zinc-950 uppercase tracking-tighter">
                                 <span>Líquido Casa (${100 - this.state.shopSettings.commission_rate}%):</span>
-                                <span>R$ ${(periodTotal * (1 - this.state.shopSettings.commission_rate / 100)).toFixed(2).replace('.', ',')}</span>
+                                <span>R$ ${(periodTotal * (1 - this.state.shopSettings.commission_rate / 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                         </div>
                     ` : ''}
@@ -2049,7 +2103,7 @@ Object.assign(App, {
                                         </div>
                                     </div>
                                     <div class="text-right flex-shrink-0 flex flex-col items-end min-w-[75px] mt-0.5">
-                                        <p class="font-black text-theme leading-none text-base">R$ ${(this.state.role === 'barber' ? ((tx.numericValue - (tx.comandaTotal || 0)) * commissionRate) + (tx.productCommission || 0) : tx.numericValue).toFixed(2).replace('.', ',')}</p>
+                                        <p class="font-black text-theme leading-none text-base">R$ ${(this.state.role === 'barber' ? ((tx.numericValue - (tx.comandaTotal || 0)) * commissionRate) + (tx.productCommission || 0) : tx.numericValue).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                         <p class="text-[9px] text-muted-theme font-mono mt-1.5 opacity-60">${tx.date} • ${tx.time}</p>
                                     </div>
                                 </div>
@@ -2114,13 +2168,13 @@ Object.assign(App, {
                             ${servicesList.map((s, idx) => `
                                 <div class="flex items-center justify-between py-1.5 border-b border-theme/30 last:border-0">
                                     <span class="text-sm text-theme">${App.escapeHTML(s)}</span>
-                                    ${servicesList.length === 1 ? `<span class="text-sm font-bold text-theme">R$ ${servicesTotal.toFixed(2).replace('.', ',')}</span>` : ''}
+                                    ${servicesList.length === 1 ? `<span class="text-sm font-bold text-theme">R$ ${servicesTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>` : ''}
                                 </div>
                             `).join('')}
                             ${servicesList.length > 1 ? `
                                 <div class="flex items-center justify-between pt-1.5">
                                     <span class="text-xs text-muted-theme">Subtotal</span>
-                                    <span class="text-sm font-bold text-theme">R$ ${servicesTotal.toFixed(2).replace('.', ',')}</span>
+                                    <span class="text-sm font-bold text-theme">R$ ${servicesTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                             ` : ''}
                         </div>
@@ -2142,12 +2196,12 @@ Object.assign(App, {
                                             <span class="text-[10px] font-black text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md shrink-0">${item.qty || 1}×</span>
                                             <span class="text-sm text-theme truncate">${App.escapeHTML(item.name)}</span>
                                         </div>
-                                        <span class="text-sm font-bold text-theme shrink-0 ml-3">R$ ${(item.price * (item.qty || 1)).toFixed(2).replace('.', ',')}</span>
+                                        <span class="text-sm font-bold text-theme shrink-0 ml-3">R$ ${(item.price * (item.qty || 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                 `).join('')}
                                 <div class="flex items-center justify-between pt-1.5">
                                     <span class="text-xs text-muted-theme">Subtotal produtos</span>
-                                    <span class="text-sm font-bold text-theme">R$ ${comandaTotal.toFixed(2).replace('.', ',')}</span>
+                                    <span class="text-sm font-bold text-theme">R$ ${comandaTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                             </div>
                         ` : ''}
@@ -2156,7 +2210,7 @@ Object.assign(App, {
                     <!-- Rodapé / Total -->
                     <div class="p-5 border-t border-theme input-bg flex items-center justify-between">
                         <span class="text-sm font-bold text-muted-theme uppercase tracking-wider">Total</span>
-                        <span class="text-2xl font-black text-theme">R$ ${tx.numericValue.toFixed(2).replace('.', ',')}</span>
+                        <span class="text-2xl font-black text-theme">R$ ${tx.numericValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                 </div>
             </div>
@@ -3132,7 +3186,7 @@ Object.assign(App, {
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 w-full md:w-auto">
-                                    <select id="role-select-${c.id}" class="flex-1 md:w-auto card-bg border border-theme rounded-lg p-2 text-xs text-theme focus:border-amber-500 outline-none">
+                                    <select id="role-select-${c.id}" class="flex-1 min-w-0 md:w-auto card-bg border border-theme rounded-lg p-2 text-xs text-theme focus:border-amber-500 outline-none">
                                         <option value="client" ${c.role === 'client' ? 'selected' : ''}>Cliente</option>
                                         <option value="barber" ${c.role === 'barber' ? 'selected' : ''}>Barbeiro</option>
                                         <option value="manager" ${c.role === 'manager' ? 'selected' : ''}>Gerente</option>
@@ -3190,27 +3244,31 @@ Object.assign(App, {
                                     </div>
                                 </div>
 
-                                <div class="flex gap-2 pt-3 border-t border-theme">
+                                <div class="pt-3 border-t border-theme space-y-2">
+                                <div class="flex gap-2">
                                     <a href="https://wa.me/${App.formatWA(client.phone || client.email)}" target="_blank" class="flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-bold border border-[#25D366]/10">
                                         <i data-lucide="message-square" class="w-4 h-4"></i> Whats
                                     </a>
                                     <a href="tel:+${App.formatWA(client.phone || client.email)}" class="flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 input-bg text-theme hover:bg-zinc-700 border border-theme transition-colors text-xs font-bold">
                                         <i data-lucide="phone" class="w-4 h-4"></i> Ligar
                                     </a>
-                                    <button onclick="App.openClientInsights('${client.id}')" class="flex-none py-2 px-3 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 rounded-lg flex items-center justify-center border border-violet-500/20 transition-colors" title="Ver Perfil 360°">
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="App.openClientInsights('${client.id}')" class="flex-1 py-2 px-3 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 rounded-lg flex items-center justify-center border border-violet-500/20 transition-colors" title="Ver Perfil 360°">
                                         <i data-lucide="user-round-search" class="w-4 h-4"></i>
                                     </button>
-                                    <button onclick="App.showEditClientModal('${client.id}', '${App.escapeHTML(client.name)}', '${App.escapeHTML(client.phone || '')}')" class="flex-none py-2 px-3 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-lg flex items-center justify-center border border-amber-500/20 transition-colors" title="Editar dados do cliente">
+                                    <button onclick="App.showEditClientModal('${client.id}', '${App.escapeHTML(client.name)}', '${App.escapeHTML(client.phone || '')}')" class="flex-1 py-2 px-3 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-lg flex items-center justify-center border border-amber-500/20 transition-colors" title="Editar dados do cliente">
                                         <i data-lucide="pencil" class="w-4 h-4"></i>
                                     </button>
-                                    <button onclick="App.toggleClientPause('${client.id}', ${!!client.is_paused}, '${App.escapeHTML(client.name)}')" class="flex-none py-2 px-3 ${client.is_paused ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20'} rounded-lg flex items-center justify-center transition-colors" title="${client.is_paused ? 'Reativar cliente' : 'Pausar cliente'}">
+                                    <button onclick="App.toggleClientPause('${client.id}', ${!!client.is_paused}, '${App.escapeHTML(client.name)}')" class="flex-1 py-2 px-3 ${client.is_paused ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20'} rounded-lg flex items-center justify-center transition-colors" title="${client.is_paused ? 'Reativar cliente' : 'Pausar cliente'}">
                                         <i data-lucide="${client.is_paused ? 'play-circle' : 'pause-circle'}" class="w-4 h-4"></i>
                                     </button>
                                     ${this.state.role === 'admin' ? `
-                                    <button onclick="App.adminDeleteUser('${client.id}', '${App.escapeHTML(client.name)}')" class="flex-none py-2 px-3 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg flex items-center justify-center border border-red-500/20 transition-colors" title="Excluir Cliente">
+                                    <button onclick="App.adminDeleteUser('${client.id}', '${App.escapeHTML(client.name)}')" class="flex-1 py-2 px-3 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg flex items-center justify-center border border-red-500/20 transition-colors" title="Excluir Cliente">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                                     </button>
                                     ` : ''}
+                                </div>
                                 </div>
                             </div>
                         `).join('')}
@@ -3223,6 +3281,7 @@ Object.assign(App, {
             const commissionRate = (this.state.shopSettings?.commission_rate || 50) / 100;
             const txs = this.state.completedTransactions || [];
             const payouts = this.state.payouts || [];
+            const money = (v) => 'R$ ' + (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             contentHtml = `
                 <div class="space-y-6 fade-in">
@@ -3245,7 +3304,7 @@ Object.assign(App, {
                         <div class="flex justify-between items-start z-10 relative">
                             <div>
                                 <p class="text-[10px] uppercase font-black text-muted-theme tracking-widest mb-1">Total Pendente de Repasse</p>
-                                <h3 class="text-3xl font-bold text-theme">R$ ${stats?.pendingBalance.toFixed(2).replace('.', ',') || '0,00'}</h3>
+                                <h3 class="text-3xl font-bold text-theme">${money(stats?.pendingBalance)}</h3>
                                 <p class="text-[9px] text-muted-theme mt-2 italic">Comissões não quitadas menos adiantamentos.</p>
                             </div>
                             <button onclick="App.confirmGlobalReset()" class="p-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-500/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer shadow-lg shadow-red-500/5 group" title="Zerar todos os repasses e reiniciar saldo">
@@ -3279,8 +3338,8 @@ Object.assign(App, {
                                     <div class="card-bg rounded-2xl border border-theme p-4 shadow-sm flex items-center justify-between gap-3 hover:border-amber-500/30 transition-all">
                                         <div class="min-w-0">
                                             <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(b.name)}</p>
-                                            <p class="text-[10px] text-muted-theme uppercase font-black tracking-tighter mt-0.5">Saldo: <span class="text-amber-500">R$ ${bFinalBalance.toFixed(2).replace('.', ',')}</span></p>
-                                            ${bProductEarnings > 0 ? `<p class="text-[10px] text-muted-theme tracking-tighter mt-0.5">Serviços: <span class="text-amber-500">R$ ${bServiceEarnings.toFixed(2).replace('.', ',')}</span> + Produtos: <span class="text-violet-400">R$ ${bProductEarnings.toFixed(2).replace('.', ',')}</span></p>` : ''}
+                                            <p class="text-[10px] text-muted-theme uppercase font-black tracking-tighter mt-0.5">Saldo: <span class="text-amber-500">${money(bFinalBalance)}</span></p>
+                                            ${bProductEarnings > 0 ? `<p class="text-[10px] text-muted-theme tracking-tighter mt-0.5">Serviços: <span class="text-amber-500">${money(bServiceEarnings)}</span> + Produtos: <span class="text-violet-400">${money(bProductEarnings)}</span></p>` : ''}
                                         </div>
                                         <div class="flex gap-2">
                                             <button onclick="App.openPayoutModal('${b.user_id}', '${App.escapeHTML(b.name)}', ${bFinalBalance})" class="px-3 py-2 bg-amber-500 text-zinc-950 text-[10px] font-black uppercase rounded-lg shadow-theme active:scale-95 transition-all">
@@ -3312,7 +3371,7 @@ Object.assign(App, {
                                                 <p class="font-bold text-theme uppercase tracking-tighter">${App.escapeHTML(barber.name)}</p>
                                                 <p class="text-muted-theme mt-0.5">${new Date(p.payout_date).toLocaleDateString()} • ${p.type === 'full' ? 'QUITAÇÃO' : 'ADIANTAMENTO'}</p>
                                             </div>
-                                            <p class="font-black text-amber-500 text-sm">R$ ${p.amount.toFixed(2).replace('.', ',')}</p>
+                                            <p class="font-black text-amber-500 text-sm">${money(p.amount)}</p>
                                         </div>
                                     `;
                     }).join('');
@@ -3339,7 +3398,7 @@ Object.assign(App, {
                             <i data-lucide="tags" class="w-4 h-4 text-amber-500"></i> Categorias de Comanda
                         </h3>
                         <div class="flex gap-2 mb-4">
-                            <input type="text" id="new-category-name" placeholder="Ex: Bebidas, Pomadas..." class="flex-1 input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors text-sm" />
+                            <input type="text" id="new-category-name" placeholder="Ex: Bebidas, Pomadas..." class="flex-1 min-w-0 input-bg border border-theme rounded-xl p-3 text-theme focus:border-amber-500 outline-none transition-colors text-sm" />
                             <button onclick="App.addCategory(document.getElementById('new-category-name').value)" class="bg-amber-500 text-zinc-950 px-4 rounded-xl font-bold uppercase tracking-wider text-xs hover:bg-amber-400 active:scale-95 transition-all shadow-theme">
                                 Adicionar
                             </button>
@@ -3404,7 +3463,7 @@ Object.assign(App, {
                                     ${this.state.editingProductId === p.id ? `
                                         <div data-product-id="${p.id}" class="flex flex-col gap-2 input-bg p-3 rounded-xl border border-amber-500/50 w-full fade-in">
                                             <div class="flex gap-2">
-                                                <input type="text" id="edit-prod-name-${p.id}" value="${App.escapeHTML(p.name)}" placeholder="Nome" class="flex-1 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
+                                                <input type="text" id="edit-prod-name-${p.id}" value="${App.escapeHTML(p.name)}" placeholder="Nome" class="flex-1 min-w-0 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
                                                 <input type="number" id="edit-prod-price-${p.id}" value="${p.price.toFixed(2)}" step="0.01" class="w-20 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
                                                 <input type="number" id="edit-prod-stock-${p.id}" value="${p.stock_quantity != null ? p.stock_quantity : ''}" placeholder="∞" min="0" step="1" title="Estoque (vazio = ilimitado)" class="w-16 input-bg border border-theme rounded p-1.5 text-xs text-theme focus:border-amber-500 outline-none" />
                                                 <input type="number" id="edit-prod-commission-${p.id}" value="${p.commission_rate != null ? p.commission_rate : ''}" placeholder="% com." min="0" max="100" step="1" title="Comissão % (vazio = sem comissão)" class="w-16 input-bg border border-violet-500/40 rounded p-1.5 text-xs text-violet-400 focus:border-violet-500 outline-none" />
@@ -3424,27 +3483,29 @@ Object.assign(App, {
                                             </div>
                                         </div>
                                     ` : `
-                                    <div data-product-id="${p.id}" class="flex items-center gap-2 input-bg p-3 rounded-xl border border-theme/50 hover:border-amber-500/30 transition-colors w-full">
-                                        <div class="sortable-handle cursor-grab active:cursor-grabbing p-1 -ml-1 text-zinc-600 hover:text-amber-500 transition-colors flex-shrink-0">
+                                    <div data-product-id="${p.id}" class="flex items-start gap-2 input-bg p-3 rounded-xl border border-theme/50 hover:border-amber-500/30 transition-colors w-full">
+                                        <div class="sortable-handle cursor-grab active:cursor-grabbing p-1 -ml-1 mt-0.5 text-zinc-600 hover:text-amber-500 transition-colors flex-shrink-0">
                                             <i data-lucide="grip-vertical" class="w-4 h-4"></i>
                                         </div>
-                                        <div class="flex flex-col flex-1 min-w-0">
-                                            <span class="font-bold text-theme text-sm truncate">${App.escapeHTML(p.name)}</span>
-                                            <span class="text-xs text-emerald-500 font-bold">R$ ${p.price.toFixed(2).replace('.', ',')}</span>
-                                        </div>
-                                        <div class="flex items-center gap-2 flex-shrink-0">
-                                            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${p.stock_quantity === 0 ? 'bg-rose-500/15 text-rose-400' : p.stock_quantity != null && p.stock_quantity <= 3 ? 'bg-amber-500/15 text-amber-400' : 'border border-theme text-muted-theme'}">
-                                                ${p.stock_quantity != null ? p.stock_quantity + ' un' : '∞'}
-                                            </span>
-                                            <button onclick="App.initEditProduct('${p.id}')" class="text-amber-500 hover:bg-amber-500/10 p-2 rounded-lg transition-colors" title="Editar">
-                                                <i data-lucide="edit-2" class="w-4 h-4"></i>
-                                            </button>
-                                            <button onclick="App.archiveProduct('${p.id}')" class="text-zinc-500 hover:bg-zinc-500/10 p-2 rounded-lg transition-colors" title="${p.is_active === false ? 'Reativar' : 'Arquivar'}">
-                                                <i data-lucide="${p.is_active === false ? 'archive-restore' : 'archive'}" class="w-4 h-4"></i>
-                                            </button>
-                                            <button onclick="App.deleteProduct('${p.id}')" class="text-rose-500 hover:bg-rose-500/10 p-2 rounded-lg transition-colors" title="Excluir">
-                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                            </button>
+                                        <div class="flex flex-col flex-1 min-w-0 gap-1.5">
+                                            <span class="font-bold text-theme text-sm leading-snug break-words">${App.escapeHTML(p.name)}</span>
+                                            <div class="flex items-center justify-between gap-2 flex-wrap">
+                                                <span class="text-xs text-emerald-500 font-bold">R$ ${p.price.toFixed(2).replace('.', ',')}</span>
+                                                <div class="flex items-center gap-1 flex-shrink-0">
+                                                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${p.stock_quantity === 0 ? 'bg-rose-500/15 text-rose-400' : p.stock_quantity != null && p.stock_quantity <= 3 ? 'bg-amber-500/15 text-amber-400' : 'border border-theme text-muted-theme'}">
+                                                        ${p.stock_quantity != null ? p.stock_quantity + ' un' : '∞'}
+                                                    </span>
+                                                    <button onclick="App.initEditProduct('${p.id}')" class="text-amber-500 hover:bg-amber-500/10 p-2 rounded-lg transition-colors" title="Editar">
+                                                        <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                                    </button>
+                                                    <button onclick="App.archiveProduct('${p.id}')" class="text-zinc-500 hover:bg-zinc-500/10 p-2 rounded-lg transition-colors" title="${p.is_active === false ? 'Reativar' : 'Arquivar'}">
+                                                        <i data-lucide="${p.is_active === false ? 'archive-restore' : 'archive'}" class="w-4 h-4"></i>
+                                                    </button>
+                                                    <button onclick="App.deleteProduct('${p.id}')" class="text-rose-500 hover:bg-rose-500/10 p-2 rounded-lg transition-colors" title="Excluir">
+                                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     `}
@@ -4102,7 +4163,9 @@ Object.assign(App, {
             const today = new Date().toISOString().split('T')[0];
             const isExpiredByDate = cp.status === 'active' && cp.end_date < today;
             const effectiveStatus = isExpiredByDate ? 'expired' : cp.status;
-            const statusColor = effectiveStatus === 'active' ? 'text-emerald-400' : effectiveStatus === 'expired' ? 'text-red-400' : 'text-zinc-500';
+            const statusBadgeClass = effectiveStatus === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                : effectiveStatus === 'expired' ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20';
             const statusLabel = effectiveStatus === 'active' ? 'Ativo' : effectiveStatus === 'expired' ? 'Expirado' : 'Cancelado';
             return `
                 <div class="card-bg border border-theme rounded-2xl p-4 flex items-center gap-3">
@@ -4115,35 +4178,52 @@ Object.assign(App, {
                     <div class="flex-1 min-w-0">
                         <p class="font-bold text-theme text-sm truncate">${App.escapeHTML(clientName)}</p>
                         <p class="text-[11px] text-amber-500/80 font-semibold">${App.escapeHTML(planName)}</p>
-                        <p class="text-[10px] text-muted-theme">
-                            até ${ed}/${em}/${ey}
-                            ${effectiveStatus === 'active' && daysLeft !== null && daysLeft <= 7
-                ? `<span class="text-amber-400 font-bold"> · ${daysLeft}d restantes</span>`
+                        ${this.state.editingPlanEndDateId === cp.id ? `
+                            <div class="flex flex-col gap-1.5 fade-in mt-1.5 max-w-[180px]">
+                                <input type="date" id="adj-plan-end-${cp.id}" value="${cp.end_date}" class="w-full input-bg border border-amber-500 rounded-lg px-2 py-1.5 text-[11px] text-amber-500 font-bold outline-none" />
+                                <div class="flex gap-1.5">
+                                    <button onclick="App.updateClientPlanEndDate('${cp.id}', document.getElementById('adj-plan-end-${cp.id}').value)" class="flex-1 py-1.5 bg-amber-500 text-zinc-950 rounded-lg flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-wide hover:bg-amber-400 active:scale-95 transition-all">
+                                        <i data-lucide="check" class="w-3.5 h-3.5"></i> Salvar
+                                    </button>
+                                    <button onclick="App.cancelEditPlanEndDate()" class="px-3 py-1.5 input-bg text-muted-theme rounded-lg border border-theme flex items-center justify-center hover:text-theme active:scale-95 transition-all">
+                                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        ` : `
+                            <button onclick="App.initEditPlanEndDate('${cp.id}')" class="mt-1 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg input-bg border border-theme text-[10px] font-bold text-muted-theme hover:border-amber-500/40 hover:text-amber-500 transition-all" title="Toque para alterar a data de vencimento">
+                                <i data-lucide="pencil" class="w-3 h-3 text-amber-500/70"></i>
+                                até ${ed}/${em}/${ey}
+                                ${effectiveStatus === 'active' && daysLeft !== null && daysLeft <= 7
+                ? `<span class="text-amber-400 font-bold">· ${daysLeft}d</span>`
                 : ''
             }
-                        </p>
+                            </button>
+                        `}
                     </div>
-                    <div class="flex flex-col items-end gap-2">
-                        <span class="text-[10px] font-black uppercase ${statusColor}">${statusLabel}</span>
-                        <button onclick="App.renewClientPlan('${cp.id}')"
-                            class="text-[11px] font-bold text-amber-400 hover:text-amber-300 transition-colors px-2 py-1 input-bg rounded-lg border border-amber-500/20 flex items-center gap-1">
-                            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Renovar
-                        </button>
-                        ${effectiveStatus === 'active' ? `
-                        <button onclick="App.confirmRevokePlan('${cp.id}')"
-                            class="text-[11px] font-bold text-red-400 hover:text-red-300 transition-colors px-2 py-1 input-bg rounded-lg border border-red-500/20">
-                            Revogar
-                        </button>` : ''}
-                        ${cp.status === 'cancelled' && cp.end_date >= today ? `
-                        <button onclick="App.reactivateClientPlan('${cp.id}')"
-                            class="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors px-2 py-1 input-bg rounded-lg border border-emerald-500/20">
-                            Reativar
-                        </button>` : ''}
-                        ${effectiveStatus !== 'active' ? `
-                        <button onclick="App.deleteClientPlan('${cp.id}')"
-                            class="text-[11px] font-bold text-zinc-500 hover:text-red-400 transition-colors px-2 py-1 input-bg rounded-lg border border-theme">
-                            Excluir
-                        </button>` : ''}
+                    <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                        <span class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${statusBadgeClass}">${statusLabel}</span>
+                        <div class="flex flex-col gap-1.5 w-[104px]">
+                            <button onclick="App.renewClientPlan('${cp.id}')"
+                                class="w-full py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all active:scale-95">
+                                <i data-lucide="refresh-cw" class="w-3 h-3"></i> Renovar
+                            </button>
+                            ${effectiveStatus === 'active' ? `
+                            <button onclick="App.confirmRevokePlan('${cp.id}')"
+                                class="w-full py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1.5 input-bg text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-all active:scale-95">
+                                <i data-lucide="ban" class="w-3 h-3"></i> Revogar
+                            </button>` : ''}
+                            ${cp.status === 'cancelled' && cp.end_date >= today ? `
+                            <button onclick="App.reactivateClientPlan('${cp.id}')"
+                                class="w-full py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1.5 input-bg text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/10 transition-all active:scale-95">
+                                <i data-lucide="play-circle" class="w-3 h-3"></i> Reativar
+                            </button>` : ''}
+                            ${effectiveStatus !== 'active' ? `
+                            <button onclick="App.deleteClientPlan('${cp.id}')"
+                                class="w-full py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1.5 input-bg text-zinc-500 border border-theme hover:text-red-400 hover:border-red-500/30 transition-all active:scale-95">
+                                <i data-lucide="trash-2" class="w-3 h-3"></i> Excluir
+                            </button>` : ''}
+                        </div>
                     </div>
                 </div>`;
         }).join('')}

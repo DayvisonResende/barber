@@ -688,7 +688,9 @@ Object.assign(App, {
         if (isPrivileged) {
             btnNotify?.classList.remove('hidden');
             btnRefresh?.classList.remove('hidden');
-            if (this.state.unreadCount > 0) {
+            const notifSummary = this.getNotificationsSummary();
+            if (notifSummary.total > 0) {
+                if (badge) badge.textContent = notifSummary.total > 9 ? '9+' : String(notifSummary.total);
                 badge?.classList.remove('hidden');
             } else {
                 badge?.classList.add('hidden');
@@ -734,7 +736,7 @@ Object.assign(App, {
                 <div class="space-y-4">
                     <div class="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-center">
                         <p class="text-[10px] uppercase font-black text-amber-500/70 tracking-widest">Saldo Atual Disponível</p>
-                        <p class="text-2xl font-black text-amber-500 mt-1">R$ ${balance.toFixed(2).replace('.', ',')}</p>
+                        <p class="text-2xl font-black text-amber-500 mt-1">R$ ${(balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
 
                     <div class="space-y-3">
@@ -893,6 +895,12 @@ Object.assign(App, {
                 }
             } else if (this.state.viewingClientId) {
                 modalContainer.innerHTML = this.renderClientInsightsModal();
+                if (window.lucide) lucide.createIcons({ root: modalContainer });
+            } else if (this.state.isNotificationsPanelOpen) {
+                modalContainer.innerHTML = this.renderNotificationsPanel();
+                if (window.lucide) lucide.createIcons({ root: modalContainer });
+            } else if (this.state.isCustomBookingOpen) {
+                modalContainer.innerHTML = this.renderCustomBookingModal();
                 if (window.lucide) lucide.createIcons({ root: modalContainer });
             } else {
                 modalContainer.innerHTML = '';

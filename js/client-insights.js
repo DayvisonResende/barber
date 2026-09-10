@@ -10,6 +10,9 @@ Object.assign(App, {
     // ============================================================
 
     async openClientInsights(clientId) {
+        // Fecha o sino (se estiver aberto) no MESMO ciclo de render que abre o perfil —
+        // evita duas trocas seguidas de conteúdo no modal-container (o "pisca 2x").
+        this.state.isNotificationsPanelOpen = false;
         this.state.viewingClientId = clientId;
         this.state.isLoadingClientInsights = true;
         this.state.clientInsights = null;
@@ -326,6 +329,45 @@ Object.assign(App, {
         return `Oi ${firstName}! Tudo bem? Passando aqui pra manter contato 😄`;
     },
 
+    // Templates de mensagem prontos pro botão "Enviar Mensagem" do Perfil 360°.
+    // Cada tipo só aparece quando faz sentido pra aquele cliente específico (ver getAvailableMessageTypes).
+    buildWhatsappMessageByType(d, client, type) {
+        const firstName = (client.name || '').split(' ')[0] || '';
+        const greeting = firstName ? `Oi ${firstName}!` : 'Oi!';
+
+        if (type === 'birthday') {
+            return `${greeting} 🎉 Passando pra desejar um feliz aniversário! Que tal comemorar dando um trato novo no visual? Te esperamos aqui 💈`;
+        }
+        if (type === 'plan') {
+            const planName = d.clientPlan?.plan?.name || 'seu plano';
+            const endDate = d.clientPlan?.end_date ? new Date(`${d.clientPlan.end_date}T00:00:00`).toLocaleDateString('pt-BR') : '';
+            return `${greeting} Passando pra avisar que o seu plano "${planName}"${endDate ? ` vence em ${endDate}` : ' está perto de vencer'}. Quer aproveitar pra renovar e continuar com os benefícios? Qualquer dúvida é só chamar 😄`;
+        }
+        if (type === 'reengage') {
+            return this.buildSuggestedWhatsappMessage(d);
+        }
+        return `${greeting} Tudo bem? Passando aqui pra manter contato 😄`;
+    },
+
+    // Decide quais botões de mensagem fazem sentido mostrar pra este cliente.
+    getAvailableMessageTypes(d, client) {
+        const types = [];
+        if (d.status && ['Ausente', 'Em risco', 'Frequência diminuindo'].includes(d.status.label)) {
+            types.push({ type: 'reengage', label: 'Reengajar', icon: 'user-round-search' });
+        }
+        if (this.isBirthdayMonth(client)) {
+            types.push({ type: 'birthday', label: 'Aniversário', icon: 'cake' });
+        }
+        if (d.clientPlan?.end_date) {
+            const daysLeft = Math.round((new Date(`${d.clientPlan.end_date}T00:00:00`) - new Date(`${new Date().toISOString().split('T')[0]}T00:00:00`)) / 86400000);
+            if (daysLeft >= 0 && daysLeft <= 7) {
+                types.push({ type: 'plan', label: 'Plano vencendo', icon: 'hourglass' });
+            }
+        }
+        types.push({ type: 'generic', label: 'Mensagem', icon: 'message-circle' });
+        return types;
+    },
+
     // --- Preferências do cliente (requer coluna "preferences" em profiles — ver _dev/add_client_preferences.sql) ---
     toggleEditClientPreferences() {
         this.state.editingClientPreferences = !this.state.editingClientPreferences;
@@ -492,7 +534,8 @@ Object.assign(App, {
         const statusColor = d.status ? colorMap[d.status.color] : 'zinc-500';
         const scoreColor = d.healthScore == null ? 'zinc-500' : d.healthScore >= 70 ? 'emerald-500' : d.healthScore >= 40 ? 'amber-500' : 'rose-500';
         const phone = client.phone || '';
-        const waLink = phone ? `https://wa.me/${App.formatWA(phone)}?text=${encodeURIComponent(this.buildSuggestedWhatsappMessage(d))}` : null;
+        const messageTypes = phone ? this.getAvailableMessageTypes(d, client) : [];
+        const waLinkFor = (type) => `https://wa.me/${App.formatWA(phone)}?text=${encodeURIComponent(this.buildWhatsappMessageByType(d, client, type))}`;
 
         return `
             <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm fade-in">
@@ -528,16 +571,24 @@ Object.assign(App, {
                     <div class="overflow-y-auto pr-1 space-y-5 flex-1 min-h-0 custom-scrollbar">
 
                         ${d.recommendation ? `
-                            <div class="p-4 rounded-2xl border border-${statusColor}/20 bg-${statusColor}/5 space-y-3">
-                                <div>
-                                    <p class="text-[10px] font-black text-${statusColor} uppercase tracking-widest mb-1">Próxima ação sugerida</p>
-                                    <p class="text-xs text-theme leading-relaxed">${App.escapeHTML(d.recommendation)}</p>
+                            <div class="p-4 rounded-2xl border border-${statusColor}/20 bg-${statusColor}/5">
+                                <p class="text-[10px] font-black text-${statusColor} uppercase tracking-widest mb-1">Próxima ação sugerida</p>
+                                <p class="text-xs text-theme leading-relaxed">${App.escapeHTML(d.recommendation)}</p>
+                            </div>
+                        ` : ''}
+
+                        ${messageTypes.length ? `
+                            <div class="space-y-2">
+                                <h4 class="text-[10px] font-black text-muted-theme uppercase tracking-widest flex items-center gap-1.5">
+                                    <i data-lucide="message-circle" class="w-3.5 h-3.5 text-[#25D366]"></i> Enviar mensagem
+                                </h4>
+                                <div class="flex flex-wrap gap-2">
+                                    ${messageTypes.map(mt => `
+                                        <a href="${waLinkFor(mt.type)}" target="_blank" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-bold border border-[#25D366]/20">
+                                            <i data-lucide="${mt.icon}" class="w-3.5 h-3.5"></i> ${mt.label}
+                                        </a>
+                                    `).join('')}
                                 </div>
-                                ${waLink ? `
-                                    <a href="${waLink}" target="_blank" class="w-full py-2.5 rounded-xl flex items-center justify-center gap-2 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors text-xs font-bold border border-[#25D366]/20">
-                                        <i data-lucide="message-circle" class="w-4 h-4"></i> Enviar WhatsApp
-                                    </a>
-                                ` : ''}
                             </div>
                         ` : ''}
 
@@ -853,6 +904,239 @@ Object.assign(App, {
                             </button>
                         `;
         }).join('')}
+                </div>
+            </div>`;
+    },
+
+    // ============================================================
+    // SINO DE NOTIFICAÇÕES (aniversariantes, planos vencendo, clientes em atenção)
+    // ============================================================
+
+    isBirthdayMonth(client) {
+        const bd = client?.birth_date;
+        if (!bd) return false;
+        const month = parseInt(bd.split(/[\/-]/)[1], 10);
+        return !isNaN(month) && (month - 1) === new Date().getMonth();
+    },
+
+    // Usado só pela notificação do sino — mais restrito que isBirthdayMonth (que ainda
+    // alimenta o filtro "Aniversariantes" do Painel de Clientes, onde faz sentido ver o mês todo).
+    isBirthdayToday(client) {
+        const bd = client?.birth_date;
+        if (!bd) return false;
+        let day, month;
+        if (bd.includes('/')) {
+            const [d, m] = bd.split('/');
+            day = parseInt(d, 10); month = parseInt(m, 10);
+        } else {
+            const [, m, d] = bd.split('-');
+            day = parseInt(d, 10); month = parseInt(m, 10);
+        }
+        const now = new Date();
+        return !isNaN(day) && !isNaN(month) && day === now.getDate() && (month - 1) === now.getMonth();
+    },
+
+    // --- Armazenamento local de "lidas/dispensadas" (por navegador, sem mudança de banco) ---
+    // Cada notificação tem um id estável (ex: "plan:<client_plan_id>"). Dispensar guarda
+    // {id: timestamp}. Se o problema de origem ainda existir depois de NOTIF_SNOOZE_DAYS,
+    // a notificação volta a aparecer sozinha — o barbeiro precisa resolver, não só esconder.
+    NOTIF_STORAGE_KEY: 'finotrato-notif-dismissed',
+    NOTIF_SNOOZE_DAYS: 2,
+
+    _loadDismissedNotifs() {
+        try { return JSON.parse(localStorage.getItem(this.NOTIF_STORAGE_KEY)) || {}; }
+        catch (e) { return {}; }
+    },
+
+    _saveDismissedNotifs(map) {
+        try { localStorage.setItem(this.NOTIF_STORAGE_KEY, JSON.stringify(map)); }
+        catch (e) { /* localStorage indisponível (modo privado etc) — segue sem persistir */ }
+    },
+
+    dismissNotification(notifId) {
+        const map = this._loadDismissedNotifs();
+        map[notifId] = Date.now();
+        this._saveDismissedNotifs(map);
+        this.render();
+    },
+
+    dismissAllNotifications() {
+        const { visible } = this.getNotificationsSummary();
+        const map = this._loadDismissedNotifs();
+        const now = Date.now();
+        visible.forEach(item => { map[item.id] = now; });
+        this._saveDismissedNotifs(map);
+        this.render();
+    },
+
+    // Monta a lista "bruta" de notificações (com id estável) a partir de dados já em
+    // memória (sem query nova), depois filtra o que está dispensado e ainda dentro do
+    // prazo de soneca — isso vira "visible", que é o que aparece na caixa e conta no sino.
+    getNotificationsSummary() {
+        const today = new Date().toISOString().split('T')[0];
+        const in3Days = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
+
+        const items = [];
+
+        (typeof CLIENTES !== 'undefined' ? CLIENTES : []).forEach(c => {
+            if (this.isBirthdayToday(c)) {
+                items.push({
+                    id: `birthday:${c.id}:${today}`,
+                    type: 'birthday',
+                    clientId: c.id,
+                    title: c.name || 'Cliente',
+                    subtitle: 'Aniversário é hoje! 🎉'
+                });
+            }
+        });
+
+        (this.state.clientPlans || [])
+            .filter(cp => cp.status === 'active' && cp.end_date >= today && cp.end_date <= in3Days)
+            .sort((a, b) => a.end_date.localeCompare(b.end_date))
+            .forEach(cp => {
+                const client = CLIENTES.find(c => c.id === cp.client_id);
+                const daysLeft = Math.max(0, Math.round((new Date(`${cp.end_date}T00:00:00`) - new Date(`${today}T00:00:00`)) / 86400000));
+                const endDateBR = new Date(`${cp.end_date}T00:00:00`).toLocaleDateString('pt-BR');
+                items.push({
+                    id: `plan:${cp.id}`,
+                    type: 'plan',
+                    clientId: cp.client_id,
+                    title: client?.name || 'Cliente',
+                    subtitle: `${cp.plan?.name || 'Plano'} · vence em ${endDateBR}`,
+                    badge: daysLeft === 0 ? 'Vence hoje' : `${daysLeft}d`
+                });
+            });
+
+        (this.state.clientsPanelData || [])
+            .filter(c => c.status && ['Ausente', 'Em risco', 'Frequência diminuindo'].includes(c.status.label))
+            .forEach(c => {
+                items.push({
+                    id: `attention:${c.client.id}:${c.status.label}`,
+                    type: 'attention',
+                    clientId: c.client.id,
+                    title: c.client.name || 'Cliente',
+                    subtitle: `${c.status.emoji} ${c.status.label}`
+                });
+            });
+
+        const dismissed = this._loadDismissedNotifs();
+        const snoozeMs = this.NOTIF_SNOOZE_DAYS * 24 * 60 * 60 * 1000;
+        const isSnoozed = (id) => {
+            const t = dismissed[id];
+            return !!t && (Date.now() - t) < snoozeMs;
+        };
+
+        const visible = items.filter(it => !isSnoozed(it.id));
+
+        return { items, visible, total: visible.length };
+    },
+
+    toggleNotificationsPanel() {
+        this.state.isNotificationsPanelOpen = !this.state.isNotificationsPanelOpen;
+        // Recalcula "clientes em atenção" toda vez que o sino é aberto — o cliente pode ter
+        // sido atendido/renovado desde a última vez, e esse dado não entra no polling automático
+        // do app (é pesado demais pra rodar em segundo plano o tempo todo).
+        if (this.state.isNotificationsPanelOpen && !this.state.isLoadingClientsPanel) {
+            // loadClientsPanelData() já chama this.render() sozinha (no início e no fim).
+            // Chamar render() de novo aqui recriava o modal do zero com o MESMO conteúdo,
+            // reiniciando a animação de entrada — era isso que parecia "piscar 2x" ao abrir.
+            this.loadClientsPanelData();
+        } else {
+            this.render();
+        }
+    },
+
+    closeNotificationsPanel() {
+        this.state.isNotificationsPanelOpen = false;
+        this.state._notifPanelAnimated = false; // reseta pra animar de novo na próxima abertura
+        this.render();
+    },
+
+    renderNotificationsPanel() {
+        const { visible } = this.getNotificationsSummary();
+        const isEmpty = visible.length === 0 && !this.state.isLoadingClientsPanel;
+
+        // O carregamento dos "clientes em atenção" gera pelo menos 2 renders (carregando →
+        // carregado). Como o modal é recriado do zero a cada render (innerHTML), a animação
+        // de entrada reiniciaria em cada um — parecendo "piscar" várias vezes. Por isso ela só
+        // toca na primeira vez que o sino abre; atualizações seguintes ficam paradas.
+        const isFreshOpen = !this.state._notifPanelAnimated;
+        this.state._notifPanelAnimated = true;
+
+        const typeMeta = {
+            plan: { label: 'Planos vencendo', color: 'amber-500', icon: 'hourglass' },
+            birthday: { label: 'Aniversário hoje', color: 'violet-400', icon: null },
+            attention: { label: 'Clientes que precisam de atenção', color: 'rose-400', icon: 'alert-triangle' }
+        };
+
+        const renderRow = (item) => `
+            <div class="flex items-stretch gap-1.5">
+                <button onclick="App.openClientInsights('${item.clientId}')" class="flex-1 min-w-0 text-left flex items-center justify-between gap-2 card-bg border border-${typeMeta[item.type].color}/20 rounded-xl p-3 hover:border-${typeMeta[item.type].color}/40 transition-colors">
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold text-theme truncate">${App.escapeHTML(item.title)}</p>
+                        <p class="text-[10px] text-muted-theme truncate">${App.escapeHTML(item.subtitle)}</p>
+                    </div>
+                    ${item.badge ? `<span class="text-[10px] font-black uppercase text-${typeMeta[item.type].color} shrink-0">${App.escapeHTML(item.badge)}</span>` : ''}
+                </button>
+                <button onclick="App.dismissNotification('${item.id}')" title="Dispensar (volta em ${this.NOTIF_SNOOZE_DAYS} dias se ainda for o caso)" class="w-9 shrink-0 rounded-xl input-bg border border-theme text-muted-theme hover:text-rose-400 hover:border-rose-500/30 transition-colors flex items-center justify-center active:scale-95">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>`;
+
+        const sections = ['plan', 'birthday', 'attention'].map(type => {
+            const rows = visible.filter(it => it.type === type);
+            if (type === 'attention' && this.state.isLoadingClientsPanel) {
+                return `
+                    <div class="space-y-2">
+                        <h4 class="text-[10px] font-black text-${typeMeta.attention.color} uppercase tracking-widest flex items-center gap-1.5">
+                            <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> ${typeMeta.attention.label}
+                        </h4>
+                        <div class="flex items-center gap-2 text-[11px] text-muted-theme p-3">
+                            <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Calculando situação dos clientes...
+                        </div>
+                    </div>`;
+            }
+            if (rows.length === 0) return '';
+            const meta = typeMeta[type];
+            return `
+                <div class="space-y-2">
+                    <h4 class="text-[10px] font-black text-${meta.color} uppercase tracking-widest flex items-center gap-1.5">
+                        ${meta.icon ? `<i data-lucide="${meta.icon}" class="w-3.5 h-3.5"></i>` : '🎂'} ${meta.label} (${rows.length})
+                    </h4>
+                    <div class="space-y-1.5">
+                        ${rows.slice(0, 10).map(renderRow).join('')}
+                        ${rows.length > 10 ? `<a href="clientes.html" target="_blank" class="block text-center text-[10px] text-amber-500 font-bold uppercase tracking-widest pt-1 hover:underline">Ver todos (${rows.length}) →</a>` : ''}
+                    </div>
+                </div>`;
+        }).join('');
+
+        return `
+            <div class="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-16 md:pt-20 bg-zinc-950/80 backdrop-blur-sm ${isFreshOpen ? 'fade-in' : ''}" onclick="if(event.target === this) App.closeNotificationsPanel()">
+                <div class="card-bg w-full max-w-md rounded-3xl border border-theme shadow-2xl ${isFreshOpen ? 'scale-in' : ''} flex flex-col max-h-[80vh]">
+                    <div class="flex justify-between items-center p-5 pb-3 shrink-0">
+                        <h3 class="text-lg font-black text-theme flex items-center gap-2">
+                            <i data-lucide="bell" class="w-5 h-5 text-amber-500"></i> Notificações
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            ${visible.length > 0 ? `
+                                <button onclick="App.dismissAllNotifications()" class="text-[10px] font-bold text-muted-theme hover:text-amber-500 uppercase tracking-widest transition-colors" title="Marcar tudo como lido">
+                                    Limpar tudo
+                                </button>
+                            ` : ''}
+                            <button onclick="App.closeNotificationsPanel()" class="w-9 h-9 rounded-full card-bg flex items-center justify-center text-muted-theme hover:text-theme transition-colors border border-theme">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-y-auto px-5 pb-5 space-y-5 custom-scrollbar">
+                        ${isEmpty ? `
+                            <div class="py-10 text-center text-muted-theme space-y-2">
+                                <i data-lucide="party-popper" class="w-7 h-7 mx-auto opacity-30"></i>
+                                <p class="text-[11px] font-bold uppercase tracking-widest opacity-50">Tudo em dia por aqui</p>
+                            </div>
+                        ` : sections}
+                    </div>
                 </div>
             </div>`;
     }

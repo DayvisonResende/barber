@@ -1028,7 +1028,7 @@ const Rel = {
         </div>`;
     },
 
-    fmt(n) { return (n || 0).toFixed(2).replace('.', ','); }
+    fmt(n) { return (n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 };
 
 document.addEventListener('DOMContentLoaded', () => Rel.init());

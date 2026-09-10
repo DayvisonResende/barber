@@ -34,6 +34,15 @@ Object.assign(App, {
         this.applyTheme();
         this.render();
         this.applyMasks();
+
+        // Calcula "clientes em atenção" em segundo plano, sem travar o login — é uma
+        // busca mais pesada (histórico de todos os clientes), então não faz parte do
+        // carregamento inicial acima. Sem isso, o número do sino de notificações ficava
+        // incompleto até o barbeiro abrir o sino pela primeira vez.
+        const isStaff = ['admin', 'manager', 'barber'].includes(this.state.role);
+        if (isStaff) {
+            this.loadClientsPanelData();
+        }
     },
 
     loadCache() {
@@ -403,6 +412,9 @@ Object.assign(App, {
             this.state.editingDurationId ||
             this.state.editingTimeId ||
             this.state.editingDateId ||
+            this.state.editingPlanEndDateId ||
+            this.state.swappingClientId ||
+            this.state.isCustomBookingOpen ||
 
             // --- Modais de pagamento ---
             this.state.showingSplitPaymentId ||
@@ -873,6 +885,113 @@ Object.assign(App, {
         } catch (err) {
             console.error("Erro ao alterar data:", err);
             this.showNotification("Erro", "Não foi possível alterar a data.");
+        }
+    },
+
+    // --- Trocar o cliente de um agendamento já existente (ex: cliente desistiu em cima
+    // da hora e outro cliente quer o mesmo horário) ---
+    initSwapClient(appointmentId) {
+        this.state.swappingClientId = appointmentId;
+        this.state.swapClientSelected = null;
+        this.render();
+    },
+
+    cancelSwapClient() {
+        this.state.swappingClientId = null;
+        this.state.swapClientSelected = null;
+        this.render();
+    },
+
+    clearSwapClient() {
+        this.state.swapClientSelected = null;
+        this.render();
+    },
+
+    searchSwapClient(term) {
+        const resultsEl = document.getElementById('swap-client-search-results');
+        if (!resultsEl) return;
+
+        if (!term || term.trim().length < 2) {
+            resultsEl.innerHTML = '<p class="text-[11px] text-muted-theme text-center py-3">Digite ao menos 2 caracteres para buscar.</p>';
+            return;
+        }
+
+        const q = term.toLowerCase().trim();
+        const digitsOnly = q.replace(/\D/g, '');
+        const results = (CLIENTES || []).filter(c => {
+            if (c.role !== 'client') return false;
+            const nameMatch = (c.name || '').toLowerCase().includes(q);
+            const phoneMatch = digitsOnly.length > 0 && (c.phone || '').replace(/\D/g, '').includes(digitsOnly);
+            return nameMatch || phoneMatch;
+        }).slice(0, 8);
+
+        if (results.length === 0) {
+            resultsEl.innerHTML = '<p class="text-[11px] text-muted-theme text-center py-4">Nenhum cliente encontrado.</p>';
+            return;
+        }
+
+        resultsEl.innerHTML = results.map(c => {
+            const initial = (c.name?.[0] || 'C').toUpperCase();
+            const phone = c.phone ? this.formatDisplayPhone(c.phone) : 'Sem telefone';
+            return `
+                <button onclick="App.selectSwapClient('${c.id}')" class="w-full flex items-center gap-3 p-3 hover:bg-zinc-700/50 transition-colors text-left active:scale-[0.98]">
+                    <div class="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 card-bg flex items-center justify-center border border-theme">
+                        ${c.avatar
+                    ? `<img src="${c.avatar}" class="w-full h-full object-cover" />`
+                    : `<span class="text-sm font-black text-amber-500/70">${initial}</span>`
+                }
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="font-bold text-theme text-sm truncate">${this.escapeHTML(c.name || 'Cliente')}</p>
+                        <p class="text-[11px] text-muted-theme truncate">${this.escapeHTML(phone)}</p>
+                    </div>
+                    <i data-lucide="plus-circle" class="w-4 h-4 text-amber-500 flex-shrink-0"></i>
+                </button>
+            `;
+        }).join('');
+
+        if (window.lucide) lucide.createIcons({ root: resultsEl });
+    },
+
+    selectSwapClient(clientId) {
+        const client = (CLIENTES || []).find(c => c.id === clientId);
+        if (!client) return;
+        this.state.swapClientSelected = {
+            id: client.id,
+            name: client.name,
+            phone: client.phone || '',
+            avatar: client.avatar || null
+        };
+        this.render();
+    },
+
+    async confirmSwapClient(appointmentId) {
+        const newClient = this.state.swapClientSelected;
+        if (!newClient) {
+            this.showNotification('Erro', 'Selecione um cliente antes de confirmar.');
+            return;
+        }
+        try {
+            const { error } = await supabaseClient
+                .from('appointments')
+                .update({
+                    client_id: newClient.id,
+                    client_name: newClient.name,
+                    client_phone: newClient.phone,
+                    client_avatar: newClient.avatar
+                })
+                .eq('id', appointmentId);
+
+            if (error) throw error;
+
+            this.state.swappingClientId = null;
+            this.state.swapClientSelected = null;
+            this.showNotification('Sucesso', `Agendamento agora é de ${newClient.name}.`);
+            await this.loadAppointments();
+            this.render();
+        } catch (err) {
+            console.error('Erro ao trocar cliente do agendamento:', err);
+            this.showNotification('Erro', 'Não foi possível trocar o cliente deste agendamento.');
         }
     },
 

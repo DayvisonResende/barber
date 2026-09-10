@@ -435,6 +435,39 @@ Object.assign(App, {
         });
     },
 
+    initEditPlanEndDate(clientPlanId) {
+        this.state.editingPlanEndDateId = clientPlanId;
+        this.render();
+    },
+
+    cancelEditPlanEndDate() {
+        this.state.editingPlanEndDateId = null;
+        this.render();
+    },
+
+    async updateClientPlanEndDate(clientPlanId, newDate) {
+        if (!newDate) {
+            this.showNotification('Erro', 'Escolha uma data válida.');
+            return;
+        }
+        try {
+            const { error } = await supabaseClient
+                .from('client_plans')
+                .update({ end_date: newDate })
+                .eq('id', clientPlanId);
+
+            if (error) throw error;
+
+            this.state.editingPlanEndDateId = null;
+            this.showNotification('Sucesso', 'Data de vencimento atualizada!');
+            await this.loadClientPlans();
+            this.render();
+        } catch (err) {
+            console.error('Erro ao alterar vencimento do plano:', err);
+            this.showNotification('Erro', 'Não foi possível alterar a data de vencimento.');
+        }
+    },
+
     async recordPlanUsage(clientPlanId, appointmentId, appointmentDate) {
         if (!clientPlanId) return;
         const usedAt = appointmentDate

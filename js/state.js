@@ -87,6 +87,11 @@ const App = {
         plansAdminTab: 'list', // 'list' | 'clientes'
         assigningPlanId: null, // id do plano que está sendo atribuído
         assignClientData: null, // objeto do cliente selecionado para atribuição
+        editingPlanEndDateId: null, // id do client_plan com a data de vencimento em edição inline
+
+        // --- Sino de notificações (aniversariantes, planos vencendo, clientes em atenção) ---
+        isNotificationsPanelOpen: false,
+        _notifPanelAnimated: false, // controla se a animação de entrada do sino já tocou nesta sessão de abertura
 
         // --- Relatório de Produtos ---
         productReportTab: 'financial', // 'financial' | 'products'
@@ -105,6 +110,19 @@ const App = {
         // --- Detalhe de Transação ---
         transactionDetailId: null,
         transactionDetailApt: null,
+
+        // --- Trocar cliente de um agendamento existente ---
+        swappingClientId: null, // id do agendamento com a troca de cliente em edição
+        swapClientSelected: null, // { id, name, phone, avatar } do novo cliente escolhido na busca
+
+        // --- Agendamento Personalizado (horário livre, digitado manualmente) ---
+        isCustomBookingOpen: false,
+        customBookingMode: 'registered', // 'registered' | 'walkin'
+        customBookingSelectedClient: null, // { id, name, phone, avatar }
+        customBookingBarberId: null,
+        customBookingServiceIds: [],
+        customBookingDate: '',
+        customBookingTime: '',
 
         // --- Perfil Cliente 360° ---
         viewingClientId: null,
