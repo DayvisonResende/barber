@@ -148,44 +148,56 @@ Object.assign(App, {
         const totalDuration = services.reduce((sum, s) => sum + s.durationMinutes, 0);
         const serviceNames = services.map(s => s.name).join(' + ');
 
-        // Mesma checagem de colisão real do fluxo normal — não deixa marcar em cima de
-        // outro agendamento existente do mesmo barbeiro, mesmo sendo horário livre.
+        // Checagem de colisão real — igual ao fluxo normal, mas aqui é só um AVISO, não
+        // um bloqueio. O barbeiro pode saber que dá pra encaixar um atendimento rápido
+        // mesmo com a duração calculada esbarrando em outro agendamento.
         const barberIdNorm = String(barber.user_id).toLowerCase().trim();
         const newStart = this.timeToMinutes(time);
         const newEnd = newStart + totalDuration;
-        const collision = (this.state.allAppointmentsForStats || []).some(apt => {
+        const collidingApt = (this.state.allAppointmentsForStats || []).find(apt => {
             if (apt.date !== date || String(apt.barber_id).toLowerCase().trim() !== barberIdNorm) return false;
             const aptStart = this.timeToMinutes(apt.time);
             const aptEnd = aptStart + (apt.total_duration || 30);
             return this.hasIntervalConflict(newStart, newEnd, aptStart, aptEnd);
         });
 
-        if (collision) {
-            this.showNotification('Horário Ocupado', 'Já existe um agendamento desse profissional nesse período. Escolha outro horário.');
+        const payload = {
+            client_id: clientId,
+            client_name: clientName,
+            client_phone: clientPhone,
+            client_avatar: clientAvatar,
+            barber_id: barberIdNorm,
+            barber_name: barber.name,
+            service_names: serviceNames,
+            service_price: `R$ ${totalValue.toFixed(2).replace('.', ',')}`,
+            service_numeric_value: totalValue,
+            total_duration: totalDuration,
+            date: date,
+            time: time,
+            status: 'pending'
+        };
+
+        if (collidingApt) {
+            this.showConfirmModal({
+                title: 'Horário conflita com outro agendamento',
+                message: `${collidingApt.client_name || 'Outro cliente'} já está marcado às ${collidingApt.time} nesse período. Criar mesmo assim (encaixe)?`,
+                icon: 'alert-triangle',
+                isDestructive: false,
+                onConfirm: () => this._insertCustomAppointment(payload)
+            });
             return;
         }
 
-        try {
-            const { error } = await supabaseClient.from('appointments').insert({
-                client_id: clientId,
-                client_name: clientName,
-                client_phone: clientPhone,
-                client_avatar: clientAvatar,
-                barber_id: barberIdNorm,
-                barber_name: barber.name,
-                service_names: serviceNames,
-                service_price: `R$ ${totalValue.toFixed(2).replace('.', ',')}`,
-                service_numeric_value: totalValue,
-                total_duration: totalDuration,
-                date: date,
-                time: time,
-                status: 'pending'
-            });
+        await this._insertCustomAppointment(payload);
+    },
 
+    async _insertCustomAppointment(payload) {
+        try {
+            const { error } = await supabaseClient.from('appointments').insert(payload);
             if (error) throw error;
 
             this.state.isCustomBookingOpen = false;
-            this.showNotification('Agendamento criado ✓', `${clientName} às ${time} em ${date.split('-').reverse().join('/')}.`);
+            this.showNotification('Agendamento criado ✓', `${payload.client_name} às ${payload.time} em ${payload.date.split('-').reverse().join('/')}.`);
             await this.loadAppointments();
             this.render();
         } catch (err) {
