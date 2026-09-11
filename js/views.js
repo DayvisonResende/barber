@@ -2153,7 +2153,22 @@ Object.assign(App, {
                             </button>
                         </div>
                         <div class="mt-3">
-                            <span class="text-[10px] font-black px-2.5 py-1 rounded-lg ${pay.badge} uppercase tracking-widest">${tx.paymentMethod}</span>
+                            ${this.state.editingTransactionPaymentId === tx.id ? `
+                                <div class="flex flex-wrap gap-1.5 fade-in">
+                                    ${Object.keys(payMap).map(method => `
+                                        <button onclick="App.updateTransactionPaymentMethod('${tx.id}', '${method}')" class="text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest transition-all ${method === tx.paymentMethod ? payMap[method].badge : 'input-bg text-muted-theme border border-theme hover:border-amber-500/30'}">
+                                            ${method}
+                                        </button>
+                                    `).join('')}
+                                    <button onclick="App.cancelEditTransactionPayment()" class="text-[10px] font-black px-2.5 py-1 rounded-lg input-bg text-red-400 border border-red-500/20 uppercase tracking-widest">
+                                        <i data-lucide="x" class="w-3 h-3 inline-block -mt-0.5"></i>
+                                    </button>
+                                </div>
+                            ` : `
+                                <button onclick="App.initEditTransactionPayment('${tx.id}')" class="text-[10px] font-black px-2.5 py-1 rounded-lg ${pay.badge} uppercase tracking-widest flex items-center gap-1.5" title="Corrigir forma de pagamento">
+                                    ${tx.paymentMethod} <i data-lucide="pencil" class="w-2.5 h-2.5"></i>
+                                </button>
+                            `}
                         </div>
                     </div>
 

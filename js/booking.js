@@ -233,6 +233,11 @@ Object.assign(App, {
     // ─────────────────────────────────────────────────────────────────
 
     async confirmBooking() {
+        // Trava contra clique duplo em "Confirmar" — sem isso, dois cliques rápidos
+        // podiam passar pela checagem de colisão antes de qualquer um dos dois ter
+        // inserido o agendamento, criando dois registros idênticos.
+        if (this.state.isCreatingAppointment) return;
+
         const { selectedDate, selectedTime, selectedBarber, selectedServices, bookingSelectedService } = this.state;
 
         // Usar selectedServices ou bookingSelectedService como fallback
@@ -248,6 +253,9 @@ Object.assign(App, {
             this.showNotification('Selecione o cliente', 'Pesquise e selecione o cliente cadastrado antes de confirmar.');
             return;
         }
+
+        this.state.isCreatingAppointment = true;
+        try {
 
         // ── VALIDAÇÃO ANTI-RACE CONDITION: Re-busca dados frescos do servidor ──
         await this.loadInitialData();
@@ -405,7 +413,11 @@ Object.assign(App, {
 
         await this.loadInitialData();
         await this.loadAppointments();
-        this.render();
+
+        } finally {
+            this.state.isCreatingAppointment = false;
+            this.render();
+        }
     },
 
     // ─────────────────────────────────────────────────────────────────

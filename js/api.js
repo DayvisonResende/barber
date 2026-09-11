@@ -250,6 +250,35 @@ Object.assign(App, {
         }
     },
 
+    initEditTransactionPayment(id) {
+        this.state.editingTransactionPaymentId = id;
+        this.render();
+    },
+
+    cancelEditTransactionPayment() {
+        this.state.editingTransactionPaymentId = null;
+        this.render();
+    },
+
+    async updateTransactionPaymentMethod(id, newMethod) {
+        try {
+            const { error } = await supabaseClient
+                .from('transactions')
+                .update({ payment_method: newMethod })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            this.state.editingTransactionPaymentId = null;
+            this.showNotification('Sucesso', `Forma de pagamento alterada para ${newMethod}.`);
+            await this.loadTransactions();
+            this.render();
+        } catch (err) {
+            console.error('Erro ao alterar forma de pagamento:', err);
+            this.showNotification('Erro', 'Não foi possível alterar a forma de pagamento.');
+        }
+    },
+
     async loadTransactions() {
         if (!this.state.isAuthenticated) return;
 
@@ -1259,52 +1288,60 @@ Object.assign(App, {
     },
 
     async completeAppointment() {
-        if (!this.state.confirmingPaymentId) return;
+        // Trava contra clique duplo: se já tem uma finalização em andamento (ou nenhum
+        // pagamento pendente de confirmação), ignora — evita inserir a transação 2x.
+        if (!this.state.confirmingPaymentId || this.state.isCompletingPayment) return;
+        this.state.isCompletingPayment = true;
+
         const id = this.state.confirmingPaymentId;
         const paymentMethod = this.state.confirmingPaymentMethod;
 
-        const apt = this.state.appointments.find(a => a.id === id);
-        if (apt) {
-            const comandaTotal = (apt.comanda_items || []).reduce((sum, item) => sum + (item.price * item.qty), 0);
-            const productCommission = (apt.comanda_items || []).reduce((sum, item) => {
-                if (item.commission_rate != null && item.commission_rate > 0) {
-                    return sum + (item.price * item.qty * item.commission_rate / 100);
+        try {
+            const apt = this.state.appointments.find(a => a.id === id);
+            if (apt) {
+                const comandaTotal = (apt.comanda_items || []).reduce((sum, item) => sum + (item.price * item.qty), 0);
+                const productCommission = (apt.comanda_items || []).reduce((sum, item) => {
+                    if (item.commission_rate != null && item.commission_rate > 0) {
+                        return sum + (item.price * item.qty * item.commission_rate / 100);
+                    }
+                    return sum;
+                }, 0);
+
+                // 1. Inserir na tabela de transações
+                const { error: txError } = await supabaseClient.from('transactions').insert({
+                    appointment_id: apt.id,
+                    client_name: apt.clientName,
+                    service_name: apt.service.name,
+                    payment_method: paymentMethod,
+                    numeric_value: apt.numericValue,
+                    comanda_total: comandaTotal,
+                    product_commission: productCommission,
+                    date: apt.date,
+                    time: apt.time,
+                    barber_id: apt.barber_id
+                });
+
+                if (txError) {
+                    this.showNotification("Erro no Caixa", txError.message);
+                    return;
                 }
-                return sum;
-            }, 0);
 
-            // 1. Inserir na tabela de transações
-            const { error: txError } = await supabaseClient.from('transactions').insert({
-                appointment_id: apt.id,
-                client_name: apt.clientName,
-                service_name: apt.service.name,
-                payment_method: paymentMethod,
-                numeric_value: apt.numericValue,
-                comanda_total: comandaTotal,
-                product_commission: productCommission,
-                date: apt.date,
-                time: apt.time,
-                barber_id: apt.barber_id
-            });
+                // 2. Atualizar status na tabela appointments
+                await supabaseClient.from('appointments').update({ status: 'completed' }).eq('id', apt.id);
 
-            if (txError) {
-                this.showNotification("Erro no Caixa", txError.message);
-                return;
+                this.showNotification("Corte Finalizado!", `Recebido via ${paymentMethod}.`);
+                await this.loadAppointments();
+                await this.loadTransactions();
             }
 
-            // 2. Atualizar status na tabela appointments
-            await supabaseClient.from('appointments').update({ status: 'completed' }).eq('id', apt.id);
-
-            this.showNotification("Corte Finalizado!", `Recebido via ${paymentMethod}.`);
-            await this.loadAppointments();
-            await this.loadTransactions();
+            this.state.confirmingPaymentId = null;
+            this.state.confirmingPaymentMethod = null;
+            this.state.expandedAppointmentId = null;
+            this.state.openAppointmentModalId = null;
+        } finally {
+            this.state.isCompletingPayment = false;
+            this.render();
         }
-
-        this.state.confirmingPaymentId = null;
-        this.state.confirmingPaymentMethod = null;
-        this.state.expandedAppointmentId = null;
-        this.state.openAppointmentModalId = null;
-        this.render();
     },
 
     initSplitPayment(id) {
@@ -1324,15 +1361,18 @@ Object.assign(App, {
     },
 
     async completeSplitPayment(id) {
+        if (this.state.isCompletingPayment) return; // trava contra clique duplo
         const apt = this.state.appointments.find(a => a.id === id);
         if (!apt) return;
 
         const totalPaid = Object.values(this.state.splitPaymentAmounts).reduce((a, b) => a + b, 0);
-        
+
         if (Math.abs(totalPaid - apt.numericValue) > 0.01) {
             this.showNotification("Erro no Valor", `A soma (R$ ${totalPaid.toFixed(2).replace('.', ',')}) deve ser igual ao total do serviço (R$ ${apt.numericValue.toFixed(2).replace('.', ',')})`);
             return;
         }
+
+        this.state.isCompletingPayment = true;
 
         try {
             this.state.isLoading = true;
@@ -1378,6 +1418,7 @@ Object.assign(App, {
             this.showNotification("Erro", "Não foi possível finalizar o pagamento.");
         } finally {
             this.state.isLoading = false;
+            this.state.isCompletingPayment = false;
             this.render();
         }
     },

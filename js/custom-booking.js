@@ -118,6 +118,9 @@ Object.assign(App, {
     },
 
     async createCustomAppointment() {
+        // Mesma trava contra clique duplo usada no agendamento normal.
+        if (this.state.isCreatingAppointment) return;
+
         const barberId = this.state.customBookingBarberId;
         const barber = BARBERS.find(b => b.id === barberId);
         const services = SERVICES.filter(s => this.state.customBookingServiceIds.includes(s.id));
@@ -192,6 +195,11 @@ Object.assign(App, {
     },
 
     async _insertCustomAppointment(payload) {
+        // Trava contra clique duplo (protege tanto o caminho direto quanto o que passa
+        // pela confirmação de encaixe) — é o único ponto que realmente insere no banco.
+        if (this.state.isCreatingAppointment) return;
+        this.state.isCreatingAppointment = true;
+
         try {
             const { error } = await supabaseClient.from('appointments').insert(payload);
             if (error) throw error;
@@ -203,6 +211,8 @@ Object.assign(App, {
         } catch (err) {
             console.error('Erro ao criar agendamento personalizado:', err);
             this.showNotification('Erro', 'Não foi possível criar o agendamento.');
+        } finally {
+            this.state.isCreatingAppointment = false;
         }
     },
 

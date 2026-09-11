@@ -18,6 +18,8 @@ const App = {
         blockedTimes: [],
         confirmingPaymentId: null,
         confirmingPaymentMethod: null,
+        isCompletingPayment: false, // trava contra clique duplo em "Finalizar" (evita transação duplicada)
+        isCreatingAppointment: false, // trava contra clique duplo em "Confirmar Agendamento" (evita agendamento duplicado)
         // Estado do formulário de marcação
         isBooking: false,
         selectedServices: [],
@@ -114,6 +116,9 @@ const App = {
         // --- Trocar cliente de um agendamento existente ---
         swappingClientId: null, // id do agendamento com a troca de cliente em edição
         swapClientSelected: null, // { id, name, phone, avatar } do novo cliente escolhido na busca
+
+        // --- Corrigir forma de pagamento de uma transação já registrada ---
+        editingTransactionPaymentId: null,
 
         // --- Agendamento Personalizado (horário livre, digitado manualmente) ---
         isCustomBookingOpen: false,
