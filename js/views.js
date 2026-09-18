@@ -555,6 +555,9 @@ Object.assign(App, {
 
             // Desconto de plano (apenas para cliente)
             const planDiscount = this.getBookingPlanDiscount ? this.getBookingPlanDiscount(services) : null;
+            // Se não há desconto, mas é só porque o dia escolhido não é coberto pelo plano,
+            // avisa o cliente/staff antes de confirmar (em vez de só cobrar sem explicar).
+            const planDayWarning = (!planDiscount && this.getPlanDayMismatchWarning) ? this.getPlanDayMismatchWarning() : null;
 
             return `
             <div class="space-y-5 fade-in slide-in-up">
@@ -616,6 +619,14 @@ Object.assign(App, {
                             <span class="text-sm font-bold text-emerald-400">Plano ${App.escapeHTML(planDiscount.clientPlan.plan?.name || '')}</span>
                         </div>
                         <span class="text-sm font-black text-emerald-400">- R$ ${planDiscount.discountAmount.toFixed(2).replace('.', ',')}</span>
+                    </div>` : ''}
+
+                    ${planDayWarning ? `
+                    <div class="flex items-start gap-2 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500 shrink-0 mt-0.5"></i>
+                        <p class="text-[11px] text-rose-400 leading-relaxed">
+                            Seu plano <b>${App.escapeHTML(planDayWarning.planName)}</b> cobre desconto só ${planDayWarning.coveredDaysLabel}. Esse agendamento será cobrado <b>sem desconto</b>.
+                        </p>
                     </div>` : ''}
 
                     <div class="flex items-center justify-between pt-3 border-t border-theme/50">

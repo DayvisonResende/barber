@@ -86,14 +86,21 @@ Object.assign(App, {
         ) || null;
     },
 
-    isPlanActiveToday(clientPlan) {
+    // Generaliza a checagem de "esse plano vale nesse dia" pra qualquer data — usado tanto
+    // pro status "ativo hoje" quanto pra validar o DIA DO AGENDAMENTO (que pode ser
+    // diferente do dia em que a pessoa está fazendo a marcação).
+    isPlanActiveOnDate(clientPlan, dateStr) {
         if (!clientPlan || clientPlan.status !== 'active') return false;
-        const today = new Date().toISOString().split('T')[0];
-        if (clientPlan.end_date < today) return false;
+        if (!dateStr) return false;
+        if (clientPlan.end_date < dateStr) return false;
         const plan = clientPlan.plan;
         if (!plan) return false;
-        const dayOfWeek = new Date().getDay();
+        const dayOfWeek = new Date(`${dateStr}T00:00:00`).getDay();
         return (plan.active_days || []).includes(dayOfWeek);
+    },
+
+    isPlanActiveToday(clientPlan) {
+        return this.isPlanActiveOnDate(clientPlan, new Date().toISOString().split('T')[0]);
     },
 
     getPlanWeekUsageCount() {
@@ -174,10 +181,50 @@ Object.assign(App, {
 
         if (!clientPlan) return null;
         if (!clientPlan.plan) return null;
-        if (!this.isPlanActiveToday(clientPlan)) return null;
+        // Valida o dia do AGENDAMENTO (this.state.selectedDate), não o dia em que a
+        // marcação está sendo feita — um plano de terça/quarta vale pro corte de terça
+        // mesmo que o cliente esteja marcando no domingo.
+        if (!this.isPlanActiveOnDate(clientPlan, this.state.selectedDate)) return null;
         const result = this.calculatePlanDiscount(services, clientPlan.plan);
         if (result.discountAmount <= 0) return null;
         return { clientPlan, ...result };
+    },
+
+    // Detecta especificamente o caso "cliente tem plano, mas o dia escolhido pro
+    // agendamento não é coberto" — usado só pra mostrar o aviso na tela de confirmação,
+    // não interfere em nada do cálculo de desconto em si.
+    getPlanDayMismatchWarning() {
+        let clientPlan;
+
+        if (this.state.isStaffBooking) {
+            const selectedClientId = this.state.staffSelectedClient?.id;
+            if (!selectedClientId) return null;
+            const today = new Date().toISOString().split('T')[0];
+            clientPlan = (this.state.clientPlans || []).find(cp =>
+                cp.client_id === selectedClientId &&
+                cp.status === 'active' &&
+                cp.end_date >= today
+            );
+        } else {
+            if (this.state.role !== 'client') return null;
+            clientPlan = this.getActiveClientPlan();
+        }
+
+        if (!clientPlan || !clientPlan.plan) return null;
+        const plan = clientPlan.plan;
+        if (!plan.active_days || plan.active_days.length === 0) return null; // sem restrição de dia
+        if (!this.state.selectedDate) return null;
+
+        const dayOfWeek = new Date(`${this.state.selectedDate}T00:00:00`).getDay();
+        if (plan.active_days.includes(dayOfWeek)) return null; // dia coberto, sem aviso
+
+        const dayNames = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+        const coveredDaysNames = [...plan.active_days].sort((a, b) => a - b).map(d => dayNames[d]);
+        const coveredDaysLabel = coveredDaysNames.length > 1
+            ? `${coveredDaysNames.slice(0, -1).join(', ')} e ${coveredDaysNames[coveredDaysNames.length - 1]}`
+            : coveredDaysNames.join('');
+
+        return { planName: plan.name, coveredDaysLabel };
     },
 
     getDaysUntilPlanExpiry(clientPlan) {
