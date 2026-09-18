@@ -768,6 +768,29 @@ Object.assign(App, {
         this.render();
     },
 
+    // Cancelamentos feitos pelo CLIENTE nos últimos 7 dias — alimenta a notificação do
+    // sino. Consulta leve (filtrada por data), então pode rodar no login e sempre que o
+    // sino é aberto, sem o mesmo custo da busca de "clientes em atenção".
+    async loadRecentCancellations() {
+        const since = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+        try {
+            const { data, error } = await supabaseClient
+                .from('appointments')
+                .select('id, client_id, client_name, client_phone, date, time, service_names, cancelled_by_role')
+                .eq('status', 'cancelled')
+                .eq('cancelled_by_role', 'client')
+                .gte('date', since)
+                .order('date', { ascending: false });
+
+            if (error) throw error;
+            this.state.recentCancellations = data || [];
+        } catch (e) {
+            // Provavelmente a coluna cancelled_by_role ainda não existe (migração não
+            // rodada) — degrada em silêncio, essa categoria só fica vazia.
+            this.state.recentCancellations = [];
+        }
+    },
+
     async loadClientsPanelData() {
         this.state.isLoadingClientsPanel = true;
         this.render();
@@ -1019,14 +1042,31 @@ Object.assign(App, {
                 });
             });
 
+        (this.state.recentCancellations || []).forEach(apt => {
+            const dateBR = new Date(`${apt.date}T00:00:00`).toLocaleDateString('pt-BR');
+            items.push({
+                id: `cancelled:${apt.id}`,
+                type: 'cancelled',
+                clientId: apt.client_id || null,
+                phone: apt.client_phone || null,
+                title: apt.client_name || 'Cliente',
+                subtitle: `Cancelou ${apt.service_names || 'o atendimento'} de ${dateBR} às ${apt.time}`
+            });
+        });
+
         const dismissed = this._loadDismissedNotifs();
         const snoozeMs = this.NOTIF_SNOOZE_DAYS * 24 * 60 * 60 * 1000;
-        const isSnoozed = (id) => {
-            const t = dismissed[id];
-            return !!t && (Date.now() - t) < snoozeMs;
+        const isSnoozed = (item) => {
+            const t = dismissed[item.id];
+            if (!t) return false;
+            // Cancelamento é um evento pontual — uma vez dispensado, não volta (diferente
+            // das outras categorias, que são condições contínuas e merecem reaparecer
+            // depois de um tempo se ainda não foram resolvidas).
+            if (item.type === 'cancelled') return true;
+            return (Date.now() - t) < snoozeMs;
         };
 
-        const visible = items.filter(it => !isSnoozed(it.id));
+        const visible = items.filter(it => !isSnoozed(it));
 
         return { items, visible, total: visible.length };
     },
@@ -1037,6 +1077,10 @@ Object.assign(App, {
         // sido atendido/renovado desde a última vez, e esse dado não entra no polling automático
         // do app (é pesado demais pra rodar em segundo plano o tempo todo).
         if (this.state.isNotificationsPanelOpen && !this.state.isLoadingClientsPanel) {
+            // Cancelamentos são uma consulta leve, sempre atualiza junto sem custo extra.
+            // Não chama render() sozinha, então força um re-render quando terminar (o
+            // loadClientsPanelData() abaixo pode terminar antes ou depois dela).
+            this.loadRecentCancellations().then(() => this.render());
             // loadClientsPanelData() já chama this.render() sozinha (no início e no fim).
             // Chamar render() de novo aqui recriava o modal do zero com o MESMO conteúdo,
             // reiniciando a animação de entrada — era isso que parecia "piscar 2x" ao abrir.
@@ -1066,24 +1110,38 @@ Object.assign(App, {
         const typeMeta = {
             plan: { label: 'Planos vencendo', color: 'amber-500', icon: 'hourglass' },
             birthday: { label: 'Aniversário hoje', color: 'violet-400', icon: null },
-            attention: { label: 'Clientes que precisam de atenção', color: 'rose-400', icon: 'alert-triangle' }
+            attention: { label: 'Clientes que precisam de atenção', color: 'rose-400', icon: 'alert-triangle' },
+            cancelled: { label: 'Cancelamentos recentes', color: 'rose-500', icon: 'calendar-x' }
         };
 
-        const renderRow = (item) => `
-            <div class="flex items-stretch gap-1.5">
-                <button onclick="App.openClientInsights('${item.clientId}')" class="flex-1 min-w-0 text-left flex items-center justify-between gap-2 card-bg border border-${typeMeta[item.type].color}/20 rounded-xl p-3 hover:border-${typeMeta[item.type].color}/40 transition-colors">
+        const renderRow = (item) => {
+            // Cliente avulso (sem conta) não tem clientId pra abrir o Perfil 360° — nesse
+            // caso, se tiver telefone, vira um link de WhatsApp; senão, fica só informativo.
+            const mainContent = `
                     <div class="min-w-0">
                         <p class="text-xs font-bold text-theme truncate">${App.escapeHTML(item.title)}</p>
                         <p class="text-[10px] text-muted-theme truncate">${App.escapeHTML(item.subtitle)}</p>
                     </div>
                     ${item.badge ? `<span class="text-[10px] font-black uppercase text-${typeMeta[item.type].color} shrink-0">${App.escapeHTML(item.badge)}</span>` : ''}
-                </button>
-                <button onclick="App.dismissNotification('${item.id}')" title="Dispensar (volta em ${this.NOTIF_SNOOZE_DAYS} dias se ainda for o caso)" class="w-9 shrink-0 rounded-xl input-bg border border-theme text-muted-theme hover:text-rose-400 hover:border-rose-500/30 transition-colors flex items-center justify-center active:scale-95">
+                `;
+            const cardClasses = `flex-1 min-w-0 text-left flex items-center justify-between gap-2 card-bg border border-${typeMeta[item.type].color}/20 rounded-xl p-3 hover:border-${typeMeta[item.type].color}/40 transition-colors`;
+
+            const mainEl = item.clientId
+                ? `<button onclick="App.openClientInsights('${item.clientId}')" class="${cardClasses}">${mainContent}</button>`
+                : item.phone
+                    ? `<a href="https://wa.me/${App.formatWA(item.phone)}" target="_blank" class="${cardClasses}">${mainContent}</a>`
+                    : `<div class="${cardClasses} cursor-default">${mainContent}</div>`;
+
+            return `
+            <div class="flex items-stretch gap-1.5">
+                ${mainEl}
+                <button onclick="App.dismissNotification('${item.id}')" title="Dispensar" class="w-9 shrink-0 rounded-xl input-bg border border-theme text-muted-theme hover:text-rose-400 hover:border-rose-500/30 transition-colors flex items-center justify-center active:scale-95">
                     <i data-lucide="check" class="w-3.5 h-3.5"></i>
                 </button>
             </div>`;
+        };
 
-        const sections = ['plan', 'birthday', 'attention'].map(type => {
+        const sections = ['plan', 'cancelled', 'birthday', 'attention'].map(type => {
             const rows = visible.filter(it => it.type === type);
             if (type === 'attention' && this.state.isLoadingClientsPanel) {
                 return `

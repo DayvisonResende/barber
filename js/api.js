@@ -42,6 +42,7 @@ Object.assign(App, {
         const isStaff = ['admin', 'manager', 'barber'].includes(this.state.role);
         if (isStaff) {
             this.loadClientsPanelData();
+            this.loadRecentCancellations();
         }
     },
 
@@ -1918,6 +1919,17 @@ Object.assign(App, {
                     .eq('id', id);
 
                 if (error) throw error;
+
+                // Marca quem cancelou, só pra alimentar o sino de notificações (avisa o
+                // barbeiro quando é o CLIENTE quem cancela). Best-effort: se a coluna
+                // ainda não existir no banco (migração não rodada), falha em silêncio
+                // sem afetar o cancelamento em si, que já foi concluído acima.
+                try {
+                    await supabaseClient
+                        .from('appointments')
+                        .update({ cancelled_by_role: this.state.role })
+                        .eq('id', id);
+                } catch (e) { /* coluna ainda não existe — ignora */ }
 
                 // Devolver crédito do plano caso esse agendamento tenha usado desconto
                 await supabaseClient.from('plan_usage').delete().eq('appointment_id', id);

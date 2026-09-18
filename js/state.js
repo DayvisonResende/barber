@@ -91,9 +91,10 @@ const App = {
         assignClientData: null, // objeto do cliente selecionado para atribuição
         editingPlanEndDateId: null, // id do client_plan com a data de vencimento em edição inline
 
-        // --- Sino de notificações (aniversariantes, planos vencendo, clientes em atenção) ---
+        // --- Sino de notificações (aniversariantes, planos vencendo, clientes em atenção, cancelamentos) ---
         isNotificationsPanelOpen: false,
         _notifPanelAnimated: false, // controla se a animação de entrada do sino já tocou nesta sessão de abertura
+        recentCancellations: null, // agendamentos cancelados pelo cliente recentemente
 
         // --- Relatório de Produtos ---
         productReportTab: 'financial', // 'financial' | 'products'
