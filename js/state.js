@@ -99,7 +99,7 @@ const App = {
         // --- Relatório de Produtos ---
         productReportTab: 'financial', // 'financial' | 'products'
         productCategoryFilter: 'all',
-        productDateFilter: 'month',
+        productDateFilter: 'day',
         productDateStart: '',
         productDateEnd: '',
         productSales: [],

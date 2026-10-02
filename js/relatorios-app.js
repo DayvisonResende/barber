@@ -8,7 +8,12 @@ const Rel = {
         role: null,
         userId: null,
         tab: 'resultado',
-        period: 'month',
+        atendimentosView: 'lista', // 'resumo' | 'lista'
+        comissoesView: 'lista', // 'resumo' | 'lista'
+        monthlyGoal: null,
+        shopSettingsId: null,
+        editingGoal: false,
+        period: 'day',
         periodStart: '',
         periodEnd: '',
         barbers: [],
@@ -39,14 +44,19 @@ const Rel = {
         const today = new Date().toISOString().split('T')[0];
         this.state.newExpense.date = today;
 
-        const [barbers, products, categories] = await Promise.all([
+        const [barbers, products, categories, settings] = await Promise.all([
             db.from('barbers').select('*'),
             db.from('products').select('*'),
-            db.from('categories').select('*')
+            db.from('categories').select('*'),
+            db.from('shop_settings').select('*').limit(1).maybeSingle()
         ]);
         this.state.barbers = barbers.data || [];
         this.state.products = products.data || [];
         this.state.categories = categories.data || [];
+        // monthly_revenue_goal pode não existir ainda (migração não rodada) — degrada em
+        // silêncio, a meta simplesmente não aparece até a coluna ser criada.
+        this.state.shopSettingsId = settings.data?.id || null;
+        this.state.monthlyGoal = settings.data?.monthly_revenue_goal ?? null;
 
         await this.loadTabData();
         this.state.loading = false;
@@ -145,6 +155,45 @@ const Rel = {
         await this.loadTabData();
     },
 
+    setAtendimentosView(v) {
+        this.state.atendimentosView = v;
+        this.render();
+    },
+
+    setComissoesView(v) {
+        this.state.comissoesView = v;
+        this.render();
+    },
+
+    toggleEditGoal() {
+        this.state.editingGoal = !this.state.editingGoal;
+        this.render();
+    },
+
+    async saveMonthlyGoal() {
+        const input = document.getElementById('monthly-goal-input');
+        if (!input) return;
+        const raw = input.value.replace(/\./g, '').replace(',', '.');
+        const value = parseFloat(raw);
+        if (isNaN(value) || value <= 0) { alert('Informe um valor valido.'); return; }
+
+        if (!this.state.shopSettingsId) {
+            alert('Nao foi possivel identificar as configuracoes da barbearia.');
+            return;
+        }
+
+        try {
+            const { error } = await db.from('shop_settings').update({ monthly_revenue_goal: value }).eq('id', this.state.shopSettingsId);
+            if (error) throw error;
+            this.state.monthlyGoal = value;
+            this.state.editingGoal = false;
+            this.render();
+        } catch (e) {
+            console.error('saveMonthlyGoal:', e);
+            alert('Nao foi possivel salvar a meta. Rode a migracao _dev/add_monthly_revenue_goal.sql no Supabase.');
+        }
+    },
+
     async loadResultado(start, end) {
         try {
             const { start: ps, end: pe } = this.getPrevPeriodDates();
@@ -204,7 +253,7 @@ const Rel = {
         try {
             const { data } = await db
                 .from('transactions')
-                .select('id, date, completed_at, client_name, service_name, numeric_value, comanda_total, product_commission, barber_id, payment_method, is_settled')
+                .select('id, date, time, completed_at, client_name, service_name, numeric_value, comanda_total, product_commission, barber_id, payment_method, is_settled')
                 .order('completed_at', { ascending: false });
             const all = data || [];
             this.state.transactions = all.filter(t => {
@@ -343,7 +392,7 @@ const Rel = {
         const tabs = [
             { id: 'resultado', label: 'Resultado', icon: 'layout-dashboard' },
             { id: 'atendimentos', label: 'Atendimentos', icon: 'users' },
-            { id: 'comissoes', label: 'Comissoes', icon: 'package' },
+            { id: 'comissoes', label: 'Produtos', icon: 'package' },
             { id: 'despesas', label: 'Despesas', icon: 'receipt' }
         ];
         const periods = [
@@ -455,7 +504,24 @@ const Rel = {
             if (day > 0 && day < daysInMonth && faturamento > 0) {
                 projection = (faturamento / day) * daysInMonth;
             }
+        } else if (this.state.period === 'week') {
+            // Semana começa no domingo (ver getPeriodDates) — getDay() 0=domingo..6=sabado,
+            // então dias decorridos (contando hoje) = getDay() + 1.
+            const now = new Date();
+            const elapsedDays = now.getDay() + 1;
+            if (elapsedDays > 0 && elapsedDays < 7 && faturamento > 0) {
+                projection = (faturamento / elapsedDays) * 7;
+            }
         }
+
+        // Meta do mês — só faz sentido comparar no próprio período mensal.
+        const goal = this.state.monthlyGoal;
+        const goalProgress = (goal && this.state.period === 'month') ? Math.min(100, (faturamento / goal) * 100) : null;
+
+        // Lembrete simples: já estamos avançados no mês e nenhuma despesa variável foi
+        // lançada ainda — provável esquecimento, não necessariamente "mês sem gasto".
+        const now0 = new Date();
+        const showExpenseReminder = this.state.period === 'month' && now0.getDate() > 5 && varExpenses.length === 0;
 
         const prevClientSet = new Set(prevTxs.map(t => (t.client_name || '').toLowerCase().trim()).filter(Boolean));
         const currentClients = [...new Set(txs.map(t => (t.client_name || '').toLowerCase().trim()).filter(Boolean))];
@@ -487,6 +553,39 @@ const Rel = {
             .sort((a, b) => b.total - a.total);
 
         return `<div class="space-y-5 fade-in">
+
+            ${this.state.period === 'month' ? `
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+                <div class="flex items-center justify-between gap-3 mb-3">
+                    <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
+                        <i data-lucide="target" class="w-3.5 h-3.5 text-amber-500"></i> Meta do Mes
+                    </p>
+                    <button onclick="Rel.toggleEditGoal()" class="text-[10px] font-bold text-amber-500 hover:underline">${goal ? 'Editar' : 'Definir meta'}</button>
+                </div>
+                ${this.state.editingGoal ? `
+                    <div class="flex gap-2">
+                        <input type="text" id="monthly-goal-input" inputmode="decimal" placeholder="Ex: 15000" value="${goal || ''}" class="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-none focus:border-amber-500">
+                        <button onclick="Rel.saveMonthlyGoal()" class="bg-amber-500 text-zinc-950 px-4 rounded-lg font-bold text-sm active:scale-95">Salvar</button>
+                        <button onclick="Rel.toggleEditGoal()" class="bg-zinc-800 text-zinc-400 px-3 rounded-lg border border-zinc-700 active:scale-95"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    </div>
+                ` : goal ? `
+                    <div class="flex items-end justify-between mb-2">
+                        <p class="text-2xl font-black text-zinc-100">R$ ${this.fmt(faturamento)} <span class="text-sm text-zinc-500 font-medium">/ R$ ${this.fmt(goal)}</span></p>
+                        <p class="text-sm font-black ${goalProgress >= 100 ? 'text-emerald-400' : 'text-amber-500'}">${goalProgress.toFixed(0)}%</p>
+                    </div>
+                    <div class="h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div class="h-full ${goalProgress >= 100 ? 'bg-emerald-500' : 'bg-amber-500'} rounded-full transition-all" style="width:${goalProgress.toFixed(1)}%"></div>
+                    </div>
+                ` : `
+                    <p class="text-sm text-zinc-500">Defina uma meta de faturamento pra acompanhar o progresso do mes.</p>
+                `}
+            </div>` : ''}
+
+            ${showExpenseReminder ? `
+            <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
+                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5"></i>
+                <p class="text-xs text-amber-400 leading-relaxed">Nenhuma despesa variavel lancada este mes ainda. Se ja passou insumo, manutencao ou outro gasto, nao esqueca de registrar na aba <b>Despesas</b> pro resultado ficar completo.</p>
+            </div>` : ''}
 
             <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
                 <div class="px-5 py-4 border-b border-zinc-800 flex items-center justify-between gap-3">
@@ -649,6 +748,8 @@ const Rel = {
             byMethod[m] = (byMethod[m] || 0) + (t.numeric_value || 0);
         });
 
+        const view = this.state.atendimentosView;
+
         return `<div class="space-y-5 fade-in">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                 ${this.card('trending-up', 'Faturamento', `R$ ${this.fmt(total)}`, 'amber')}
@@ -656,6 +757,13 @@ const Rel = {
                 ${this.card('users', 'Clientes', uniqueClients, 'blue')}
                 ${this.card('receipt', 'Ticket Medio', `R$ ${this.fmt(avg)}`, 'emerald')}
             </div>
+
+            <div class="flex gap-2 p-1 bg-zinc-900 border border-zinc-800 rounded-xl">
+                <button onclick="Rel.setAtendimentosView('lista')" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${view === 'lista' ? 'bg-amber-500 text-zinc-950' : 'text-zinc-500 hover:text-zinc-200'}">Lista</button>
+                <button onclick="Rel.setAtendimentosView('resumo')" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${view === 'resumo' ? 'bg-amber-500 text-zinc-950' : 'text-zinc-500 hover:text-zinc-200'}">Resumo</button>
+            </div>
+
+            ${view === 'lista' ? this.renderAtendimentosList(txs) : `
             ${barbers.length === 0 ? this.emptyState('inbox', 'Nenhum servico no periodo') : `
             <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
                 <div class="px-5 py-3.5 border-b border-zinc-800">
@@ -698,6 +806,56 @@ const Rel = {
                     }).join('')}
                 </div>
             </div>` : ''}
+            `}
+        </div>`;
+    },
+
+    // Lista itemizada de atendimentos — um card por transação, mostrando SÓ o valor
+    // do serviço (sem produtos da comanda), pra não confundir na hora do fechamento manual.
+    renderAtendimentosList(txs) {
+        if (txs.length === 0) return this.emptyState('inbox', 'Nenhum atendimento no periodo');
+
+        const payMeta = {
+            'Pix': { icon: 'zap', color: 'teal-400' },
+            'Dinheiro': { icon: 'banknote', color: 'emerald-400' },
+            'Debito': { icon: 'credit-card', color: 'blue-400' },
+            'Débito': { icon: 'credit-card', color: 'blue-400' },
+            'Credito': { icon: 'credit-card', color: 'amber-400' },
+            'Crédito': { icon: 'credit-card', color: 'amber-400' }
+        };
+
+        const sorted = [...txs].sort((a, b) => {
+            const ka = `${a.date || ''} ${a.time || ''}`;
+            const kb = `${b.date || ''} ${b.time || ''}`;
+            return kb.localeCompare(ka);
+        });
+
+        return `<div class="space-y-2.5">
+            ${sorted.map(t => {
+                const pay = payMeta[t.payment_method] || { icon: 'credit-card', color: 'zinc-400' };
+                const barber = this.state.barbers.find(b => String(b.user_id) === String(t.barber_id));
+                const serviceValue = Math.max(0, (t.numeric_value || 0) - (t.comanda_total || 0));
+                const dateFmt = (t.date || '').split('-').reverse().join('/');
+                return `<div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <div class="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="${pay.icon}" class="w-5 h-5 text-${pay.color}"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="font-bold text-zinc-100 text-base truncate">${t.client_name || 'Cliente'}</p>
+                            <div class="text-xs text-zinc-300 flex items-center gap-1.5 mt-1 flex-wrap">
+                                <span class="bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700 font-bold text-${pay.color} uppercase tracking-tighter">${t.payment_method || '—'}</span>
+                                <span class="truncate">${t.service_name || 'Servico'}</span>
+                                ${barber ? `<span class="opacity-50">•</span><span class="bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700 font-bold text-amber-400 uppercase tracking-tighter">${barber.name}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <p class="font-black text-zinc-100 text-lg leading-none">R$ ${this.fmt(serviceValue)}</p>
+                        <p class="text-[11px] text-zinc-400 font-mono mt-1.5">${dateFmt} · ${t.time || ''}</p>
+                    </div>
+                </div>`;
+            }).join('')}
         </div>`;
     },
 
@@ -728,12 +886,21 @@ const Rel = {
         const rows = Object.values(productMap).sort((a, b) => b.total - a.total);
         const totalBarbearia = totalSales - totalComm;
 
+        const view = this.state.comissoesView;
+
         return `<div class="space-y-5 fade-in">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 ${this.card('package', 'Vendas de Produtos', `R$ ${this.fmt(totalSales)}`, 'amber')}
                 ${this.card('hand-coins', 'Comissoes Barbeiros', `R$ ${this.fmt(totalComm)}`, 'blue')}
                 ${this.card('building-2', 'Liquido Barbearia', `R$ ${this.fmt(totalBarbearia)}`, 'emerald')}
             </div>
+
+            <div class="flex gap-2 p-1 bg-zinc-900 border border-zinc-800 rounded-xl">
+                <button onclick="Rel.setComissoesView('lista')" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${view === 'lista' ? 'bg-amber-500 text-zinc-950' : 'text-zinc-500 hover:text-zinc-200'}">Lista</button>
+                <button onclick="Rel.setComissoesView('resumo')" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${view === 'resumo' ? 'bg-amber-500 text-zinc-950' : 'text-zinc-500 hover:text-zinc-200'}">Resumo</button>
+            </div>
+
+            ${view === 'lista' ? this.renderComissoesList(apts) : `
             ${rows.length === 0 ? this.emptyState('package-x', 'Nenhum produto vendido no periodo') : `
             <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
                 <div class="px-5 py-3.5 border-b border-zinc-800">
@@ -788,6 +955,64 @@ const Rel = {
                     </div>
                 </div>
             </div>`}
+            `}
+        </div>`;
+    },
+
+    // Lista itemizada de vendas de produto — uma linha por venda (não agrupada por
+    // produto), espelhando a tela de "Produtos" do app, separada do faturamento de serviço.
+    renderComissoesList(apts) {
+        const isBarber = this.state.role === 'barber';
+        const items = [];
+
+        apts.forEach(apt => {
+            (apt.comanda_items || []).forEach(item => {
+                const product = this.state.products.find(p => p.id === item.id);
+                const category = product ? this.state.categories.find(c => c.id === product.category_id) : null;
+                const qty = item.qty || 1;
+                const rate = (item.commission_rate != null ? item.commission_rate : 0) / 100;
+                const earnedValue = isBarber ? item.price * qty * rate : item.price * qty;
+                items.push({
+                    name: item.name,
+                    price: item.price,
+                    qty,
+                    commissionRate: item.commission_rate || 0,
+                    earnedValue,
+                    categoryName: category ? category.name : 'Sem Categoria',
+                    date: apt.date,
+                    clientName: apt.client_name
+                });
+            });
+        });
+
+        if (items.length === 0) return this.emptyState('package-x', 'Nenhum produto vendido no periodo');
+
+        items.sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0));
+
+        return `<div class="space-y-2.5">
+            ${items.map(item => {
+                const dateFmt = (item.date || '').split('-').reverse().join('/').slice(0, 5);
+                return `<div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <div class="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="package" class="w-5 h-5 text-amber-400"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="font-bold text-zinc-100 text-base truncate">${item.name}</p>
+                            <div class="text-xs text-zinc-300 flex items-center gap-1.5 mt-1 flex-wrap">
+                                <span class="bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700 font-bold text-amber-400 uppercase tracking-tighter">${item.categoryName}</span>
+                                ${dateFmt ? `<span class="opacity-50">•</span><span>${dateFmt}</span>` : ''}
+                                ${item.qty > 1 ? `<span class="opacity-50">·</span><span class="font-bold text-amber-400">${item.qty}x</span>` : ''}
+                                ${item.clientName ? `<span class="opacity-50">•</span><span class="truncate max-w-[140px]">${item.clientName}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <p class="font-black text-zinc-100 text-lg leading-none">R$ ${this.fmt(item.earnedValue)}</p>
+                        <p class="text-[11px] text-zinc-400 font-mono mt-1.5">${isBarber ? `${item.commissionRate}% comissao` : `R$ ${this.fmt(item.price)} / un`}</p>
+                    </div>
+                </div>`;
+            }).join('')}
         </div>`;
     },
 
