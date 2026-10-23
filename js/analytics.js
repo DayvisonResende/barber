@@ -22,7 +22,8 @@ Object.assign(App, {
         });
 
         // Helper para pegar a comissão de uma transação (usa taxa individual do barbeiro)
-        const getRateForTx = (tx) => commissionMap[tx.barberId] || globalCommissionRate;
+        // Transações sem barbeiro (ex.: venda de plano) são receita da casa: sem comissão
+        const getRateForTx = (tx) => tx.barberId ? (commissionMap[tx.barberId] || globalCommissionRate) : 0;
 
         // Helper para obter o valor somente de serviços (excluindo comanda) de uma transação
         const serviceValueOf = (tx) => tx.numericValue - (tx.comandaTotal || 0);

@@ -1904,6 +1904,8 @@ Object.assign(App, {
         const periodProductCommission = isBarber ? filteredTxs.reduce((sum, tx) => sum + (tx.productCommission || 0), 0) : 0;
         const periodServiceValue = isBarber ? filteredTxs.reduce((sum, tx) => sum + (tx.numericValue - (tx.comandaTotal || 0)), 0) : periodTotalRaw;
         let periodTotal = isBarber ? (periodServiceValue * commissionRate) + periodProductCommission : periodTotalRaw;
+        const teamCommissionBase = filteredTxs.filter(tx => tx.barberId).reduce((sum, tx) => sum + tx.numericValue, 0);
+        const teamCommission = teamCommissionBase * ((this.state.shopSettings?.commission_rate || 100) / 100);
 
         let myAdvancesList = [];
         let myAdvancesTotal = 0;
@@ -2068,11 +2070,11 @@ Object.assign(App, {
                         <div class="mt-4 pt-3 border-t border-zinc-950/10 flex flex-col gap-1">
                             <div class="flex justify-between text-[11px] font-bold text-zinc-900/70 lowercase italic">
                                 <span>Repasse Equipe (${this.state.shopSettings.commission_rate}%):</span>
-                                <span>R$ ${(periodTotal * (this.state.shopSettings.commission_rate / 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                <span>R$ ${teamCommission.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                             <div class="flex justify-between text-[11px] font-bold text-zinc-950 uppercase tracking-tighter">
                                 <span>Líquido Casa (${100 - this.state.shopSettings.commission_rate}%):</span>
-                                <span>R$ ${(periodTotal * (1 - this.state.shopSettings.commission_rate / 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                <span>R$ ${(periodTotal - teamCommission).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                         </div>
                     ` : ''}
@@ -4296,6 +4298,13 @@ Object.assign(App, {
                         placeholder="Breve descrição para o cliente..."
                         class="w-full card-bg border border-theme rounded-xl p-3 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
                 </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Valor do Plano (R$)</label>
+                    <input type="number" id="plan-price" value="${plan?.price != null ? plan.price : ''}" min="0" step="0.01"
+                        placeholder="Ex: 200"
+                        class="w-full card-bg border border-theme rounded-xl p-3 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
+                    <p class="text-[10px] text-zinc-500">Entra no caixa ao atribuir ou renovar (receita da casa, sem comissão)</p>
+                </div>
             </div>
 
             <!-- Tipo de Desconto -->
@@ -4385,7 +4394,7 @@ Object.assign(App, {
                             </div>
                             <div class="relative w-28">
                                 <span class="absolute left-2 top-1/2 -translate-y-1/2 text-amber-500 text-xs font-black">R$</span>
-                                <input type="number" id="plan-svc-fixed-${svc.id}" value="${existingFixed?.fixed_price || ''}"
+                                <input type="number" id="plan-svc-fixed-${svc.id}" value="${existingFixed?.fixed_price ?? ''}"
                                     min="0" step="0.01" placeholder="0,00"
                                     class="w-full input-bg border border-theme rounded-lg p-2 pl-7 text-theme text-sm text-right focus:outline-none focus:border-amber-500 transition-colors" />
                             </div>
@@ -4472,12 +4481,19 @@ Object.assign(App, {
         const defaultEndDate = this.calcPlanEndDate(today, plan.duration_value, plan.duration_type);
         const [ey, em, ed] = defaultEndDate.split('-');
         const client = this.state.assignClientData;
+        const isRenewing = !!this.state.renewingClientPlanId;
+        const payMethods = [
+            { id: 'Pix', icon: 'zap', color: 'text-teal-400' },
+            { id: 'Dinheiro', icon: 'banknote', color: 'text-emerald-500' },
+            { id: 'Débito', icon: 'credit-card', color: 'text-blue-400' },
+            { id: 'Crédito', icon: 'credit-card', color: 'text-amber-500' }
+        ];
 
         return `
         <div class="space-y-5 fade-in-fast slide-in-up">
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-2xl font-bold text-theme">Atribuir Plano</h2>
+                    <h2 class="text-2xl font-bold text-theme">${isRenewing ? 'Renovar Plano' : 'Atribuir Plano'}</h2>
                     <p class="text-xs text-amber-500 font-semibold mt-0.5">${App.escapeHTML(plan.name)}</p>
                 </div>
                 <button onclick="App.cancelAssignPlan()" class="p-2 input-bg rounded-full text-muted-theme hover:text-theme transition-colors">
@@ -4500,9 +4516,9 @@ Object.assign(App, {
                         <p class="font-bold text-theme text-sm">${App.escapeHTML(client.name)}</p>
                         <p class="text-[11px] text-muted-theme">${App.formatDisplayPhone ? App.formatDisplayPhone(client.phone) : client.phone || ''}</p>
                     </div>
-                    <button onclick="App.clearAssignClient()" class="p-1.5 input-bg border border-theme rounded-lg">
+                    ${isRenewing ? '' : `<button onclick="App.clearAssignClient()" class="p-1.5 input-bg border border-theme rounded-lg">
                         <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-muted-theme"></i>
-                    </button>
+                    </button>`}
                 </div>` : `
                 <div class="relative">
                     <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-theme pointer-events-none"></i>
@@ -4532,6 +4548,26 @@ Object.assign(App, {
                 <span class="font-black text-theme" id="assign-end-date-display">${ed}/${em}/${ey}</span>
             </div>
 
+            <!-- Valor cobrado (entra no caixa) -->
+            <div class="space-y-1.5">
+                <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Valor Cobrado (R$)</label>
+                <input type="number" id="assign-plan-price" value="${App.escapeHTML(this.state.assignPlanPrice)}" min="0" step="0.01"
+                    placeholder="0 para cortesia"
+                    oninput="App.state.assignPlanPrice = this.value"
+                    class="w-full card-bg border border-theme rounded-xl p-3 text-theme focus:outline-none focus:border-amber-500 transition-colors" />
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="text-xs font-bold text-muted-theme uppercase tracking-widest">Forma de Pagamento</label>
+                <div class="grid grid-cols-2 gap-2">
+                    ${payMethods.map(m => `
+                    <button onclick="App.setAssignPaymentMethod('${m.id}')"
+                        class="py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-all active:scale-[0.98] ${this.state.assignPaymentMethod === m.id ? 'border-amber-500 bg-amber-500/10 text-amber-500' : 'border-theme input-bg text-theme'}">
+                        <i data-lucide="${m.icon}" class="w-4 h-4 ${m.color}"></i> ${m.id}
+                    </button>`).join('')}
+                </div>
+            </div>
+
             <div class="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl text-[11px] text-muted-theme space-y-1">
                 <p class="flex items-center gap-1.5 font-bold text-amber-400">
                     <i data-lucide="info" class="w-3.5 h-3.5"></i> Informações do plano
@@ -4543,7 +4579,7 @@ Object.assign(App, {
 
             <button onclick="App.confirmAssignPlan()"
                 class="w-full py-4 rounded-2xl font-black text-lg bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                <i data-lucide="user-check" class="w-5 h-5"></i> Confirmar Atribuição
+                <i data-lucide="${isRenewing ? 'refresh-cw' : 'user-check'}" class="w-5 h-5"></i> ${isRenewing ? 'Confirmar Renovação' : 'Confirmar Atribuição'}
             </button>
         </div>`;
     },

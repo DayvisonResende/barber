@@ -249,6 +249,8 @@ Object.assign(App, {
         const description = document.getElementById('plan-description')?.value?.trim() || null;
         const maxUsesVal = document.getElementById('plan-max-uses')?.value?.trim();
         const maxDiscountUses = maxUsesVal ? (parseInt(maxUsesVal) || null) : null;
+        const priceVal = parseFloat(document.getElementById('plan-price')?.value);
+        const price = !isNaN(priceVal) && priceVal >= 0 ? priceVal : null;
 
         const activeDays = [0, 1, 2, 3, 4, 5, 6].filter(d =>
             document.getElementById(`plan-day-${d}`)?.checked
@@ -286,6 +288,7 @@ Object.assign(App, {
             duration_type: durationType,
             duration_value: durationValue,
             max_discount_uses: maxDiscountUses,
+            price,
             is_active: true
         };
 
@@ -362,31 +365,86 @@ Object.assign(App, {
         const startDate = document.getElementById('assign-start-date')?.value;
         if (!startDate) { this.showNotification('Erro', 'Informe a data de início.'); return; }
 
-        const endDate = this.calcPlanEndDate(startDate, plan.duration_value, plan.duration_type);
+        const price = parseFloat(this.state.assignPlanPrice);
+        if (isNaN(price) || price < 0) { this.showNotification('Erro', 'Informe o valor cobrado (0 para cortesia).'); return; }
+        const paymentMethod = this.state.assignPaymentMethod;
+        if (price > 0 && !paymentMethod) { this.showNotification('Erro', 'Selecione a forma de pagamento.'); return; }
 
-        const { data: { user } } = await supabaseClient.auth.getUser();
+        // Trava contra clique duplo: evita lançar o valor do plano 2x no caixa
+        if (this.state.isAssigningPlan) return;
+        this.state.isAssigningPlan = true;
 
-        // Cancelar plano anterior do cliente se houver
-        await supabaseClient.from('client_plans')
-            .update({ status: 'cancelled' })
-            .eq('client_id', client.id)
-            .eq('status', 'active');
+        try {
+            const endDate = this.calcPlanEndDate(startDate, plan.duration_value, plan.duration_type);
+            const renewingId = this.state.renewingClientPlanId;
 
-        const { error } = await supabaseClient.from('client_plans').insert({
-            client_id: client.id,
-            plan_id: planId,
-            assigned_by: user.id,
-            start_date: startDate,
-            end_date: endDate,
-            status: 'active'
-        });
+            const { data: { user } } = await supabaseClient.auth.getUser();
 
-        if (error) { this.showNotification('Erro', error.message); return; }
+            // Renovação: remove o registro anterior para não acumular histórico
+            if (renewingId) {
+                await supabaseClient.from('client_plans').delete().eq('id', renewingId);
+            }
 
-        this.showNotification('Plano Atribuído!', `${plan.name} ativado para ${client.name}.`);
+            // Cancelar plano anterior do cliente se houver
+            await supabaseClient.from('client_plans')
+                .update({ status: 'cancelled' })
+                .eq('client_id', client.id)
+                .eq('status', 'active');
+
+            const { error } = await supabaseClient.from('client_plans').insert({
+                client_id: client.id,
+                plan_id: planId,
+                assigned_by: user.id,
+                start_date: startDate,
+                end_date: endDate,
+                status: 'active'
+            });
+
+            if (error) { this.showNotification('Erro', error.message); return; }
+
+            // Entrada no caixa: valor do plano é receita da casa (sem barbeiro = sem comissão)
+            if (price > 0) {
+                const now = new Date();
+                const { error: txError } = await supabaseClient.from('transactions').insert({
+                    appointment_id: null,
+                    client_name: client.name,
+                    service_name: `Plano: ${plan.name}`,
+                    payment_method: paymentMethod,
+                    numeric_value: price,
+                    comanda_total: 0,
+                    product_commission: 0,
+                    date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+                    time: now.toTimeString().slice(0, 5),
+                    barber_id: null
+                });
+                if (txError) {
+                    this.showNotification('Atenção', `Plano ativado, mas a entrada no caixa falhou: ${txError.message}`);
+                    return;
+                }
+            }
+
+            const action = renewingId ? 'renovado' : 'ativado';
+            this.showNotification(renewingId ? 'Plano Renovado ✓' : 'Plano Atribuído!', `${plan.name} ${action} para ${client.name}.`);
+            this.resetAssignPlanState();
+            await this.loadClientPlans();
+            if (price > 0 && this.loadTransactions) await this.loadTransactions();
+            this.render();
+        } finally {
+            this.state.isAssigningPlan = false;
+        }
+    },
+
+    resetAssignPlanState() {
         this.state.assigningPlanId = null;
         this.state.assignClientData = null;
-        await this.loadClientPlans();
+        this.state.assignPlanPrice = '';
+        this.state.assignPaymentMethod = null;
+        this.state.renewingClientPlanId = null;
+    },
+
+    setAssignPaymentMethod(method) {
+        this.haptic('light');
+        this.state.assignPaymentMethod = method;
         this.render();
     },
 
@@ -434,52 +492,24 @@ Object.assign(App, {
         });
     },
 
-    async renewClientPlan(clientPlanId) {
+    // Renovação usa a mesma tela de atribuição (já com cliente e plano), para
+    // registrar o valor cobrado e a forma de pagamento no caixa.
+    renewClientPlan(clientPlanId) {
         const cp = (this.state.clientPlans || []).find(c => c.id === clientPlanId);
         if (!cp) return;
 
-        const plan = cp.plan;
+        const plan = (this.state.plans || []).find(p => p.id === cp.plan_id);
         if (!plan) { this.showNotification('Erro', 'Dados do plano não encontrados.'); return; }
 
-        const client = CLIENTES.find(c => c.id === cp.client_id);
-        const clientName = client?.name || 'Cliente';
+        const client = CLIENTES.find(c => c.id === cp.client_id) || { id: cp.client_id, name: 'Cliente' };
 
-        const today = new Date().toISOString().split('T')[0];
-        const newEndDate = this.calcPlanEndDate(today, plan.duration_value, plan.duration_type);
-        const [ey, em, ed] = newEndDate.split('-');
-        const [ty, tm, td] = today.split('-');
-        const durationLabel = `${plan.duration_value} ${plan.duration_type === 'days' ? 'dia' : 'mês'}${plan.duration_value > 1 ? 's' : ''}`;
-
-        this.showConfirmModal({
-            title: 'Renovar Plano?',
-            message: `${clientName} receberá o plano "${plan.name}" por mais ${durationLabel}. Período: ${td}/${tm}/${ty} → ${ed}/${em}/${ey}`,
-            icon: 'refresh-cw',
-            isDestructive: false,
-            onConfirm: async () => {
-                const { data: { user } } = await supabaseClient.auth.getUser();
-
-                // Remove o registro anterior para não acumular histórico
-                await supabaseClient.from('client_plans')
-                    .delete()
-                    .eq('id', clientPlanId);
-
-                // Cria novo período a partir de hoje
-                const { error } = await supabaseClient.from('client_plans').insert({
-                    client_id: cp.client_id,
-                    plan_id: cp.plan_id,
-                    assigned_by: user.id,
-                    start_date: today,
-                    end_date: newEndDate,
-                    status: 'active'
-                });
-
-                if (error) { this.showNotification('Erro', error.message); return; }
-
-                this.showNotification('Plano Renovado ✓', `${plan.name} renovado para ${clientName} até ${ed}/${em}/${ey}.`);
-                await this.loadClientPlans();
-                this.render();
-            }
-        });
+        this.haptic('light');
+        this.state.assigningPlanId = plan.id;
+        this.state.assignClientData = client;
+        this.state.assignPlanPrice = plan.price != null ? String(plan.price) : '';
+        this.state.assignPaymentMethod = null;
+        this.state.renewingClientPlanId = clientPlanId;
+        this.render();
     },
 
     initEditPlanEndDate(clientPlanId) {
@@ -559,8 +589,10 @@ Object.assign(App, {
 
     startAssignPlan(planId) {
         this.haptic('light');
+        const plan = (this.state.plans || []).find(p => p.id === planId);
+        this.resetAssignPlanState();
         this.state.assigningPlanId = planId;
-        this.state.assignClientData = null;
+        this.state.assignPlanPrice = plan?.price != null ? String(plan.price) : '';
         this.render();
         // Re-aplica máscara no campo de busca após render
         setTimeout(() => {
@@ -571,8 +603,7 @@ Object.assign(App, {
 
     cancelAssignPlan() {
         this.haptic('light');
-        this.state.assigningPlanId = null;
-        this.state.assignClientData = null;
+        this.resetAssignPlanState();
         this.render();
     },
 

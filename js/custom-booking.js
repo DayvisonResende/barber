@@ -4,8 +4,9 @@
 // agendamento, pra quando o barbeiro precisa de um horário fora da grade de slots
 // (ex: encaixe, exceção, horário fora do expediente configurado).
 //
-// Só uma regra é mantida igual ao fluxo normal: não deixa marcar em cima de outro
-// agendamento já existente do mesmo barbeiro (mesma checagem de colisão real).
+// Regras mantidas iguais ao fluxo normal: checagem de colisão real com outro
+// agendamento do mesmo barbeiro (aqui só como aviso) e desconto do plano ativo do
+// cliente cadastrado (mesma regra do barbeiro agendando pelo fluxo normal).
 
 Object.assign(App, {
 
@@ -109,6 +110,27 @@ Object.assign(App, {
         this.render();
     },
 
+    // Mesma regra de getBookingPlanDiscount() para agendamento feito pelo staff:
+    // plano ativo do cliente, válido no dia do agendamento, com desconto > 0.
+    getCustomBookingPlanDiscount(services) {
+        if (this.state.customBookingMode !== 'registered') return null;
+        const clientId = this.state.customBookingSelectedClient?.id;
+        if (!clientId || services.length === 0 || !this.calculatePlanDiscount) return null;
+
+        const today = new Date().toISOString().split('T')[0];
+        const clientPlan = (this.state.clientPlans || []).find(cp =>
+            cp.client_id === clientId &&
+            cp.status === 'active' &&
+            cp.end_date >= today
+        );
+        if (!clientPlan?.plan) return null;
+        if (!this.isPlanActiveOnDate(clientPlan, this.state.customBookingDate)) return null;
+
+        const result = this.calculatePlanDiscount(services, clientPlan.plan);
+        if (result.discountAmount <= 0) return null;
+        return { clientPlan, ...result };
+    },
+
     toggleCustomBookingService(serviceId) {
         const list = this.state.customBookingServiceIds;
         const idx = list.indexOf(serviceId);
@@ -147,7 +169,8 @@ Object.assign(App, {
             if (!clientName) { this.showNotification('Dados incompletos', 'Informe o nome do cliente avulso.'); return; }
         }
 
-        const totalValue = services.reduce((sum, s) => sum + s.priceValue, 0);
+        const planDiscount = this.getCustomBookingPlanDiscount(services);
+        const totalValue = planDiscount ? planDiscount.discountedTotal : services.reduce((sum, s) => sum + s.priceValue, 0);
         const totalDuration = services.reduce((sum, s) => sum + s.durationMinutes, 0);
         const serviceNames = services.map(s => s.name).join(' + ');
 
@@ -186,23 +209,28 @@ Object.assign(App, {
                 message: `${collidingApt.client_name || 'Outro cliente'} já está marcado às ${collidingApt.time} nesse período. Criar mesmo assim (encaixe)?`,
                 icon: 'alert-triangle',
                 isDestructive: false,
-                onConfirm: () => this._insertCustomAppointment(payload)
+                onConfirm: () => this._insertCustomAppointment(payload, planDiscount)
             });
             return;
         }
 
-        await this._insertCustomAppointment(payload);
+        await this._insertCustomAppointment(payload, planDiscount);
     },
 
-    async _insertCustomAppointment(payload) {
+    async _insertCustomAppointment(payload, planDiscount = null) {
         // Trava contra clique duplo (protege tanto o caminho direto quanto o que passa
         // pela confirmação de encaixe) — é o único ponto que realmente insere no banco.
         if (this.state.isCreatingAppointment) return;
         this.state.isCreatingAppointment = true;
 
         try {
-            const { error } = await supabaseClient.from('appointments').insert(payload);
+            const { data, error } = await supabaseClient.from('appointments').insert(payload).select('id');
             if (error) throw error;
+
+            // Registrar uso do plano (conta no limite semanal/total, igual ao fluxo normal)
+            if (planDiscount) {
+                this.recordPlanUsage(planDiscount.clientPlan.id, data?.[0]?.id || null, payload.date).catch(() => {});
+            }
 
             this.state.isCustomBookingOpen = false;
             this.showNotification('Agendamento criado ✓', `${payload.client_name} às ${payload.time} em ${payload.date.split('-').reverse().join('/')}.`);
@@ -223,6 +251,7 @@ Object.assign(App, {
         const selectedServices = SERVICES.filter(s => this.state.customBookingServiceIds.includes(s.id));
         const totalValue = selectedServices.reduce((sum, s) => sum + s.priceValue, 0);
         const totalDuration = selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
+        const planDiscount = this.getCustomBookingPlanDiscount(selectedServices);
 
         return `
             <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm fade-in" onclick="if(event.target === this) App.closeCustomBooking()">
@@ -299,7 +328,12 @@ Object.assign(App, {
         }).join('')}
                             </div>
                             ${selectedServices.length > 0 ? `
-                                <p class="text-[11px] text-muted-theme">Total: <span class="text-amber-500 font-bold">R$ ${totalValue.toFixed(2).replace('.', ',')}</span> · <span class="text-theme font-bold">${totalDuration} min</span></p>
+                                <p class="text-[11px] text-muted-theme">Total: ${planDiscount
+                    ? `<span class="line-through">R$ ${totalValue.toFixed(2).replace('.', ',')}</span> <span class="text-emerald-400 font-bold">R$ ${planDiscount.discountedTotal.toFixed(2).replace('.', ',')}</span>`
+                    : `<span class="text-amber-500 font-bold">R$ ${totalValue.toFixed(2).replace('.', ',')}</span>`} · <span class="text-theme font-bold">${totalDuration} min</span></p>
+                                ${planDiscount ? `
+                                <p class="text-[11px] text-emerald-400 font-bold flex items-center gap-1.5"><i data-lucide="tag" class="w-3.5 h-3.5"></i> ${App.escapeHTML(planDiscount.clientPlan.plan.name)} · - R$ ${planDiscount.discountAmount.toFixed(2).replace('.', ',')}</p>
+                                ` : ''}
                             ` : ''}
                         </div>
 
@@ -307,7 +341,7 @@ Object.assign(App, {
                         <div class="grid grid-cols-2 gap-3">
                             <div class="space-y-2">
                                 <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Data</label>
-                                <input type="date" value="${this.state.customBookingDate}" onchange="App.state.customBookingDate = this.value" class="w-full input-bg border border-theme rounded-xl p-3 text-sm text-theme focus:border-amber-500 outline-none transition-colors" />
+                                <input type="date" value="${this.state.customBookingDate}" onchange="App.state.customBookingDate = this.value; if (App.state.customBookingMode === 'registered') App.render()" class="w-full input-bg border border-theme rounded-xl p-3 text-sm text-theme focus:border-amber-500 outline-none transition-colors" />
                             </div>
                             <div class="space-y-2">
                                 <label class="text-[10px] text-muted-theme uppercase font-bold tracking-wider">Horário (livre)</label>

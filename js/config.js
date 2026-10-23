@@ -1,3 +1,10 @@
+// --- Logs: silenciados por padrão (ativar com localStorage.debug = '1') ---
+(() => {
+    let debug = false;
+    try { debug = localStorage.getItem('debug') === '1'; } catch (e) {}
+    if (!debug) ['log', 'info', 'debug', 'warn'].forEach(m => { console[m] = () => {}; });
+})();
+
 // --- Backend: Supabase (Configure suas chaves aqui) ---
 const SUPABASE_URL = 'https://plhxtgbmmupojzbhpnpe.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsaHh0Z2JtbXVwb2p6YmhwbnBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNzk1MDMsImV4cCI6MjA5MDg1NTUwM30.xi2GoizxHsCFwQvW5otBrNFdxDhTE_MRmlOV3m0GYnA';

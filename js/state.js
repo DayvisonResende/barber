@@ -20,6 +20,10 @@ const App = {
         confirmingPaymentMethod: null,
         isCompletingPayment: false, // trava contra clique duplo em "Finalizar" (evita transação duplicada)
         isCreatingAppointment: false, // trava contra clique duplo em "Confirmar Agendamento" (evita agendamento duplicado)
+        isAssigningPlan: false, // trava contra clique duplo em "Confirmar Atribuição" (evita entrada duplicada no caixa)
+        assignPlanPrice: '',
+        assignPaymentMethod: null,
+        renewingClientPlanId: null,
         // Estado do formulário de marcação
         isBooking: false,
         selectedServices: [],

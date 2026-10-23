@@ -735,7 +735,7 @@ const Rel = {
             const key = t.barber_id || 'none';
             if (!byBarber[key]) {
                 const rec = this.state.barbers.find(b => String(b.user_id) === String(t.barber_id));
-                byBarber[key] = { name: rec?.name || 'Nao informado', total: 0, count: 0, commissionRate: rec?.commission_rate };
+                byBarber[key] = { name: rec?.name || (t.barber_id ? 'Nao informado' : 'Casa'), total: 0, count: 0, commissionRate: rec?.commission_rate };
             }
             byBarber[key].total += t.numeric_value || 0;
             byBarber[key].count++;

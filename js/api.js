@@ -186,7 +186,6 @@ Object.assign(App, {
 
         if (userProfiles) {
             CLIENTES = userProfiles;
-            console.log(`✅ Carregados ${userProfiles.length} perfis de clientes/equipe.`);
         }
     },
 
@@ -771,7 +770,6 @@ Object.assign(App, {
             if (profile) {
                 this.state.role = profile.role;
                 this.state.userProfile = profile;
-                console.log('✅ Sessão Carregada:', profile.name, `(${profile.role})`);
             }
         } catch (e) {
             console.error('❌ Falha Crítica na Sessão:', e);
